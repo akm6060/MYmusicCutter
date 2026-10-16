@@ -1,0 +1,44 @@
+name: Build MYmusic Cutter APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # iPad-friendly: if the project was uploaded as a single .zip file, unpack it first.
+      - name: Unpack uploaded project ZIP (if any)
+        run: |
+          shopt -s nullglob
+          for z in *.zip; do
+            echo "Unpacking $z"
+            unzip -o -q "$z"
+          done
+          test -f settings.gradle || { echo "settings.gradle not found: upload the project ZIP or its files to the repository root."; exit 1; }
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MYmusic-Cutter-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
