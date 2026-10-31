@@ -10,6 +10,10 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- Android 13 and newer: needed only for old file managers that send file:// paths. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
     <!-- Lets the app see which player is currently the default (for the ★ Default button). -->
     <queries>
         <intent>

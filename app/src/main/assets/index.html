@@ -1138,6 +1138,12 @@ html.native-video .video-layer.native-fullscreen,html.native-video .video-layer:
 html.native-video #videoElement{display:none!important}
 html.native-video #audioEqLite{display:none!important}
 html.native-video .audio-eq-toggles{grid-template-columns:1fr 1fr!important}
+
+/* direct video layer: everything around the picture area is painted over, so the picture
+   (which Android shows underneath the page) appears only inside its rounded frame */
+html.native-video .video-stage{z-index:0;box-shadow:0 0 0 300vmax #050610}
+html.native-video .video-layer:not(.native-fullscreen) .video-head,html.native-video .video-layer:not(.native-fullscreen) .video-controls{position:relative;z-index:1}
+html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -2233,9 +2239,10 @@ html.native-video .audio-eq-toggles{grid-template-columns:1fr 1fr!important}
   layer.addEventListener('click',function(e){if(e.target===layer&&!isFullscreen())hide()});
   setTimeout(fitStage,50);setTimeout(fitStage,600);
   if(NATIVE){var lastRect='';(function rectLoop(){
-    var r=stage.getBoundingClientRect(),fs=isFullscreen(),hidden=layer.classList.contains('eq-page-open')||!layer.classList.contains('open'),
-        k=hidden?'h':[r.left.toFixed(1),r.top.toFixed(1),r.width.toFixed(1),r.height.toFixed(1),fs?0:14].join();
-    if(k!==lastRect){lastRect=k;try{if(hidden)NP.setVideoRect(0,0,1,1,0);else NP.setVideoRect(r.left,r.top,r.width,r.height,fs?0:14)}catch(e){}}
+    var r=stage.getBoundingClientRect(),fs=isFullscreen(),hidden=layer.classList.contains('eq-page-open')||!layer.classList.contains('open');
+    // While the equalizer page covers the screen the picture area is left where it is (no resizing).
+    var k=[r.left.toFixed(1),r.top.toFixed(1),r.width.toFixed(1),r.height.toFixed(1),fs?0:14].join();
+    if(!hidden&&r.width>0&&k!==lastRect){lastRect=k;try{NP.setVideoRect(r.left,r.top,r.width,r.height,fs?0:14)}catch(e){}}
     requestAnimationFrame(rectLoop)})();}
 
   // ---- Sliders move only when their knob is grabbed. A touch anywhere else on a slider

@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
 import android.view.ViewOutlineProvider
@@ -53,7 +54,8 @@ class NativePlayer(
     private val activity: MainActivity,
     private val webView: WebView,
     private val cutter: MYmusicNativeCutter,
-    private val textureView: TextureView
+    private val textureView: TextureView,
+    private val surfaceView: SurfaceView
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val density = activity.resources.displayMetrics.density
@@ -70,6 +72,15 @@ class NativePlayer(
     private var panY = 0f
     private var fill = false
     private var cornerPx = 0f
+    // The picture normally goes to a SurfaceView (shown directly by the display: true black level,
+    // correct colour range and HDR). Zoom/pan and colour settings need the TextureView instead.
+    private var useTexture = false
+    private var videoShown = true
+    private var stageX = 0f
+    private var stageY = 0f
+    private var stageW = 1f
+    private var stageH = 1f
+    private var currentUri: Uri? = null
     private var pendingSeek = false
     private var metaSent = false
     private var scrubbing = false
@@ -172,6 +183,7 @@ class NativePlayer(
             rotation = videoSize.unappliedRotationDegrees
             par = if (videoSize.pixelWidthHeightRatio > 0) videoSize.pixelWidthHeightRatio else 1f
             applyTransform()
+            layoutSurface()
             val (w, h) = displaySize()
             if (w > 0) send("size", JSONObject().put("w", w).put("h", h))
             if (metaSent) sendMeta()
@@ -212,7 +224,8 @@ class NativePlayer(
             true
         )
         player.setHandleAudioBecomingNoisy(true)
-        player.setVideoTextureView(textureView)
+        player.setVideoSurfaceView(surfaceView)
+        textureView.visibility = View.INVISIBLE
         player.addListener(listener)
         textureView.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -249,6 +262,40 @@ class NativePlayer(
         m.postTranslate(panX * density, panY * density)
         textureView.setTransform(m)
         textureView.invalidate()
+    }
+
+    /** Places the SurfaceView on exactly the picture area (fit or fill) inside the page's video area. */
+    private fun layoutSurface() {
+        val lp = (surfaceView.layoutParams as? FrameLayout.LayoutParams) ?: FrameLayout.LayoutParams(1, 1)
+        val (vw0, vh0) = displaySize()
+        var x = stageX; var y = stageY; var w = stageW; var h = stageH
+        if (vw0 > 0 && vh0 > 0 && stageW > 1 && stageH > 1) {
+            val aspect = vw0.toFloat() / vh0
+            val heightLimited = (stageW / stageH > aspect) != fill
+            if (heightLimited) { h = stageH; w = stageH * aspect } else { w = stageW; h = stageW / aspect }
+            x = stageX + (stageW - w) / 2
+            y = stageY + (stageH - h) / 2
+        }
+        val nl = x.roundToInt(); val nt = y.roundToInt(); val nw = max(1, w.roundToInt()); val nh = max(1, h.roundToInt())
+        if (lp.leftMargin != nl || lp.topMargin != nt || lp.width != nw || lp.height != nh) {
+            lp.leftMargin = nl; lp.topMargin = nt; lp.width = nw; lp.height = nh
+            surfaceView.layoutParams = lp
+        }
+    }
+
+    private fun applyOutput(wantTexture: Boolean) {
+        if (wantTexture != useTexture) {
+            useTexture = wantTexture
+            if (wantTexture) {
+                textureView.visibility = View.VISIBLE
+                player.setVideoTextureView(textureView)
+            } else {
+                surfaceView.visibility = View.VISIBLE
+                player.setVideoSurfaceView(surfaceView)
+            }
+        }
+        surfaceView.visibility = if (!useTexture && videoShown) View.VISIBLE else View.GONE
+        textureView.visibility = if (useTexture && videoShown) View.VISIBLE else View.INVISIBLE
     }
 
     private fun colourMatrix(b: Float, c: Float, s: Float, hue: Float, sepia: Float): ColorMatrix {
@@ -301,6 +348,7 @@ class NativePlayer(
             }
             metaSent = false
             pendingSeek = false
+            currentUri = uri
             videoW = 0; videoH = 0; rotation = 0; par = 1f
             player.setSeekParameters(SeekParameters.EXACT)
             player.setMediaItem(MediaItem.fromUri(uri))
@@ -354,6 +402,9 @@ class NativePlayer(
     @JavascriptInterface
     fun setVideoRect(x: Double, y: Double, w: Double, h: Double, radius: Double) {
         main.post {
+            stageX = (x * density).toFloat(); stageY = (y * density).toFloat()
+            stageW = max(1f, (w * density).toFloat()); stageH = max(1f, (h * density).toFloat())
+            layoutSurface()
             val lp = (textureView.layoutParams as? FrameLayout.LayoutParams)
                 ?: FrameLayout.LayoutParams(0, 0)
             lp.leftMargin = (x * density).roundToInt()
@@ -368,7 +419,7 @@ class NativePlayer(
 
     @JavascriptInterface
     fun setVideoVisible(on: Boolean) {
-        main.post { textureView.alpha = if (on) 1f else 0f }
+        main.post { videoShown = on; textureView.alpha = if (on) 1f else 0f; applyOutput(useTexture) }
     }
 
     @JavascriptInterface
@@ -384,7 +435,10 @@ class NativePlayer(
             val s = o.optDouble("s", 100.0).toFloat()
             val h = o.optDouble("h", 0.0).toFloat()
             val sep = o.optDouble("sepia", 0.0).toFloat()
-            if (b == 100f && c == 100f && s == 100f && h == 0f && sep == 0f) {
+            val plainColour = b == 100f && c == 100f && s == 100f && h == 0f && sep == 0f
+            applyOutput(!plainColour || zoom > 1.001f)
+            layoutSurface()
+            if (plainColour) {
                 textureView.setLayerPaint(null)
             } else {
                 val p = Paint()
@@ -461,26 +515,36 @@ class NativePlayer(
         }
     }
 
-    /** Snapshot of the current frame at half size, JPEG quality 50. */
+    /** Snapshot of the current frame at half size, JPEG quality 50, read from the file itself. */
     @JavascriptInterface
     fun snapshot(name: String): Boolean {
         main.post {
+            val uri = currentUri
             val (dw, dh) = displaySize()
-            if (dw <= 0 || dh <= 0) { cutter.pageMessage("Play the video first, then take the snapshot."); return@post }
-            val r90 = rotation == 90 || rotation == 270
-            val bw = max(1, (if (r90) videoH else (videoW * par).roundToInt()) / 2)
-            val bh = max(1, (if (r90) (videoW * par).roundToInt() else videoH) / 2)
-            var bmp = textureView.getBitmap(bw, bh)
-            if (bmp == null) { cutter.pageMessage("Snapshot could not be taken."); return@post }
-            if (rotation != 0) {
-                val m = Matrix(); m.postRotate(rotation.toFloat())
-                bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
-            }
-            val shot = bmp
+            if (uri == null || dw <= 0 || dh <= 0) { cutter.pageMessage("Play the video first, then take the snapshot."); return@post }
+            val tUs = max(0L, player.currentPosition) * 1000L
             worker.execute {
-                val bos = ByteArrayOutputStream()
-                shot.compress(Bitmap.CompressFormat.JPEG, 50, bos)
-                cutter.saveSnapshotBytes(bos.toByteArray(), name)
+                val mmr = MediaMetadataRetriever()
+                try {
+                    if (uri.scheme == "file") mmr.setDataSource(uri.path) else mmr.setDataSource(activity, uri)
+                    var frame = mmr.getFrameAtTime(tUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                        ?: mmr.getFrameAtTime(tUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    if (frame == null) { cutter.pageMessage("Snapshot could not be taken."); return@execute }
+                    // Turn the frame upright if the file stores it rotated.
+                    val rot = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                    if (rot % 180 != 0 && (frame.width > frame.height) != (dw > dh)) {
+                        val m = Matrix(); m.postRotate(rot.toFloat())
+                        frame = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, m, true)
+                    }
+                    val half = Bitmap.createScaledBitmap(frame!!, max(1, frame.width / 2), max(1, frame.height / 2), true)
+                    val bos = ByteArrayOutputStream()
+                    half.compress(Bitmap.CompressFormat.JPEG, 50, bos)
+                    cutter.saveSnapshotBytes(bos.toByteArray(), name)
+                } catch (e: Exception) {
+                    cutter.pageMessage("Snapshot could not be taken.")
+                } finally {
+                    try { mmr.release() } catch (_: Exception) {}
+                }
             }
         }
         return true

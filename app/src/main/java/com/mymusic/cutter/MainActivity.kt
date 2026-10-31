@@ -25,6 +25,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import android.view.TextureView
+import android.view.SurfaceView
 import androidx.media3.common.util.UnstableApi
 import org.json.JSONObject
 
@@ -41,6 +42,7 @@ class MainActivity : Activity() {
     private var pageReady = false
     private var pendingShared: String? = null
     private var pendingFileIntent: Intent? = null
+    private var rootView: FrameLayout? = null
     private val readPermissionRequestCode = 4109
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,14 +68,30 @@ class MainActivity : Activity() {
 
         cutter = MYmusicNativeCutter(this, webView)
         webView.addJavascriptInterface(cutter, "MYmusicNativeCutter")
-        val videoSurface = TextureView(this)
-        videoSurface.layoutParams = FrameLayout.LayoutParams(1, 1)
-        nativePlayer = NativePlayer(this, webView, cutter, videoSurface)
+        val videoTexture = TextureView(this)
+        videoTexture.layoutParams = FrameLayout.LayoutParams(1, 1)
+        val videoDirect = SurfaceView(this)
+        videoDirect.layoutParams = FrameLayout.LayoutParams(1, 1)
+        nativePlayer = NativePlayer(this, webView, cutter, videoTexture, videoDirect)
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
         val root = FrameLayout(this)
         root.setBackgroundColor(Color.rgb(5, 6, 16))
-        root.addView(videoSurface)
+        root.addView(videoDirect)
+        root.addView(videoTexture)
         root.addView(webView)
+        rootView = root
+        // Android 15 draws apps under the status and navigation bars: keep the page clear of them,
+        // except in full-screen video, which uses the whole screen.
+        if (Build.VERSION.SDK_INT >= 30) {
+            root.setOnApplyWindowInsetsListener { v, insets ->
+                if (barsHidden) v.setPadding(0, 0, 0, 0)
+                else {
+                    val b = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                    v.setPadding(b.left, b.top, b.right, b.bottom)
+                }
+                insets
+            }
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -212,11 +230,11 @@ class MainActivity : Activity() {
 
     private fun deliverUris(array: Array<Uri>, intent: Intent?) {
         // Old file managers send file:// paths; reading those needs the storage permission (Android 12 and older).
-        if (Build.VERSION.SDK_INT in 23..32 && array.any { it.scheme == "file" } &&
-            checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-        ) {
+        val readPerms = if (Build.VERSION.SDK_INT >= 33) arrayOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO")
+                        else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (array.any { it.scheme == "file" } && readPerms.any { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }) {
             pendingFileIntent = intent ?: Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(array.toList()))
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), readPermissionRequestCode)
+            requestPermissions(readPerms, readPermissionRequestCode)
             return
         }
         // Preparing can take a while (protected files are copied once), so it runs off the screen thread.
@@ -236,7 +254,7 @@ class MainActivity : Activity() {
         if (requestCode != readPermissionRequestCode) return
         val waiting = pendingFileIntent
         pendingFileIntent = null
-        if (waiting != null && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (waiting != null && grantResults.isNotEmpty() && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
             handleIncoming(waiting)
         } else if (waiting != null) {
             Toast.makeText(this, "Storage permission is needed to open this file", Toast.LENGTH_LONG).show()
@@ -261,6 +279,7 @@ class MainActivity : Activity() {
     // Named differently from Activity.setImmersive(), which means something else.
     fun setFullscreenBars(on: Boolean) {
         barsHidden = on
+        rootView?.requestApplyInsets()
         // 100% of the screen: the picture also goes under the camera cut-out, and the screen stays awake.
         if (Build.VERSION.SDK_INT >= 28) {
             val attrs = window.attributes
