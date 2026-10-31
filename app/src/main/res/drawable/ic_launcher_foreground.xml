@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- White disc with a blue play triangle, centred on the red square (108 dp adaptive-icon canvas). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#B8000F"
+        android:pathData="M54,32.5a21.5,21.5 0,1 1,0 43a21.5,21.5 0,1 1,0 -43z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,33.5a20.5,20.5 0,1 1,0 41a20.5,20.5 0,1 1,0 -41z" />
+    <path
+        android:fillColor="#1F3FA6"
+        android:pathData="M49,44.2 L65.5,54 L49,63.8 Z" />
+</vector>

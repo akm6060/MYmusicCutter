@@ -7,7 +7,9 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Outline
 import android.graphics.Paint
+import android.media.AudioManager
 import android.media.MediaMetadataRetriever
+import android.provider.Settings
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -81,6 +83,8 @@ class NativePlayer(
     private var stageW = 1f
     private var stageH = 1f
     private var currentUri: Uri? = null
+    private var effectsOn = false
+    private var effectsBroken = false
     private var pendingSeek = false
     private var metaSent = false
     private var scrubbing = false
@@ -190,6 +194,17 @@ class NativePlayer(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && effectsOn) {
+                // Picture adjustments failed on this phone: play without them and use the simpler method.
+                effectsOn = false; effectsBroken = true
+                val pos = player.currentPosition
+                val wasPlaying = player.playWhenReady
+                player.setVideoEffects(emptyList())
+                player.prepare(); player.seekTo(pos); player.playWhenReady = wasPlaying
+                cutter.pageMessage("Sharpness is not supported on this phone; colour settings use a simpler method.")
+                main.post { val pf = PictureFx; if (!pf.isNeutral()) { val p = Paint(); p.colorFilter = ColorMatrixColorFilter(colourMatrix(pf.brightness, pf.contrast, pf.saturation, pf.hue, 0f)); textureView.setLayerPaint(p); applyOutput(true) } }
+                return
+            }
             val msg = when (error.errorCode) {
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ->
@@ -218,6 +233,7 @@ class NativePlayer(
                 .build()
         }
         renderers.setEnableDecoderFallback(true)
+        renderers.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         player = ExoPlayer.Builder(activity, renderers).build()
         player.setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
@@ -430,21 +446,28 @@ class NativePlayer(
             panX = o.optDouble("panX", 0.0).toFloat()
             panY = o.optDouble("panY", 0.0).toFloat()
             fill = o.optBoolean("fill", false)
-            val b = o.optDouble("b", 100.0).toFloat()
-            val c = o.optDouble("c", 100.0).toFloat()
-            val s = o.optDouble("s", 100.0).toFloat()
-            val h = o.optDouble("h", 0.0).toFloat()
-            val sep = o.optDouble("sepia", 0.0).toFloat()
-            val plainColour = b == 100f && c == 100f && s == 100f && h == 0f && sep == 0f
-            applyOutput(!plainColour || zoom > 1.001f)
-            layoutSurface()
-            if (plainColour) {
-                textureView.setLayerPaint(null)
-            } else {
-                val p = Paint()
-                p.colorFilter = ColorMatrixColorFilter(colourMatrix(b, c, s, h, sep))
-                textureView.setLayerPaint(p)
+            PictureFx.brightness = o.optDouble("b", 100.0).toFloat()
+            PictureFx.contrast = o.optDouble("c", 100.0).toFloat()
+            PictureFx.saturation = o.optDouble("s", 100.0).toFloat()
+            PictureFx.hue = o.optDouble("h", 0.0).toFloat()
+            PictureFx.sharpness = o.optDouble("sharp", 0.0).toFloat()
+            if (!PictureFx.isNeutral() && !effectsOn && !effectsBroken) {
+                effectsOn = true
+                try {
+                    player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen))
+                } catch (_: Exception) {
+                    effectsOn = false; effectsBroken = true
+                }
             }
+            // Colour settings that this phone cannot do on the graphics chip fall back to the TextureView.
+            val needPaint = effectsBroken && !PictureFx.isNeutral()
+            if (needPaint) {
+                val p = Paint()
+                p.colorFilter = ColorMatrixColorFilter(colourMatrix(PictureFx.brightness, PictureFx.contrast, PictureFx.saturation, PictureFx.hue, 0f))
+                textureView.setLayerPaint(p)
+            } else textureView.setLayerPaint(null)
+            applyOutput(zoom > 1.001f || needPaint)
+            layoutSurface()
             applyTransform()
         }
     }
@@ -515,7 +538,7 @@ class NativePlayer(
         }
     }
 
-    /** Snapshot of the current frame at half size, JPEG quality 50, read from the file itself. */
+    /** Snapshot of the current frame at full size, JPEG quality 95, read from the file itself. */
     @JavascriptInterface
     fun snapshot(name: String): Boolean {
         main.post {
@@ -536,9 +559,8 @@ class NativePlayer(
                         val m = Matrix(); m.postRotate(rot.toFloat())
                         frame = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, m, true)
                     }
-                    val half = Bitmap.createScaledBitmap(frame!!, max(1, frame.width / 2), max(1, frame.height / 2), true)
                     val bos = ByteArrayOutputStream()
-                    half.compress(Bitmap.CompressFormat.JPEG, 50, bos)
+                    frame!!.compress(Bitmap.CompressFormat.JPEG, 95, bos)
                     cutter.saveSnapshotBytes(bos.toByteArray(), name)
                 } catch (e: Exception) {
                     cutter.pageMessage("Snapshot could not be taken.")
@@ -548,6 +570,40 @@ class NativePlayer(
             }
         }
         return true
+    }
+
+    /** Screen brightness for this app's window, 0..1 (starts from the phone's own setting). */
+    @JavascriptInterface
+    fun getBrightness(): Double {
+        val own = activity.window.attributes.screenBrightness
+        if (own >= 0f) return own.toDouble()
+        return try {
+            (Settings.System.getInt(activity.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255.0).coerceIn(0.0, 1.0)
+        } catch (_: Exception) { 0.5 }
+    }
+
+    @JavascriptInterface
+    fun setBrightness(v: Double) {
+        main.post {
+            val a = activity.window.attributes
+            a.screenBrightness = v.toFloat().coerceIn(0.01f, 1f)
+            activity.window.attributes = a
+        }
+    }
+
+    /** Media volume, the same one the phone's side keys change. */
+    @JavascriptInterface
+    fun getVolume(): String {
+        val am = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return JSONObject().put("v", am.getStreamVolume(AudioManager.STREAM_MUSIC))
+            .put("max", am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)).toString()
+    }
+
+    @JavascriptInterface
+    fun setVolume(index: Int) {
+        val am = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        try { am.setStreamVolume(AudioManager.STREAM_MUSIC, index.coerceIn(0, max), 0) } catch (_: Exception) {}
     }
 
     @JavascriptInterface

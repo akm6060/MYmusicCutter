@@ -1144,10 +1144,23 @@ html.native-video .audio-eq-toggles{grid-template-columns:1fr 1fr!important}
 html.native-video .video-stage{z-index:0;box-shadow:0 0 0 300vmax #050610}
 html.native-video .video-layer:not(.native-fullscreen) .video-head,html.native-video .video-layer:not(.native-fullscreen) .video-controls{position:relative;z-index:1}
 html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
+
+/* full screen: the equalizer and reset buttons hide together with the other controls */
+.video-layer.controls-hidden .video-stage-actions,.video-layer.fs-controls-hidden .video-stage-actions{opacity:0!important;pointer-events:none!important;transition:opacity .2s}
+.video-stage-actions{transition:opacity .2s}
+/* brightness / volume indicator */
+.gesture-hud{position:fixed;top:50%;z-index:2600;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 10px;border-radius:14px;background:#000a;color:#fff;pointer-events:none}
+.gesture-hud[hidden]{display:none}
+.gesture-hud.left{left:14%}.gesture-hud.right{right:14%}
+.gesture-hud .gh-ic{font-size:22px;line-height:1}
+.gesture-hud .gh-bar{position:relative;width:8px;height:120px;border-radius:4px;background:#ffffff33;overflow:hidden}
+.gesture-hud .gh-bar i{position:absolute;left:0;right:0;bottom:0;height:0;background:#ffc24d;border-radius:4px}
+.gesture-hud .gh-val{font:700 13px/1 sans-serif;font-variant-numeric:tabular-nums}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
 <input type="file" id="videoPick" accept="video/*,audio/*,.mp4,.m4v,.webm,.mkv,.3gp,.mov,.avi,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="mmSharpen"><feConvolveMatrix id="mmSharpenKernel" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true"/></filter></svg>
 <section class="video-layer open" id="videoLayer" aria-label="Video player" aria-hidden="false">
   <header class="video-head">
     <button type="button" class="video-icon" id="videoClose" aria-label="Close video player">←</button>
@@ -1189,7 +1202,7 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
         <button type="button" class="res" id="resultMain" hidden>▶ Play cut</button>
         <button type="button" class="x" id="resultClose" aria-label="Hide" hidden>✕</button>
       </div>
-      <div class="cutter-actions"><button type="button" id="cutterSetStart">Start point</button><button type="button" id="cutterSetEnd">End point</button><button type="button" id="cutterKeep">Save selected part</button><button type="button" id="cutterRemove">Erase middle</button><button type="button" id="cutterSnapshot">Snapshot JPEG 50%</button></div>
+      <div class="cutter-actions"><button type="button" id="cutterSetStart">Start point</button><button type="button" id="cutterSetEnd">End point</button><button type="button" id="cutterKeep">Save selected part</button><button type="button" id="cutterRemove">Erase middle</button><button type="button" id="cutterSnapshot">Snapshot JPEG 95%</button></div>
       <div class="cutter-note" id="cutterNote"></div>
     </section>
     <div class="video-seek"><span id="videoCurrent">00:00</span><input id="videoSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="Video position"><span id="videoDuration">00:00</span></div>
@@ -1207,7 +1220,7 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
       <div class="video-setting"><label for="videoContrast">Contrast <output id="videoContrastOut">100%</output></label><input id="videoContrast" type="range" min="50" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoSaturation">Saturation <output id="videoSaturationOut">100%</output></label><input id="videoSaturation" type="range" min="0" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoHue">Hue <output id="videoHueOut">0°</output></label><input id="videoHue" type="range" min="-180" max="180" step="5" value="0"></div>
-      <div class="video-setting"><label for="videoColour">Colour tone <output id="videoColourOut">0%</output></label><input id="videoColour" type="range" min="0" max="100" step="5" value="0"></div>
+      <div class="video-setting"><label for="videoSharp">Sharpness <output id="videoSharpOut">0%</output></label><input id="videoSharp" type="range" min="0" max="100" step="5" value="0"></div>
     </div>
   </div>
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
@@ -1389,11 +1402,11 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
   function saveVideoSnapshot(){
     if(audioMode){el('cutterNote').textContent='Snapshots are available for video files only; audio trimming remains available.';return;}
     if(NATIVE){if(!video.src||!video.videoWidth){el('cutterNote').textContent='Play the video first, then tap Snapshot.';return}var nm0=(files[index]&&files[index].name||'video');el('cutterNote').textContent=NP.snapshot(nm0)?'Saving…':'Snapshot could not be saved.';return;}
-    if(!video.src||video.readyState<2||!video.videoWidth||!video.videoHeight){el('cutterNote').textContent='Pause or play the video at the frame you want, then tap Snapshot JPEG 50%.';return;}
+    if(!video.src||video.readyState<2||!video.videoWidth||!video.videoHeight){el('cutterNote').textContent='Pause or play the video at the frame you want, then tap Snapshot.';return;}
     try{
-      var c=document.createElement('canvas');c.width=Math.max(1,Math.round(video.videoWidth*0.5));c.height=Math.max(1,Math.round(video.videoHeight*0.5));
+      var c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;
       var cx=c.getContext('2d');cx.drawImage(video,0,0,c.width,c.height);
-      var data=c.toDataURL('image/jpeg',0.5);var nb=window.MYmusicNativeCutter;if(nb&&typeof nb.saveSnapshot==='function'){var nm=(files[index]&&files[index].name||'video');el('cutterNote').textContent=nb.saveSnapshot(data.slice(data.indexOf(',')+1),nm)===true?'Saving…':'Snapshot could not be saved.';return;}var a=document.createElement('a'),base=(files[index]&&files[index].name||'video').replace(/\.[^.]+$/,'');a.href=data;a.download=base+'-snapshot.jpg';document.body.appendChild(a);a.click();a.remove();el('cutterNote').textContent='JPEG snapshot created at 50% dimensions and 50% quality.';
+      var data=c.toDataURL('image/jpeg',0.95);var nb=window.MYmusicNativeCutter;if(nb&&typeof nb.saveSnapshot==='function'){var nm=(files[index]&&files[index].name||'video');el('cutterNote').textContent=nb.saveSnapshot(data.slice(data.indexOf(',')+1),nm)===true?'Saving…':'Snapshot could not be saved.';return;}var a=document.createElement('a'),base=(files[index]&&files[index].name||'video').replace(/\.[^.]+$/,'');a.href=data;a.download=base+'-snapshot.jpg';document.body.appendChild(a);a.click();a.remove();el('cutterNote').textContent='JPEG snapshot created (full size, 95% quality).';
     }catch(e){el('cutterNote').textContent='Snapshot could not be created from this video frame.';}
   }
   async function transferFileToNativeCutter(file,payload,bridge){
@@ -1499,7 +1512,8 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
     var mx=(dw+W)/2-Math.min(dw,W)*0.2,my=(dh+H)/2-Math.min(dh,H)*0.2;
     panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));
   }
-  function applyPicture(){if(NATIVE){var zz=+el('videoZoom').value;clampPan(zz);try{NP.setPicture(JSON.stringify({z:zz,panX:panX,panY:panY,fill:typeof fillMode!=='undefined'&&fillMode==='fill',b:+el('videoBrightness').value,c:+el('videoContrast').value,s:+el('videoSaturation').value,h:+el('videoHue').value,sepia:+el('videoColour').value}))}catch(e){}}var z=+el('videoZoom').value,b=+el('videoBrightness').value,c=+el('videoContrast').value,sat=+el('videoSaturation').value,h=+el('videoHue').value,col=+el('videoColour').value;clampPan(z);video.style.transform='translate('+panX.toFixed(1)+'px,'+panY.toFixed(1)+'px) scale('+z+')';video.style.filter='brightness('+b+'%) contrast('+c+'%) saturate('+sat+'%) hue-rotate('+h+'deg) sepia('+col+'%)';el('videoZoomOut').textContent=Math.round(z*100)+'%';el('videoBrightnessOut').textContent=b+'%';el('videoContrastOut').textContent=c+'%';el('videoSaturationOut').textContent=sat+'%';el('videoHueOut').textContent=h+'°';el('videoColourOut').textContent=col+'%';}
+  function setPreviewSharpen(v){var k=el('mmSharpenKernel');if(!k)return;var a=v/100*1.2;k.setAttribute('kernelMatrix','0 '+(-a)+' 0 '+(-a)+' '+(1+4*a)+' '+(-a)+' 0 '+(-a)+' 0')}
+  function applyPicture(){if(NATIVE){var zz=+el('videoZoom').value;clampPan(zz);try{NP.setPicture(JSON.stringify({z:zz,panX:panX,panY:panY,fill:typeof fillMode!=='undefined'&&fillMode==='fill',b:+el('videoBrightness').value,c:+el('videoContrast').value,s:+el('videoSaturation').value,h:+el('videoHue').value,sharp:+el('videoSharp').value}))}catch(e){}}var z=+el('videoZoom').value,b=+el('videoBrightness').value,c=+el('videoContrast').value,sat=+el('videoSaturation').value,h=+el('videoHue').value,col=+el('videoSharp').value;clampPan(z);video.style.transform='translate('+panX.toFixed(1)+'px,'+panY.toFixed(1)+'px) scale('+z+')';video.style.filter='brightness('+b+'%) contrast('+c+'%) saturate('+sat+'%) hue-rotate('+h+'deg)'+(col>0?' url(#mmSharpen)':'');setPreviewSharpen(col);el('videoZoomOut').textContent=Math.round(z*100)+'%';el('videoBrightnessOut').textContent=b+'%';el('videoContrastOut').textContent=c+'%';el('videoSaturationOut').textContent=sat+'%';el('videoHueOut').textContent=h+'°';el('videoSharpOut').textContent=col+'%';}
   // Playback stays at full level straight from the media element (no Web Audio
   // routing), which avoids the WebView audio-processing path linked to crackling.
   function applyVolume(){try{activeMedia.volume=1;activeMedia.muted=false;}catch(e){}}
@@ -1684,8 +1698,8 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
   el('cutterSnapshot').addEventListener('click',saveVideoSnapshot);
   el('videoSeek').addEventListener('input',function(){if(isFinite(activeMedia.duration)&&activeMedia.duration>0)activeMedia.currentTime=(+this.value/1000)*activeMedia.duration;showControls()});
   el('videoSpeed').addEventListener('input',function(){activeMedia.playbackRate=+this.value;el('videoSpeedOut').textContent=(+this.value).toFixed(2)+'×';showControls()});
-  el('videoZoom').addEventListener('input',function(){applyPicture();showControls()});['videoBrightness','videoContrast','videoSaturation','videoHue','videoColour'].forEach(function(id){el(id).addEventListener('input',function(){applyPicture();showControls()})});
-  el('videoFit').addEventListener('click',function(){el('videoZoom').value=1;panX=0;panY=0;el('videoBrightness').value=100;el('videoContrast').value=100;el('videoSaturation').value=100;el('videoHue').value=0;el('videoColour').value=0;applyPicture();showControls()});
+  el('videoZoom').addEventListener('input',function(){applyPicture();showControls()});['videoBrightness','videoContrast','videoSaturation','videoHue','videoSharp'].forEach(function(id){el(id).addEventListener('input',function(){applyPicture();showControls()})});
+  el('videoFit').addEventListener('click',function(){el('videoZoom').value=1;panX=0;panY=0;el('videoBrightness').value=100;el('videoContrast').value=100;el('videoSaturation').value=100;el('videoHue').value=0;el('videoSharp').value=0;applyPicture();showControls()});
 
   // Portrait: size the video area to the video's own shape so there is no dead
   // black band; the controls and sliders take the remaining height.
@@ -1714,6 +1728,8 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
     if(!isFullscreen()&&layer.classList.contains('open')){
       ['cutterStrip','cutterHandleRail'].forEach(function(id){var e=el(id);if(!e)return;var b=e.getBoundingClientRect();if(b.width>0&&b.height>0)rects.push([Math.floor(b.left)-12,Math.floor(b.top)-8,Math.ceil(b.right)+12,Math.ceil(b.bottom)+8]);});
     }
+    if(isFullscreen()&&layer.classList.contains('open')){var W=window.innerWidth,H=window.innerHeight,mid=H/2;
+      rects.push([0,Math.round(mid-100),Math.round(W*0.1),Math.round(mid+100)]);rects.push([Math.round(W*0.9),Math.round(mid-100),W,Math.round(mid+100)]);}
     try{nb.setGestureExclusion(JSON.stringify(rects))}catch(e){}
   }
 
@@ -2206,6 +2222,8 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
       var sr=stage.getBoundingClientRect();pinchMid0={x:(e.touches[0].clientX+e.touches[1].clientX)/2-(sr.left+sr.width/2),y:(e.touches[0].clientY+e.touches[1].clientY)/2-(sr.top+sr.height/2)};pan0={x:panX,y:panY};
       if(e.cancelable)e.preventDefault();return;}
     var t=e.touches&&e.touches[0];if(!t)return;
+    var zone=edgeZone(t,e.target);
+    if(zone){clearPress();pressFired=false;touchStart={x:t.clientX,y:t.clientY,time:Date.now(),mode:true,target:e.target,zone:zone,start:zoneValue(zone)};if(e.cancelable)e.preventDefault();return;}
     pressFired=false;touchStart={x:t.clientX,y:t.clientY,time:Date.now(),mode:gestureMode(),target:e.target};
     clearPress();pressTimer=setTimeout(function(){if(touchStart&&touchStart.mode&&gestureMode()){pressFired=true;toggleQuality();}},400);
     if(!gestureMode())showControls();
@@ -2216,6 +2234,9 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
       if(isFullscreen()&&pinchMid0){var sr=stage.getBoundingClientRect(),mx=(e.touches[0].clientX+e.touches[1].clientX)/2-(sr.left+sr.width/2),my=(e.touches[0].clientY+e.touches[1].clientY)/2-(sr.top+sr.height/2);
         panX=mx-z*(pinchMid0.x-pan0.x)/pinchZoom;panY=my-z*(pinchMid0.y-pan0.y)/pinchZoom;}
       applyPicture();if(!gestureMode())showControls();return;}
+    if(touchStart&&touchStart.zone){var tz=e.touches&&e.touches[0];if(!tz)return;e.preventDefault();
+      // a swipe over 70% of the screen height covers the whole range
+      setZoneValue(touchStart.zone,touchStart.start+(touchStart.y-tz.clientY)/(window.innerHeight*0.7));return;}
     if(!touchStart||!gestureMode())return;
     if(touchStart.target&&touchStart.target.closest&&touchStart.target.closest('.video-controls,.video-head,.video-reset-overlay')){clearPress();return;}
     var t=e.touches&&e.touches[0];if(!t)return;var dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y;
@@ -2225,6 +2246,7 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
   layer.addEventListener('touchend',function(e){
     clearPress();pinchStart=0;
     if(!touchStart)return;var t=touchStart;touchStart=null;if(pressFired)return;
+    if(t.zone){hideHud();return;}
     if(!t.target||!t.target.closest||!t.target.closest('#videoStage'))return;
     if(t.target.closest('.video-controls,.video-head,.video-reset-overlay,.video-stage-actions,.audio-eq-page'))return;
     var changed=e.changedTouches&&e.changedTouches[0];if(!changed)return;var dx=changed.clientX-t.x,dy=changed.clientY-t.y,elapsed=Date.now()-t.time;
@@ -2232,6 +2254,27 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
     else if(Math.abs(dx)<18&&Math.abs(dy)<18&&elapsed<400){if(e.cancelable)e.preventDefault();handleStageTap(changed.clientX);}
   },{passive:false});
   stage.addEventListener('pointerdown',function(e){if(e.pointerType==='mouse'&&isFullscreen())showControls()});
+  // Full screen: slide up/down on the left tenth of the screen for brightness, on the right tenth for volume.
+  var hud=document.createElement('div');hud.className='gesture-hud';hud.hidden=true;hud.innerHTML='<span class="gh-ic"></span><span class="gh-bar"><i></i></span><b class="gh-val"></b>';layer.appendChild(hud);
+  var hudTimer=0,previewBright=1;
+  function edgeZone(t,target){
+    if(!isFullscreen()||!layer.classList.contains('open')||layer.classList.contains('eq-page-open'))return null;
+    if(target&&target.closest&&target.closest('.video-head,.video-stage-actions,.audio-eq-page,.video-seek,.video-settings'))return null;
+    var w=window.innerWidth;if(t.clientX<w*0.1)return 'bright';if(t.clientX>w*0.9)return 'vol';return null;
+  }
+  function zoneValue(z){
+    try{if(z==='bright'){if(NATIVE&&NP.getBrightness)return +NP.getBrightness();return previewBright}
+      if(NATIVE&&NP.getVolume){var v=JSON.parse(NP.getVolume());return v.max?v.v/v.max:0}return activeMedia?activeMedia.volume:1}catch(e){return 0.5}
+  }
+  function setZoneValue(z,v){
+    v=Math.max(0,Math.min(1,v));
+    try{if(z==='bright'){if(NATIVE&&NP.setBrightness)NP.setBrightness(Math.max(0.01,v));else{previewBright=v;stage.style.filter='brightness('+(0.3+v*0.7)+')'}}
+      else{if(NATIVE&&NP.setVolume){var mv=JSON.parse(NP.getVolume());NP.setVolume(Math.round(v*mv.max));v=mv.max?Math.round(v*mv.max)/mv.max:v}else if(activeMedia)activeMedia.volume=v}}catch(e){}
+    hud.hidden=false;hud.className='gesture-hud '+(z==='bright'?'left':'right');hud.querySelector('.gh-ic').textContent=z==='bright'?'☀':(v<0.01?'🔇':'🔊');
+    hud.querySelector('.gh-bar i').style.height=Math.round(v*100)+'%';hud.querySelector('.gh-val').textContent=Math.round(v*100)+'%';
+    clearTimeout(hudTimer);
+  }
+  function hideHud(){clearTimeout(hudTimer);hudTimer=setTimeout(function(){hud.hidden=true},700)}
   layer.addEventListener('pointerdown',function(e){if(!layer.classList.contains('open'))return;if(gestureMode()&&e.pointerType==='mouse'){pressFired=false;clearPress();pressTimer=setTimeout(function(){pressFired=true;toggleQuality()},400);}else if(!gestureMode())showControls()});
   layer.addEventListener('pointerup',function(e){clearPress();if(gestureMode()&&e.pointerType==='mouse'&&!pressFired){var r=stage.getBoundingClientRect();if(e.clientY>=r.top&&e.clientY<=r.bottom)handleStageTap(e.clientX);}});
   layer.addEventListener('pointermove',function(){if(isFullscreen()&&!layer.classList.contains('fs-controls-hidden')&&!gestureMode())showControls()});
