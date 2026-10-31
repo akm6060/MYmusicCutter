@@ -588,6 +588,19 @@ class MYmusicNativeCutter(
         } catch (_: Exception) {
             return false
         }
+        saveSnapshotBytes(bytes, fileName)
+        return true
+    }
+
+    /** Where the native player should read a shared or saved file from (private copy if one was made). */
+    fun playableUri(id: String): Uri? {
+        val item = shared[id] ?: return null
+        return item.file?.let { Uri.fromFile(it) } ?: item.uri
+    }
+
+    fun pageMessage(message: String) = notifyPage(message)
+
+    fun saveSnapshotBytes(bytes: ByteArray, fileName: String) {
         worker.execute {
             var target: OutputTarget? = null
             try {
@@ -602,7 +615,6 @@ class MYmusicNativeCutter(
                 notifyPage("Snapshot failed: " + (e.message ?: e.javaClass.simpleName))
             }
         }
-        return true
     }
 
     /** Opens a saved picture in the gallery (or another viewer). */

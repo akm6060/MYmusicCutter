@@ -37,7 +37,18 @@ jobs:
           gradle-version: "8.9"
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace 2>&1 | tee build.log
+
+      - name: Keep the build log when the build fails
+        if: failure()
+        run: |
+          mkdir -p /tmp/logout && cp build.log /tmp/logout/build.log || echo "no log" > /tmp/logout/build.log
+          cd /tmp/logout && git init -q && git checkout -q -b buildlog
+          git add build.log
+          git -c user.name=apk-bot -c user.email=apk-bot@users.noreply.github.com commit -q -m "build log ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" buildlog
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

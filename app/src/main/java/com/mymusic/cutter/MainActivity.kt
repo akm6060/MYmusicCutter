@@ -24,9 +24,14 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
+import android.view.TextureView
+import androidx.media3.common.util.UnstableApi
 import org.json.JSONObject
 
+@UnstableApi
 class MainActivity : Activity() {
+    private lateinit var nativePlayer: NativePlayer
+    private val pickRequestCode = 4110
     private lateinit var webView: WebView
     private lateinit var cutter: MYmusicNativeCutter
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
@@ -47,7 +52,8 @@ class MainActivity : Activity() {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         )
-        webView.setBackgroundColor(Color.BLACK)
+        // Transparent: the native video picture sits underneath the page's video area.
+        webView.setBackgroundColor(Color.TRANSPARENT)
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.settings.allowFileAccess = true
@@ -60,6 +66,14 @@ class MainActivity : Activity() {
 
         cutter = MYmusicNativeCutter(this, webView)
         webView.addJavascriptInterface(cutter, "MYmusicNativeCutter")
+        val videoSurface = TextureView(this)
+        videoSurface.layoutParams = FrameLayout.LayoutParams(1, 1)
+        nativePlayer = NativePlayer(this, webView, cutter, videoSurface)
+        webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
+        val root = FrameLayout(this)
+        root.setBackgroundColor(Color.rgb(5, 6, 16))
+        root.addView(videoSurface)
+        root.addView(webView)
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -131,7 +145,7 @@ class MainActivity : Activity() {
                        !url.startsWith("blob:")
             }
         }
-        setContentView(webView)
+        setContentView(root)
         cutter.clearSharedCache()
         webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
         handleIncoming(intent)
@@ -178,11 +192,30 @@ class MainActivity : Activity() {
         }
         if (uris.isEmpty()) return
         val array = uris.distinct().toTypedArray()
+        deliverUris(array, intent)
+    }
+
+    /** The app's own "Add" button: Android's file picker, files go straight to the native player. */
+    fun pickMedia() {
+        try {
+            val i = Intent(Intent.ACTION_GET_CONTENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("*/*")
+                .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "video/*", "application/ogg", "application/octet-stream"))
+                .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent.createChooser(i, "Choose audio or video"), pickRequestCode)
+        } catch (_: Exception) {
+            Toast.makeText(this, "No file picker found", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun deliverUris(array: Array<Uri>, intent: Intent?) {
         // Old file managers send file:// paths; reading those needs the storage permission (Android 12 and older).
         if (Build.VERSION.SDK_INT in 23..32 && array.any { it.scheme == "file" } &&
             checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         ) {
-            pendingFileIntent = intent
+            pendingFileIntent = intent ?: Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(array.toList()))
             requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), readPermissionRequestCode)
             return
         }
@@ -280,6 +313,15 @@ class MainActivity : Activity() {
     @Deprecated("Deprecated in Android, retained for compatibility with WebView file chooser")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == pickRequestCode) {
+            if (resultCode == RESULT_OK && data != null) {
+                val clip = data.clipData
+                val picked = if (clip != null && clip.itemCount > 0) (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+                             else listOfNotNull(data.data)
+                if (picked.isNotEmpty()) deliverUris(picked.distinct().toTypedArray(), null)
+            }
+            return
+        }
         if (requestCode != fileChooserRequestCode) return
         val callback = fileChooserCallback ?: return
         fileChooserCallback = null
@@ -339,12 +381,14 @@ class MainActivity : Activity() {
     // Nothing keeps playing once the app leaves the screen (Home, app switch, screen off).
     override fun onPause() {
         pausePlayback()
+        if (::nativePlayer.isInitialized) nativePlayer.pauseFromActivity()
         super.onPause()
     }
 
     override fun onDestroy() {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = null
+        if (::nativePlayer.isInitialized) nativePlayer.release()
         if (::cutter.isInitialized) {
             cutter.shutdown()
             if (isFinishing) cutter.clearSharedCache()
