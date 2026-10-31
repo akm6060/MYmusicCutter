@@ -1038,7 +1038,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
 .video-layer:not(:fullscreen):not(.native-fullscreen) .video-settings input[type=range]{height:26px!important;min-height:26px!important}
 
 .video-stage.full-bleed{height:auto!important;max-height:none!important;max-width:none!important;flex:none!important}
-.audio-eq-toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.audio-eq-toggles{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px}
 .audio-eq-toggles .audio-eq-auto{padding:12px 6px;font-size:13px}
 .audio-eq-toggles #audioEqLimiter:not(.enabled){background:#202238;border-color:#454661}
 
@@ -1110,6 +1110,27 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
 .video-layer.native-fullscreen .video-head{position:fixed!important;top:0;left:0;right:0;z-index:2300;padding:6px max(10px,env(safe-area-inset-right)) 6px max(10px,env(safe-area-inset-left))!important;background:linear-gradient(#000b,transparent)}
 .video-layer.native-fullscreen .video-controls{padding-left:max(8px,env(safe-area-inset-left))!important;padding-right:max(8px,env(safe-area-inset-right))!important}
 .video-layer.native-fullscreen .video-stage-actions,.video-layer:fullscreen .video-stage-actions{top:58px!important}
+
+/* sliders: only the knob reacts; the rest of the slider lets the page scroll */
+input[type=range].thumb-only,.video-layer.open .video-controls input[type=range].thumb-only,.video-layer .video-settings input[type=range].thumb-only{pointer-events:none!important}
+.thumb-host{touch-action:pan-y}
+.af{touch-action:pan-y!important}
+input[type=range].grab::-webkit-slider-thumb{transform:scale(1.15)}
+/* portrait cutter: everything fits inside the screen width */
+.video-layer{overflow-x:hidden!important;padding-left:8px!important;padding-right:8px!important}
+.video-layer.native-fullscreen{padding:0!important}
+.video-controls,.video-cutter,.video-settings{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+.video-cutter{grid-template-columns:minmax(0,1fr)!important;padding:4px 14px 4px!important}
+.video-cutter>*{min-width:0!important;max-width:100%!important}
+.mini-bar{flex-wrap:nowrap!important;min-width:0!important;gap:4px!important;margin:16px 0 4px!important;overflow:hidden}
+.mini-bar button{height:30px!important;padding:0 7px!important;font-size:12px!important;flex:0 1 auto;min-width:0}
+.mini-bar .res,.mini-bar .orig{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
+.video-layer:not(:fullscreen):not(.native-fullscreen) .cutter-actions{gap:4px!important}
+.video-layer:not(:fullscreen):not(.native-fullscreen) .cutter-actions button{min-height:48px!important;font-size:11.5px!important;padding:3px 3px!important}
+.video-layer:not(:fullscreen):not(.native-fullscreen) .video-settings{gap:5px!important}
+.video-layer:not(:fullscreen):not(.native-fullscreen) .video-setting{padding:4px 10px!important}
+.audio-eq-toggles #audioEqLite:not(.enabled){background:#241e19;border-color:#4a3d30}
+.audio-eq-toggles .audio-eq-auto{font-size:12px!important;padding:11px 4px!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1179,9 +1200,9 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
     <header class="audio-eq-head"><button type="button" id="audioEqBack" aria-label="Back to cutter">‹</button><div><strong>Audio Equalizer</strong><small>Sound stays untouched until you change something</small></div><button type="button" id="audioEqReset">Reset</button></header>
     <div class="audio-eq-scroll">
-      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button></div>
+      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button></div>
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
-      <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>±15 dB · double-tap a fader for 0</small></div>
+      <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>±15 dB · drag a fader cap · double-tap it for 0</small></div>
       <div class="audio-eq-bands" id="audioEqBands">
         <label><span>60 Hz</span><input type="range" data-eq-band="0" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
         <label><span>150 Hz</span><input type="range" data-eq-band="1" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
@@ -1298,6 +1319,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     try{
       var meta=waitEvent('loadedmetadata','error',6000),firstFrame=waitEvent('loadeddata','error',8000);setSource(temp,src);temp.load();await meta;await firstFrame;
       for(var i=0;i<count;i++){
+        while(job===frameJob&&(cutterDragging||playhead.classList.contains('dragging')))await new Promise(function(r){setTimeout(r,200)});
         if(job!==frameJob||!layer.classList.contains('open'))break;var t=d<0.1?0:Math.min(Math.max(0,d-0.08),d*(i/(count-1)));
         if(i>0){try{var seek=waitEvent('seeked','error',2500);temp.currentTime=t;await seek;}catch(seekErr){}}
         if(job!==frameJob)break;var c=document.createElement('canvas');c.width=112;c.height=64;var cx=c.getContext('2d');
@@ -1461,9 +1483,13 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   });});
   el('videoPrev').addEventListener('click',function(){if(files.length>1)load(index-1,true);showControls()});el('videoNext').addEventListener('click',function(){if(files.length>1)load(index+1,true);showControls()});
   el('videoBack10').addEventListener('click',function(){if(isFinite(activeMedia.duration))activeMedia.currentTime=Math.max(0,activeMedia.currentTime-10);showControls()});el('videoForward10').addEventListener('click',function(){if(isFinite(activeMedia.duration))activeMedia.currentTime=Math.min(activeMedia.duration,activeMedia.currentTime+10);showControls()});
+  // While a caliper is dragged the video is paused and only one seek runs at a time;
+  // the next seek waits for the previous one to finish. Stacked seeks froze slow
+  // (protected / .sec) files.
+  var scrubInFlight=false,scrubTimer=0;
   function beginCutterScrub(){
-    scrubStarted=true;scrubLastSet=0;
-    try{var p=activeMedia.play();if(p&&p.catch)p.catch(function(){});}catch(e){}
+    scrubStarted=true;scrubLastSet=0;scrubInFlight=false;
+    try{activeMedia.pause()}catch(e){}
     scheduleCutterScrub();
   }
   // Android WebView can crash if currentTime is reassigned continuously while
@@ -1474,17 +1500,20 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     scrubRaf=requestAnimationFrame(function(now){
       scrubRaf=0;
       if(scrubTarget==null||!cutterDragging)return;
-      var interval=audioMode?110:140;
-      if(scrubLastSet&&now-scrubLastSet<interval)return;
+      if(scrubInFlight&&now-scrubLastSet<1500)return;
+      var interval=audioMode?110:160;
+      if(scrubLastSet&&now-scrubLastSet<interval){clearTimeout(scrubTimer);scrubTimer=setTimeout(scheduleCutterScrub,interval-(now-scrubLastSet)+5);return;}
       var d=duration(),target=scrubTarget;
       if(!d)return;
-      try{activeMedia.currentTime=Math.max(0,Math.min(d,target));}catch(e){}
+      if(Math.abs((activeMedia.currentTime||0)-target)<0.05)return;
+      scrubInFlight=true;
+      try{activeMedia.currentTime=Math.max(0,Math.min(d,target));}catch(e){scrubInFlight=false;}
       scrubLastSet=now;
     });
   }
   function finishCutterScrub(){
     var wasDragging=!!cutterDragging;cutterDragging='';if(!wasDragging)return;
-    if(scrubRaf){cancelAnimationFrame(scrubRaf);scrubRaf=0;}
+    if(scrubRaf){cancelAnimationFrame(scrubRaf);scrubRaf=0;}clearTimeout(scrubTimer);scrubInFlight=false;
     var target=scrubTarget;scrubTarget=null;scrubStarted=false;
     if(target!=null){var d=duration();if(d){try{activeMedia.currentTime=Math.max(0,Math.min(d,target));}catch(e){}}}
     // Releasing a scrub or selection handle must not pause playback. Resume from
@@ -1543,9 +1572,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     media.addEventListener('seeked',function(){
       if(media!==activeMedia)return;
       playheadSeekInFlight=false;
-      if(playheadWasPlaying && playhead.classList.contains('dragging')){
-        try{var p=activeMedia.play();if(p&&p.catch)p.catch(function(){});}catch(err){}
-      }
+      if(scrubInFlight){scrubInFlight=false;if(cutterDragging&&scrubTarget!=null)scheduleCutterScrub();}
       if(playheadSeekTarget!=null && playhead.classList.contains('dragging')){
         if(Math.abs((activeMedia.currentTime||0)-playheadSeekTarget)>0.04){
           issuePlayheadSeek(false);
@@ -1571,6 +1598,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     e.preventDefault();e.stopPropagation();
     playhead.classList.add('dragging');playheadPointerId=e.pointerId;
     playheadWasPlaying=!activeMedia.paused;
+    try{activeMedia.pause()}catch(err){}
     try{playhead.setPointerCapture(e.pointerId)}catch(err){}
     seekFromPlayheadPointer(e);
   });
@@ -1639,7 +1667,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level'];
   function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,mode:'off'}}
   function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;return o}
-  var eqState=eqNeutral(),eqLimiter=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
+  var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
   function stateNeutral(s){return s.bands.every(function(v){return v===0})&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level}
   function eqIsNeutral(){return stateNeutral(eqState)}
   function eqStatus(t){var e=el('audioEqStatus');if(e)e.textContent=t}
@@ -1648,8 +1676,8 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   function stereoIn(c){var g=c.createGain();g.channelCount=2;g.channelCountMode='explicit';g.channelInterpretation='speakers';return g}
   // Settings are remembered between sessions.
   var EQ_STORE='mmCutterSound_v2',eqSaveTimer=0;
-  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lim:eqLimiter,auto:eqAutoEnabled,before:eqBeforeAuto}))}catch(e){}},250)}
-  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqAutoEnabled=!!o.auto;eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
+  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lite:eqLite,lim:eqLimiter,auto:eqAutoEnabled,before:eqBeforeAuto}))}catch(e){}},250)}
+  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqLite=!!o.lite;eqAutoEnabled=!!o.auto;eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
 
   var EQ_WORKLET=[
   "class MMDeclick extends AudioWorkletProcessor{",
@@ -1715,6 +1743,8 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     var room=c.createConvolver();room.normalize=true;room.buffer=eqRoomImpulse(c,0.7);
     var send=c.createGain();send.gain.value=0.25;v.input.connect(send);send.connect(room);room.connect(v.wet);
     v.wet.connect(v.output);
+    v.p=[fl,fr,rl,rr];var roomOn=true;
+    v.setLite=function(on){v.p.forEach(function(p){try{p.panningModel=on?'equalpower':'HRTF'}catch(e){}});if(on&&roomOn){try{send.disconnect()}catch(e){}roomOn=false}else if(!on&&!roomOn){send.connect(room);roomOn=true}};
     v.set=function(w){var t=c.currentTime;v.dry.gain.setTargetAtTime(1-w,t,0.03);v.wet.gain.setTargetAtTime(w*0.7,t,0.03)};
     v.set(0);
     return v;
@@ -1724,8 +1754,9 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   function eqTubeCurve(k){var n=2048,curve=new Float32Array(n),b=0.18,off=Math.tanh(b),norm=Math.tanh(k+b)-off;for(var i=0;i<n;i++){var x=i/(n-1)*2-1;curve[i]=(Math.tanh(k*x+b)-off)/norm}return curve}
   function eqBuildTube(c){
     var t={input:c.createGain(),output:c.createGain(),k:0,d:-1};
-    var sh=c.createWaveShaper();try{sh.oversample='4x'}catch(e){}
+    var sh=c.createWaveShaper();try{sh.oversample='2x'}catch(e){}
     var dc=bqC(c,'highpass',12,0.707),lo=bqC(c,'lowshelf',180),hi=bqC(c,'highshelf',6500);
+    t.setLite=function(on){try{sh.oversample=on?'none':'2x'}catch(e){}};
     t.input.connect(sh);sh.connect(dc);dc.connect(lo);lo.connect(hi);hi.connect(t.output);
     t.set=function(drive,warmth){
       var k=Math.round((1+drive/100*4)*20)/20;
@@ -1793,8 +1824,8 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   }
   // Rewire only when a stage is switched on or off; slider moves just change values.
   function eqRewireNode(n,s,lim,analysing){
-    var neutral=stateNeutral(s),use={click:!neutral&&s.click>0&&n.worklet,tube:!neutral&&s.tube>0,bassx:!neutral&&s.bassx>0,ms:!neutral&&(s.dialog>0||s.width!==100),virt:!neutral&&s.virtual>0,lev:!neutral&&s.level>0,lim:!neutral&&lim};
-    var key=[neutral,use.click,use.tube,use.bassx,use.ms,use.virt,use.lev,use.lim,n.worklet,!!analysing].join();
+    var neutral=stateNeutral(s),use={click:!neutral&&s.click>0&&n.worklet&&!eqLite,tube:!neutral&&s.tube>0,bassx:!neutral&&s.bassx>0,ms:!neutral&&(s.dialog>0||s.width!==100),virt:!neutral&&s.virtual>0,lev:!neutral&&s.level>0,lim:!neutral&&lim};
+    var key=[eqLite,neutral,use.click,use.tube,use.bassx,use.ms,use.virt,use.lev,use.lim,n.worklet,!!analysing].join();
     if(key===n.topo)return;n.topo=key;
     [n.input,n.last,n.declick,n.tube.output,n.bassx.output,n.ms.output,n.virt.output,n.levOut,n.limiter,n.fallbackLimiter].forEach(function(x){if(x)try{x.disconnect()}catch(e){}});
     if(analysing)n.input.connect(n.analyser);
@@ -1809,13 +1840,14 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
       if(use.lev){tail.connect(n.lev);tail=n.levOut}
       if(use.lim){var l=n.worklet?n.limiter:n.fallbackLimiter;tail.connect(l);tail=l}
     }
-    tail.connect(n.out);tail.connect(n.meterIn);
+    tail.connect(n.out);
   }
   function eqApplyTo(n,s,lim,analysing){
     var c=n.c;
     setP(c,n.rumble.frequency,20+s.rumble*1.25);setP(c,n.hum.gain,-0.24*s.hum);setP(c,n.bass.gain,s.bass);
     s.bands.forEach(function(v,i){setP(c,n.bands[i].gain,v)});
     setP(c,n.clarity.gain,s.clarity);setP(c,n.hiss.gain,-0.15*s.hiss);
+    n.virt.setLite(eqLite);n.tube.setLite(eqLite);
     n.virt.set(s.virtual/100);n.tube.set(s.tube,s.warmth);n.bassx.set(s.bassx);n.ms.set(s.dialog,s.width);
     setP(c,n.lev.threshold,-8-s.level*0.24);setP(c,n.lev.ratio,1.5+s.level*0.045);setP(c,n.levOut.gain,Math.pow(10,s.level/100*8/20));
     if(n.declick){try{n.declick.parameters.get('amount').setValueAtTime(s.click,c.currentTime)}catch(e){}}
@@ -1864,9 +1896,11 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
       input.classList.add('af-input');input.tabIndex=-1;input.setAttribute('aria-hidden','true');
       lab.insertBefore(f,input);input.__fader=f;
       function put(v){v=Math.max(+input.min,Math.min(+input.max,v));if(v!==+input.value){input.value=v;input.dispatchEvent(new Event('input',{bubbles:true}))}syncFader(input)}
-      function fromY(y){var r=f.getBoundingClientRect(),cap=22,p=(y-r.top-cap/2)/Math.max(1,r.height-cap);p=Math.max(0,Math.min(1,p));put(Math.round(+input.max-p*(+input.max-(+input.min))))}
+      var off=0;
+      function capY(){var r=f.getBoundingClientRect(),p=(+input.max-(+input.value))/((+input.max-(+input.min))||1);return r.top+11+p*Math.max(1,r.height-22)}
+      function fromY(y){var r=f.getBoundingClientRect(),cap=22,p=(y-off-r.top-cap/2)/Math.max(1,r.height-cap);p=Math.max(0,Math.min(1,p));put(Math.round(+input.max-p*(+input.max-(+input.min))))}
       var drag=false,lastTap=0;
-      f.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();var now=Date.now();if(now-lastTap<320){lastTap=0;put(0);return}lastTap=now;drag=true;try{f.setPointerCapture(e.pointerId)}catch(_){}f.classList.add('drag');fromY(e.clientY)});
+      f.addEventListener('pointerdown',function(e){var cy=capY();if(Math.abs(e.clientY-cy)>24)return;e.preventDefault();e.stopPropagation();var now=Date.now();if(now-lastTap<320){lastTap=0;put(0);return}lastTap=now;off=e.clientY-cy;drag=true;try{f.setPointerCapture(e.pointerId)}catch(_){}f.classList.add('drag')});
       f.addEventListener('pointermove',function(e){if(!drag)return;e.preventDefault();fromY(e.clientY)});
       function end(){drag=false;f.classList.remove('drag')}
       f.addEventListener('pointerup',end);f.addEventListener('pointercancel',end);f.addEventListener('lostpointercapture',end);
@@ -1882,6 +1916,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     document.querySelectorAll('[data-eq-band]').forEach(function(input){var i=+input.getAttribute('data-eq-band'),out=input.parentNode.querySelector('output');input.value=eqState.bands[i];if(out)out.textContent=(eqState.bands[i]>0?'+':'')+eqState.bands[i]+' dB';syncFader(input)});
     ADJ.forEach(function(p){var node=el(p[0]),out=el(p[0]+'Out');if(node){node.value=eqState[p[1]];var mn=+node.min,mx=+node.max;node.style.setProperty('--p',((eqState[p[1]]-mn)/(mx-mn)*100).toFixed(1)+'%')}if(out)out.textContent=eqState[p[1]]+p[2]});
     document.querySelectorAll('#cinemaModes [data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-mode')===eqState.mode?'true':'false')});
+    var sb=el('audioEqLite');if(sb){sb.textContent='Smooth: '+(eqLite?'ON':'OFF');sb.classList.toggle('enabled',eqLite);sb.setAttribute('aria-pressed',eqLite?'true':'false')}
     var lb=el('audioEqLimiter');if(lb){lb.textContent='Limiter: '+(eqLimiter?'ON':'OFF');lb.classList.toggle('enabled',eqLimiter);lb.setAttribute('aria-pressed',eqLimiter?'true':'false')}
     var ab=el('audioEqAuto');if(ab){ab.textContent=eqAutoEnabled?'✦ Auto enhancer: ON':'✦ Auto enhancer: OFF';ab.classList.toggle('enabled',eqAutoEnabled);ab.setAttribute('aria-pressed',eqAutoEnabled?'true':'false')}
   }
@@ -1891,6 +1926,17 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   el('videoEqOpen').addEventListener('click',function(e){e.stopPropagation();eqOpen()});
   el('audioEqBack').addEventListener('click',eqClose);
   el('audioEqReset').addEventListener('click',function(){eqState=eqNeutral();eqAutoEnabled=false;eqBeforeAuto=null;eqRefreshUi();eqApply();eqStatus('Reset to neutral: sound is untouched.')});
+  el('audioEqLite').addEventListener('click',function(){eqLite=!eqLite;eqRefreshUi();if(A)A.topo='';eqApply();eqStatus(eqLite?'Smooth mode on: lighter processing for phones or Bluetooth headphones where the sound breaks up.':'Smooth mode off: full-quality processing.')});
+  // If the sound engine falls behind real time (heard as jumps and short pauses, e.g. some
+  // phones with Bluetooth), Smooth mode is switched on by itself.
+  var glitch={t:0,c:0,n:0};
+  setInterval(function(){
+    if(!A||eqLite||A.c.state!=='running'||!activeMedia||!activeMedia.__mmSource||activeMedia.paused||eqIsNeutral()){glitch.t=0;return}
+    var now=performance.now()/1000,ct=A.c.currentTime;
+    if(glitch.t){var wall=now-glitch.t,aud=ct-glitch.c;if(wall>0.5&&aud<wall*0.97)glitch.n++;else if(glitch.n>0&&Math.random()<0.2)glitch.n--;
+      if(glitch.n>=2){eqLite=true;glitch.n=0;eqRefreshUi();A.topo='';eqApply();eqStatus('Sound was breaking up, so Smooth mode was switched on (lighter processing). You can switch it off above.')}}
+    glitch.t=now;glitch.c=ct;
+  },1000);
   el('audioEqLimiter').addEventListener('click',function(){eqLimiter=!eqLimiter;eqRefreshUi();eqApply();eqStatus(eqLimiter?'Limiter on: loud peaks cannot distort.':'Limiter off.')});
   document.querySelectorAll('[data-eq-band]').forEach(function(input){input.addEventListener('input',function(){eqState.bands[+input.getAttribute('data-eq-band')]=+input.value;eqRefreshUi();eqChanged()})});
   ADJ.forEach(function(p){var node=el(p[0]);if(node)node.addEventListener('input',function(){eqState[p[1]]=+node.value;if(CINEMA_KEYS.indexOf(p[1])>=0)eqState.mode='custom';eqRefreshUi();eqChanged()})});
@@ -1922,8 +1968,8 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
       var humRatio=10*Math.log10((humOn+1e-20)/(humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);
       s.rumble=10*Math.log10(sub/frames+1e-20)-db[0]>-4?35:10;
       var rmsDb=20*Math.log10(rmsAcc/frames+1e-9);s.level=rmsDb<-28?50:(rmsDb<-22?35:15);
-      s.hiss=dens[7]-ref-target[7]>4?25:8;s.click=8;s.tube=10;s.warmth=55;
-      s.virtual=audioMode?15:30;s.width=audioMode?115:120;s.dialog=audioMode?0:30;s.bassx=db[0]<ref-12?30:10;s.mode='custom';
+      s.hiss=dens[7]-ref-target[7]>4?25:8;s.click=0;s.tube=10;s.warmth=55;
+      s.virtual=0;s.width=audioMode?115:120;s.dialog=audioMode?0:30;s.bassx=db[0]<ref-12?30:10;s.mode='custom';
       eqState=s;eqAutoEnabled=true;A.topo='';eqRefreshUi();eqApply();
       eqStatus('Auto enhancer on: tone balanced, loudness '+Math.round(rmsDb)+' dB levelled'+(s.hum?', hum removed':'')+'. Tap again to restore your previous settings.');
     }
@@ -1967,7 +2013,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
     resultMode=mode;var b=el('resultMain'),x=el('resultClose');
     if(!mode){b.hidden=true;x.hidden=true;scheduleFit();return;}
     b.hidden=false;x.hidden=false;b.className=mode==='original'?'orig':'res';
-    b.textContent=mode==='play'?'▶ Play cut':(mode==='view'?'🖼 View':'↩ Original');scheduleFit();
+    b.textContent=mode==='play'?'▶ Play':(mode==='view'?'🖼 View':'↩ Original');b.title=mode==='play'?'Play the saved cut':(mode==='view'?'View snapshot':'Back to the original file');scheduleFit();
   }
   window.onNativeCutterProgress=function(p){el('cutterNote').textContent='Saving '+Math.max(0,Math.min(100,Math.round(p)))+'%';};
   window.onNativeCutterSaved=function(info){
@@ -1986,7 +2032,9 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
       if(!origState)origState={files:files.slice(),index:index,time:activeMedia?activeMedia.currentTime:0,start:el('cutterStart').value,end:el('cutterEnd').value};
       el('cutterNote').textContent='Opening…';
       var saved=origState;openFiles([remoteMedia({url:info.url,name:info.name,type:info.mime||''})]);origState=saved;
-      el('cutterNote').textContent='';setResultButtons('original');
+      el('cutterNote').textContent='Opening the cut…';setResultButtons('original');
+      var m=activeMedia,go=function(){m.removeEventListener('canplay',go);el('cutterNote').textContent='';var p=m.play();if(p&&p.catch)p.catch(function(){el('cutterNote').textContent='Tap the video to play the cut.'})};
+      m.addEventListener('canplay',go);setTimeout(function(){if(m.readyState<2){try{m.load()}catch(e){}}},3000);
       return;
     }
     if(resultMode==='original'&&origState){
@@ -2047,11 +2095,30 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   // transport buttons, and the video progress slider must never move them.
   function bindMediaEvents(media){
     media.addEventListener('timeupdate',function(){if(activeMedia!==media)return;el('videoCurrent').textContent=fmt(media.currentTime);if(isFinite(media.duration)&&media.duration>0)el('videoSeek').value=Math.round(media.currentTime/media.duration*1000);updateCutterPlayhead();});
-    media.addEventListener('loadedmetadata',function(){if(activeMedia!==media)return;el('videoDuration').textContent=fmt(media.duration);resetCutter();cutterUpdate('',false);updateCutterPlayhead();el('cutterNote').textContent='';makeCutterFrames();});
+    media.addEventListener('loadedmetadata',function(){if(activeMedia!==media)return;if(recovering){recovering=false;el('videoDuration').textContent=fmt(media.duration);updateCutterPlayhead();return;}el('videoDuration').textContent=fmt(media.duration);resetCutter();cutterUpdate('',false);updateCutterPlayhead();el('cutterNote').textContent='';makeCutterFrames();});
     media.addEventListener('play',function(){if(activeMedia===media){el('videoPlay').textContent='Ⅱ';animateCutterPlayhead();}});media.addEventListener('pause',function(){if(activeMedia===media){el('videoPlay').textContent='▶';updateCutterPlayhead();if(playheadRaf){cancelAnimationFrame(playheadRaf);playheadRaf=0;}}});
     media.addEventListener('ended',function(){if(activeMedia!==media)return;if(index<files.length-1)load(index+1,true);else el('videoPlay').textContent='▶'});
   }
   bindMediaEvents(video);bindMediaEvents(audioMedia);
+  var stallTimer=0,recovering=false,recoverTries=0;
+  function armStall(){clearTimeout(stallTimer);stallTimer=setTimeout(recoverStall,8000)}
+  function clearStall(){clearTimeout(stallTimer);stallTimer=0}
+  function recoverStall(){
+    var m=activeMedia;if(!m||!m.src)return;
+    if(cutterDragging||playhead.classList.contains('dragging')){armStall();return}
+    if(recoverTries>=3)return;recoverTries++;
+    var t=m.currentTime||0,src=m.src,resume=!m.paused||m.__wantPlay;recovering=true;
+    el('cutterNote').textContent='Video was stuck: reloading at '+fmt(t)+'…';
+    m.removeAttribute('src');try{m.load()}catch(e){}
+    setSource(m,src);try{m.load()}catch(e){}
+    m.addEventListener('loadedmetadata',function f(){m.removeEventListener('loadedmetadata',f);try{m.currentTime=t}catch(e){}if(resume){var p=m.play();if(p&&p.catch)p.catch(function(){})}setTimeout(function(){if(el('cutterNote').textContent.indexOf('stuck')>=0)el('cutterNote').textContent=''},1500)});
+  }
+  [video,audioMedia].forEach(function(m){
+    m.addEventListener('waiting',function(){if(m===activeMedia)armStall()});
+    m.addEventListener('seeking',function(){if(m===activeMedia)armStall()});
+    ['playing','seeked','canplay','pause','emptied','ended'].forEach(function(ev){m.addEventListener(ev,function(){if(m===activeMedia){clearStall();if(ev==='playing')recoverTries=0}})});
+    m.addEventListener('play',function(){m.__wantPlay=true});m.addEventListener('pause',function(){if(!recovering)m.__wantPlay=false});
+  });
   video.addEventListener('error',function(){if(video.src&&activeMedia===video){el('videoTitle').textContent='Cannot play this video format on this device';}});
   audioMedia.addEventListener('error',function(){if(audioMedia.src&&activeMedia===audioMedia){el('videoTitle').textContent='Cannot play this audio format on this device';}});
   // Landscape fullscreen uses gestures instead of visible transport buttons.
@@ -2098,6 +2165,26 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   document.addEventListener('keydown',function(e){if(!layer.classList.contains('open'))return;if(e.key==='Escape'&&!isFullscreen()){hide();return;}if(/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||'')||(e.target&&e.target.classList&&e.target.classList.contains('af')))return;if(e.key==='ArrowLeft'){seekBy(-5);showControls()}if(e.key==='ArrowRight'){seekBy(5);showControls()}if(e.key===' '&&!/INPUT|BUTTON/.test((e.target||{}).tagName||'')){e.preventDefault();el('videoPlay').click();}});
   layer.addEventListener('click',function(e){if(e.target===layer&&!isFullscreen())hide()});
   setTimeout(fitStage,50);setTimeout(fitStage,600);
+
+  // ---- Sliders move only when their knob is grabbed. A touch anywhere else on a slider
+  // (while scrolling or holding the phone) does nothing; the knob is followed without a jump.
+  function thumbOnly(input){
+    if(!input||input.__thumbOnly||input.hidden||input.classList.contains('af-input'))return;
+    input.__thumbOnly=true;input.classList.add('thumb-only');
+    var host=input.parentNode;host.classList.add('thumb-host');
+    var drag=null;
+    function geom(){var r=input.getBoundingClientRect(),mn=+input.min||0,mx=+input.max||100,tw=Math.min(24,Math.max(8,r.height*0.75)),p=(+input.value-mn)/((mx-mn)||1);return {r:r,mn:mn,mx:mx,tw:tw,x:r.left+tw/2+p*(r.width-tw)}}
+    function setX(x){var g=geom(),p=(x-g.r.left-g.tw/2)/Math.max(1,g.r.width-g.tw),st=+input.step||1;p=Math.max(0,Math.min(1,p));var v=g.mn+p*(g.mx-g.mn);v=Math.round((v-g.mn)/st)*st+g.mn;v=Math.max(g.mn,Math.min(g.mx,+v.toFixed(4)));if(v!==+input.value){input.value=v;input.dispatchEvent(new Event('input',{bubbles:true}))}}
+    host.addEventListener('pointerdown',function(e){
+      var g=geom();if(e.clientY<g.r.top-14||e.clientY>g.r.bottom+14||Math.abs(e.clientX-g.x)>26)return;
+      e.preventDefault();e.stopPropagation();drag={id:e.pointerId,off:e.clientX-g.x};input.classList.add('grab');
+      try{host.setPointerCapture(e.pointerId)}catch(_){}
+    });
+    host.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;e.preventDefault();setX(e.clientX-drag.off)});
+    function end(e){if(!drag||(e&&e.pointerId!==drag.id))return;drag=null;input.classList.remove('grab');input.dispatchEvent(new Event('change',{bubbles:true}))}
+    host.addEventListener('pointerup',end);host.addEventListener('pointercancel',end);host.addEventListener('lostpointercapture',end);
+  }
+  document.querySelectorAll('input[type=range]').forEach(thumbOnly);
 })();
 </script>
 

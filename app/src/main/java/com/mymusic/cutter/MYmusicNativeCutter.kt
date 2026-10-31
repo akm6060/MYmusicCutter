@@ -76,6 +76,7 @@ class MYmusicNativeCutter(
 
     fun shutdown() {
         worker.shutdown()
+        shared.values.forEach { it.close() }
     }
 
     // ---------------------------------------------------------------- orientation / fullscreen
@@ -181,12 +182,25 @@ class MYmusicNativeCutter(
     // cloud apps, some messengers. Those cannot seek, so they are first copied once into this app's
     // private cache (with a progress display) and played from there. The original is never changed.
 
-    private class SharedItem(val uri: Uri, val name: String, val mime: String, val file: File?)
+    private class SharedItem(val uri: Uri, val name: String, val mime: String, val file: File?) {
+        // Opened once and read by position for every request; reopening the file on each seek
+        // made protected / slow sources freeze.
+        var pfd: ParcelFileDescriptor? = null
+        var fis: FileInputStream? = null
+        var channel: FileChannel? = null
+        var size: Long = -1L
+        fun close() {
+            try { channel?.close() } catch (_: Exception) {}
+            try { pfd?.close() } catch (_: Exception) {}
+            channel = null; fis = null; pfd = null
+        }
+    }
     private val shared = ConcurrentHashMap<String, SharedItem>()
     private val sharedDir: File by lazy { File(context.cacheDir, "shared").apply { mkdirs() } }
 
     /** Removes copies left from earlier sessions (called at start-up). */
     fun clearSharedCache(keep: Set<File> = emptySet()) {
+        if (keep.isEmpty()) { shared.values.forEach { it.close() } }
         try {
             sharedDir.listFiles()?.forEach { if (it !in keep) it.delete() }
         } catch (_: Exception) {
@@ -202,6 +216,37 @@ class MYmusicNativeCutter(
             "mkv" -> "video/x-matroska"; "mka" -> "audio/x-matroska"; "opus" -> "audio/ogg"
             "flac" -> "audio/flac"; "m4a", "m4b" -> "audio/mp4"; "ts", "m2ts", "mts" -> "video/mp2t"
             else -> given ?: ""
+        }
+    }
+
+    /**
+     * Files that must be copied once before playing: one-way streams, Solid Explorer's encrypted
+     * (.sec) folders and any source too slow for smooth seeking (decrypting on the fly).
+     */
+    private fun needsLocalCopy(uri: Uri): Boolean {
+        val text = Uri.decode(uri.toString()).lowercase()
+        if (text.contains(".sec/") || text.endsWith(".sec")) return true
+        if (!isSeekable(uri)) return true
+        if (uri.scheme == "file") return false
+        return try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                val size = pfd.statSize
+                val ch = FileInputStream(pfd.fileDescriptor).channel
+                val buf = ByteBuffer.allocate(1 shl 20)
+                val t0 = SystemClock.uptimeMillis()
+                var pos = maxOf(0L, size / 2 - (1L shl 20))
+                var got = 0
+                while (got < (2 shl 20)) {
+                    buf.clear()
+                    val n = ch.read(buf, pos)
+                    if (n <= 0) break
+                    got += n; pos += n
+                }
+                val ms = SystemClock.uptimeMillis() - t0
+                ms > 150 // under ~13 MB/s (decrypting on the fly): too slow to seek smoothly
+            } ?: true
+        } catch (_: Exception) {
+            true
         }
     }
 
@@ -270,7 +315,7 @@ class MYmusicNativeCutter(
             val (name, size) = nameAndSize(uri)
             val mime = mimeFor(uri, name)
             var file: File? = null
-            if (!isSeekable(uri)) {
+            if (needsLocalCopy(uri)) {
                 try {
                     file = copyToCache(uri, name, size) { pct -> onProgress(name, pct) }
                     fresh.add(file)
@@ -295,6 +340,7 @@ class MYmusicNativeCutter(
         // Copies from the previous "Open with" are no longer needed.
         if (fresh.isNotEmpty() || uris.isNotEmpty()) {
             val stale = keep.filter { k -> fresh.none { it == k } }
+            shared.values.filter { v -> v.file?.let { f -> stale.contains(f) } == true }.forEach { it.close() }
             shared.entries.removeIf { e -> e.value.file?.let { f -> stale.contains(f) } == true }
             stale.forEach { it.delete() }
         }
@@ -316,15 +362,30 @@ class MYmusicNativeCutter(
         headers["Accept-Ranges"] = "bytes"
         val mime = item.mime.ifBlank { "application/octet-stream" }
         return try {
-            val pfd = when {
-                item.file != null -> ParcelFileDescriptor.open(item.file, ParcelFileDescriptor.MODE_READ_ONLY)
-                item.uri.scheme == "file" -> ParcelFileDescriptor.open(File(item.uri.path ?: ""), ParcelFileDescriptor.MODE_READ_ONLY)
-                else -> context.contentResolver.openFileDescriptor(item.uri, "r")
+            val opened = synchronized(item) {
+                if (item.channel == null) {
+                    val pfd = when {
+                        item.file != null -> ParcelFileDescriptor.open(item.file, ParcelFileDescriptor.MODE_READ_ONLY)
+                        item.uri.scheme == "file" -> ParcelFileDescriptor.open(File(item.uri.path ?: ""), ParcelFileDescriptor.MODE_READ_ONLY)
+                        else -> context.contentResolver.openFileDescriptor(item.uri, "r")
+                    }
+                    if (pfd != null) {
+                        item.pfd = pfd
+                        item.size = pfd.statSize
+                        val fis = FileInputStream(pfd.fileDescriptor)
+                        item.fis = fis
+                        item.channel = fis.channel
+                    }
+                }
+                val ch = item.channel
+                if (ch == null) null else Pair(ch, item.size)
             } ?: return null
-            val total = pfd.statSize
+            val ch = opened.first
+            val total = opened.second
             if (total <= 0) {
                 // Length unknown: send it as one stream (playback works, seeking may not).
-                return WebResourceResponse(mime, null, 200, "OK", headers, ParcelFileDescriptor.AutoCloseInputStream(pfd))
+                val pfd2 = context.contentResolver.openFileDescriptor(item.uri, "r") ?: return null
+                return WebResourceResponse(mime, null, 200, "OK", headers, ParcelFileDescriptor.AutoCloseInputStream(pfd2))
             }
             var start = 0L
             var end = total - 1
@@ -340,29 +401,41 @@ class MYmusicNativeCutter(
                 }
             }
             if (start >= total || start > end) {
-                pfd.close()
                 headers["Content-Range"] = "bytes */$total"
                 return WebResourceResponse(mime, null, 416, "Range Not Satisfiable", headers, java.io.ByteArrayInputStream(ByteArray(0)))
             }
-            val input = ParcelFileDescriptor.AutoCloseInputStream(pfd)
-            if (start > 0) {
-                try {
-                    input.channel.position(start)
-                } catch (_: Exception) {
-                    skipFully(input, start)
-                }
-            }
             val length = end - start + 1
             headers["Content-Length"] = length.toString()
+            val body = ChannelRangeStream(ch, start, length)
             if (m != null) {
                 headers["Content-Range"] = "bytes $start-$end/$total"
-                WebResourceResponse(mime, null, 206, "Partial Content", headers, LimitedInputStream(input, length))
+                WebResourceResponse(mime, null, 206, "Partial Content", headers, body)
             } else {
-                WebResourceResponse(mime, null, 200, "OK", headers, LimitedInputStream(input, length))
+                WebResourceResponse(mime, null, 200, "OK", headers, body)
             }
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Reads one byte range by position from a shared, already-open file (safe for parallel requests). */
+    private class ChannelRangeStream(private val ch: FileChannel, private var pos: Long, private var left: Long) : InputStream() {
+        override fun read(): Int {
+            val one = ByteArray(1)
+            val n = read(one, 0, 1)
+            return if (n <= 0) -1 else (one[0].toInt() and 0xFF)
+        }
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (left <= 0) return -1
+            val want = minOf(len.toLong(), left).toInt()
+            if (want <= 0) return 0
+            val n = ch.read(ByteBuffer.wrap(b, off, want), pos)
+            if (n <= 0) return -1
+            pos += n
+            left -= n
+            return n
+        }
+        override fun available(): Int = minOf(left, 1L shl 16).toInt()
     }
 
     private class LimitedInputStream(private val inner: InputStream, private var left: Long) : InputStream() {
