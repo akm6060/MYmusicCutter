@@ -5,6 +5,9 @@ on:
   push:
     branches: [ "main", "master" ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,3 +45,11 @@ jobs:
           name: MYmusic-Cutter-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK to the "apk" branch (direct download link)
+        run: |
+          mkdir -p /tmp/apkout && cp app/build/outputs/apk/debug/app-debug.apk /tmp/apkout/MYmusicCutter.apk
+          cd /tmp/apkout && git init -q && git checkout -q -b apk
+          git add MYmusicCutter.apk
+          git -c user.name=apk-bot -c user.email=apk-bot@users.noreply.github.com commit -q -m "APK from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" apk
