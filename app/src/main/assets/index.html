@@ -1170,6 +1170,11 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
 .video-layer.native-fullscreen .video-controls input[type=range]::-webkit-slider-runnable-track,.video-layer:fullscreen .video-controls input[type=range]::-webkit-slider-runnable-track{height:5px!important;border-radius:3px!important;background:#8a86b8!important}
 .video-layer.native-fullscreen .video-controls input[type=range]::-webkit-slider-thumb,.video-layer:fullscreen .video-controls input[type=range]::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:15px!important;height:26px!important;margin-top:-10.5px!important;border-radius:4px!important;background:linear-gradient(90deg,#9d8cf0,#e6e0ff 45%,#9d8cf0)!important;border:1px solid #2a2450!important;box-shadow:0 2px 4px #000c!important}
 .video-layer.native-fullscreen .video-seek,.video-layer:fullscreen .video-seek{grid-template-columns:48px minmax(0,1fr) 48px!important;font-size:12px!important;gap:8px!important}
+
+/* no text selection or copy menu anywhere except text fields */
+html,body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-user-select:text!important;user-select:text!important}
+.gesture-hud{display:none!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1415,7 +1420,7 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
   }
   function saveVideoSnapshot(){
     if(audioMode){el('cutterNote').textContent='Snapshots are available for video files only; audio trimming remains available.';return;}
-    if(NATIVE){if(!video.src||!video.videoWidth){el('cutterNote').textContent='Play the video first, then tap Snapshot.';return}var nm0=(files[index]&&files[index].name||'video');el('cutterNote').textContent=NP.snapshot(nm0)?'Saving…':'Snapshot could not be saved.';return;}
+    if(NATIVE){if(!video.src||!video.videoWidth){el('cutterNote').textContent='Play the video first, then tap Snapshot.';return}var nm0=(files[index]&&files[index].name||'video');el('cutterNote').textContent=NP.snapshot(nm0)?'Taking snapshot…':'Snapshot could not be saved.';return;}
     if(!video.src||video.readyState<2||!video.videoWidth||!video.videoHeight){el('cutterNote').textContent='Pause or play the video at the frame you want, then tap Snapshot.';return;}
     try{
       var c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;
@@ -2291,7 +2296,7 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
     v=Math.max(0,Math.min(1,v));
     try{if(z==='bright'){if(NATIVE&&NP.setBrightness)NP.setBrightness(Math.max(0.01,v));else{previewBright=v;stage.style.filter='brightness('+(0.3+v*0.7)+')'}}
       else{if(NATIVE&&NP.setVolume){var mv=JSON.parse(NP.getVolume());NP.setVolume(Math.round(v*mv.max));v=mv.max?Math.round(v*mv.max)/mv.max:v}else if(activeMedia)activeMedia.volume=v}}catch(e){}
-    hud.hidden=false;hud.className='gesture-hud '+(z==='bright'?'left':'right');hud.querySelector('.gh-ic').textContent=z==='bright'?'☀':(v<0.01?'🔇':'🔊');
+    hud.hidden=true;hud.className='gesture-hud '+(z==='bright'?'left':'right');hud.querySelector('.gh-ic').textContent=z==='bright'?'☀':(v<0.01?'🔇':'🔊');
     hud.querySelector('.gh-bar i').style.height=Math.round(v*100)+'%';hud.querySelector('.gh-val').textContent=Math.round(v*100)+'%';
     clearTimeout(hudTimer);
   }

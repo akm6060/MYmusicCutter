@@ -556,7 +556,10 @@ class NativePlayer(
         }
     }
 
-    /** Snapshot of the current frame at full size, JPEG quality 95, read from the file itself. */
+    /**
+     * Snapshot of the current frame, JPEG quality 95. First the exact frame is read from the file at
+     * full size; if that fails or takes too long, the picture on screen is copied instead.
+     */
     @JavascriptInterface
     fun snapshot(name: String): Boolean {
         main.post {
@@ -564,28 +567,59 @@ class NativePlayer(
             val (dw, dh) = displaySize()
             if (uri == null || dw <= 0 || dh <= 0) { cutter.pageMessage("Play the video first, then take the snapshot."); return@post }
             val tUs = max(0L, player.currentPosition) * 1000L
-            worker.execute {
+            val done = java.util.concurrent.atomic.AtomicBoolean(false)
+            fun save(bmp: Bitmap, how: String) {
+                if (!done.compareAndSet(false, true)) return
+                Thread {
+                    try {
+                        val bos = ByteArrayOutputStream()
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 95, bos)
+                        cutter.saveSnapshotBytes(bos.toByteArray(), name)
+                    } catch (e: Exception) {
+                        cutter.pageMessage("Snapshot could not be saved ($how): " + (e.message ?: e.javaClass.simpleName))
+                    }
+                }.start()
+            }
+            fun fromScreen() {
+                if (done.get()) return
+                try {
+                    if (useTexture) {
+                        val bmp = textureView.bitmap
+                        if (bmp != null) save(bmp, "screen") else cutter.pageMessage("Snapshot could not be taken.")
+                    } else {
+                        val w = max(1, surfaceView.width); val h = max(1, surfaceView.height)
+                        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                        android.view.PixelCopy.request(surfaceView, bmp, { result ->
+                            if (result == android.view.PixelCopy.SUCCESS) save(bmp, "screen")
+                            else if (!done.get()) cutter.pageMessage("Snapshot could not be taken (code $result).")
+                        }, main)
+                    }
+                } catch (e: Exception) {
+                    cutter.pageMessage("Snapshot could not be taken: " + (e.message ?: e.javaClass.simpleName))
+                }
+            }
+            // If reading the file takes more than 4 seconds, use the picture on screen.
+            main.postDelayed({ fromScreen() }, 4000)
+            Thread {
                 val mmr = MediaMetadataRetriever()
                 try {
                     if (uri.scheme == "file") mmr.setDataSource(uri.path) else mmr.setDataSource(activity, uri)
                     var frame = mmr.getFrameAtTime(tUs, MediaMetadataRetriever.OPTION_CLOSEST)
                         ?: mmr.getFrameAtTime(tUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    if (frame == null) { cutter.pageMessage("Snapshot could not be taken."); return@execute }
-                    // Turn the frame upright if the file stores it rotated.
-                    val rot = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
-                    if (rot % 180 != 0 && (frame.width > frame.height) != (dw > dh)) {
-                        val m = Matrix(); m.postRotate(rot.toFloat())
-                        frame = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, m, true)
-                    }
-                    val bos = ByteArrayOutputStream()
-                    frame!!.compress(Bitmap.CompressFormat.JPEG, 95, bos)
-                    cutter.saveSnapshotBytes(bos.toByteArray(), name)
-                } catch (e: Exception) {
-                    cutter.pageMessage("Snapshot could not be taken.")
+                    if (frame != null) {
+                        val rot = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                        if (rot % 180 != 0 && (frame.width > frame.height) != (dw > dh)) {
+                            val m = Matrix(); m.postRotate(rot.toFloat())
+                            frame = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, m, true)
+                        }
+                        save(frame!!, "file")
+                    } else main.post { fromScreen() }
+                } catch (_: Throwable) {
+                    main.post { fromScreen() }
                 } finally {
                     try { mmr.release() } catch (_: Exception) {}
                 }
-            }
+            }.start()
         }
         return true
     }
