@@ -1175,6 +1175,59 @@ html.native-video .video-layer.native-fullscreen .video-stage{box-shadow:none}
 html,body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-user-select:text!important;user-select:text!important}
 .gesture-hud{display:none!important}
+
+/* ---- portrait cutter v4: marks, step buttons, list ---- */
+#miniBar,.cutter-actions,.cutter-handle-rail,.cutter-selected{display:none!important}
+.mark-layer{position:absolute;inset:0;z-index:6;pointer-events:none}
+.mark-layer .mk-seg{position:absolute;top:0;bottom:0;background:#2fd18a40;border-top:2px solid #2fd18a;border-bottom:2px solid #2fd18a}
+.mark-layer .mk-line{position:absolute;top:-7px;bottom:-7px;width:3px;margin-left:-1.5px;border-radius:2px}
+.mark-layer .mk-line.s{background:#3b82f6;box-shadow:0 0 4px #3b82f6}
+.mark-layer .mk-line.e{background:#ef4444;box-shadow:0 0 4px #ef4444}
+.cx-row{display:flex;gap:5px;margin-top:6px;min-width:0}
+.cx-row button{flex:1 1 0;min-width:0;min-height:40px;padding:2px 4px;border-radius:9px;border:1px solid #3d4566;background:#1c2040;color:#e6e3ff;font:700 12.5px/1.15 system-ui,sans-serif;touch-action:manipulation;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cx-transport{margin-top:36px}
+.cx-transport .cx-step{flex:1 1 0;font-size:15px;background:#252a52}
+.cx-transport .cx-play{flex:1.3 1 0;font-size:18px;background:linear-gradient(135deg,#ffb21e,#f09a00);color:#241400;border-color:#f09a00}
+.cx-marks .cx-start{background:#173a7a;border-color:#3b82f6;color:#dbe8ff}
+.cx-marks .cx-end{background:#6b1b1b;border-color:#ef4444;color:#ffe1e1}
+.cx-marks .cx-songs{background:#3c2a6b;border-color:#8b6cf0}
+.cx-save button{background:#235c49;border-color:#2fd18a}
+.cx-save #eraseParts{background:#674c28;border-color:#e0a24a}
+.cx-tools button{min-height:34px;font-size:12px}
+.cutter-note{min-height:14px;margin-top:4px;font-size:11.5px!important;color:#cfd2f5!important}
+.media-list{display:none;flex-direction:column;min-height:0;flex:1 1 auto;margin-top:6px;border:1px solid #353650;border-radius:10px;background:#0d0e1c;overflow:hidden}
+@media (orientation:portrait){
+  .video-layer:not(.native-fullscreen):not(:fullscreen) .media-list{display:flex}
+  .video-layer:not(.native-fullscreen):not(:fullscreen) .video-settings{display:none!important}
+}
+.ml-head{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid #2a2c48;font-size:13px;color:#e6e3ff}
+.ml-head .sp{flex:1}
+.ml-head button{min-height:30px;padding:0 10px;border-radius:8px;border:1px solid #3d4566;background:#1c2040;color:#e6e3ff;font-weight:700;font-size:12px}
+.ml-head button:disabled{opacity:.4}
+.ml-items{overflow-y:auto;overscroll-behavior:contain;min-height:60px;flex:1 1 auto}
+.ml-item{display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid #1f2140;min-height:48px}
+.ml-item.cur{background:#ffb21e22;box-shadow:inset 3px 0 0 #ffb21e}
+.ml-chk{display:grid;place-items:center;width:34px;height:40px;flex:none}
+.ml-chk input{width:20px;height:20px;accent-color:#2fd18a}
+.ml-name{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;gap:2px;padding:4px 2px;color:#eceaff}
+.ml-name b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ml-name small{font-size:11px;color:#9b9dbd}
+.ml-item.cut .ml-name small{color:#62efae}
+.ml-item.cur .ml-name b{color:#ffc24d}
+.ml-mv{flex:none;width:34px;height:36px;border-radius:8px;background:#1c2040;color:#cfd2f5;font-size:12px}
+.songs-panel{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#000a;padding:16px}
+.songs-panel[hidden]{display:none}
+.sp-card{width:min(440px,100%);background:#14162b;border:1px solid #3d4566;border-radius:14px;padding:14px;color:#eceaff;display:grid;gap:10px}
+.sp-card h3{margin:0;font-size:16px}
+.sp-hint{margin:0;font-size:12px;color:#b9bbd8}
+.sp-row{display:grid;gap:2px;font-size:12.5px}
+.sp-row span{display:flex;justify-content:space-between}
+.sp-row output{color:#ffc24d}
+.sp-row input{width:100%}
+.sp-status{margin:0;min-height:16px;font-size:12px;color:#62efae}
+.sp-btns{display:flex;gap:8px}
+.sp-btns button{flex:1;min-height:42px;border-radius:10px;border:1px solid #3d4566;background:#1c2040;color:#fff;font-weight:700}
+.sp-btns #spFind{background:#3c2a6b;border-color:#8b6cf0}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1203,6 +1256,7 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
         <div class="cutter-strip" id="cutterStrip" role="group" aria-label="Video thumbnail strip">
           <div class="cutter-frames" id="cutterFrames"></div>
           <div class="cutter-selected" id="cutterSelected"></div>
+          <div class="mark-layer" id="markLayer" aria-hidden="true"></div>
           <div class="cutter-playhead" id="cutterPlayhead" aria-hidden="true"></div>
         </div>
         <div class="cutter-handle-rail" id="cutterHandleRail" aria-label="Video selection handles">
@@ -1211,6 +1265,28 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
         </div>
         <input id="cutterStart" type="range" min="0" max="1000" value="0" step="1" aria-label="Start marker from beginning" hidden>
         <input id="cutterEnd" type="range" min="0" max="1000" value="0" step="1" aria-label="End marker from beginning" hidden>
+      </div>
+      <div class="cx-row cx-transport">
+        <button type="button" class="cx-step" id="stepBack" aria-label="Step back (hold to go faster)">◀◀</button>
+        <button type="button" class="cx-play" id="cxPlay" aria-label="Play or pause">▶</button>
+        <button type="button" class="cx-step" id="stepFwd" aria-label="Step forward (hold to go faster)">▶▶</button>
+      </div>
+      <div class="cx-row cx-marks">
+        <button type="button" class="cx-start" id="markStart">▍Start</button>
+        <button type="button" class="cx-end" id="markEnd">▍End</button>
+        <button type="button" id="markUndo">↶ Undo</button>
+        <button type="button" id="markClear">✕ Clear</button>
+        <button type="button" class="cx-songs" id="findSongs">♫ Songs</button>
+      </div>
+      <div class="cx-row cx-save">
+        <button type="button" id="saveParts">Save parts</button>
+        <button type="button" id="saveOne">Save as one</button>
+        <button type="button" id="eraseParts">Erase parts</button>
+      </div>
+      <div class="cx-row cx-tools">
+        <button type="button" id="cxEq">♒ EQ</button>
+        <button type="button" id="cxAdd">＋ Files</button>
+        <button type="button" id="cxFolder">📁 Folder</button>
       </div>
       <div class="mini-bar" id="miniBar">
         <button type="button" id="miniReset" aria-label="Reset picture">⟲ Reset</button>
@@ -1221,8 +1297,12 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
         <button type="button" class="res" id="resultMain" hidden>▶ Play cut</button>
         <button type="button" class="x" id="resultClose" aria-label="Hide" hidden>✕</button>
       </div>
-      <div class="cutter-actions"><button type="button" id="cutterSetStart">Start point</button><button type="button" id="cutterSetEnd">End point</button><button type="button" id="cutterKeep">Save selected part</button><button type="button" id="cutterRemove">Erase middle</button><button type="button" id="cutterSnapshot">Snapshot JPEG 95%</button></div>
+      <div class="cutter-actions"><button type="button" id="cutterSetStart">Start point</button><button type="button" id="cutterSetEnd">End point</button><button type="button" id="cutterKeep">Save selected part</button><button type="button" id="cutterRemove">Erase middle</button></div>
       <div class="cutter-note" id="cutterNote"></div>
+    </section>
+    <section class="media-list" id="mediaList" aria-label="Files">
+      <div class="ml-head"><b>Files</b><span id="mlCount"></span><span class="sp"></span><button type="button" id="mlJoin">Join ✓</button><button type="button" id="mlRemove">Remove ✓</button></div>
+      <div class="ml-items" id="mlItems"></div>
     </section>
     <div class="video-seek"><span id="videoCurrent">00:00</span><input id="videoSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="Video position"><span id="videoDuration">00:00</span></div>
     <div class="video-transport">
@@ -1242,6 +1322,17 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
       <div class="video-setting"><label for="videoSharp">Sharpness ◀ soft · sharp ▶ <output id="videoSharpOut">0</output></label><input id="videoSharp" class="centre-zero" type="range" min="-100" max="100" step="5" value="0"></div>
     </div>
   </div>
+  <section class="songs-panel" id="songsPanel" hidden>
+    <div class="sp-card">
+      <h3>Find songs by silence</h3>
+      <p class="sp-hint">Finds the quiet gaps between songs and marks every song. Check the marks, then tap <b>Save parts</b>.</p>
+      <label class="sp-row"><span>Silence level <output id="spThrOut">Auto</output></span><input id="spThr" type="range" min="-71" max="-20" step="1" value="-71"></label>
+      <label class="sp-row"><span>Shortest gap between songs <output id="spGapOut">2.0 s</output></span><input id="spGap" type="range" min="0.5" max="8" step="0.5" value="2"></label>
+      <label class="sp-row"><span>Shortest song <output id="spSongOut">30 s</output></span><input id="spSong" type="range" min="5" max="180" step="5" value="30"></label>
+      <p class="sp-status" id="spStatus"></p>
+      <div class="sp-btns"><button type="button" id="spFind">Find songs</button><button type="button" id="spClose">Close</button></div>
+    </div>
+  </section>
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
     <header class="audio-eq-head"><button type="button" id="audioEqBack" aria-label="Back to cutter">‹</button><div><strong>Audio Equalizer</strong><small>Sound stays untouched until you change something</small></div><button type="button" id="audioEqReset">Reset</button></header>
     <div class="audio-eq-scroll">
@@ -1418,16 +1509,6 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
       }
     }catch(e){if(job===frameJob)host.innerHTML='<div style="display:grid;place-items:center;width:100%;color:#ddd;font-size:10px">Thumbnails unavailable for this video format</div>';}finally{temp.removeAttribute('src');try{temp.load()}catch(e){}}
   }
-  function saveVideoSnapshot(){
-    if(audioMode){el('cutterNote').textContent='Snapshots are available for video files only; audio trimming remains available.';return;}
-    if(NATIVE){if(!video.src||!video.videoWidth){el('cutterNote').textContent='Play the video first, then tap Snapshot.';return}var nm0=(files[index]&&files[index].name||'video');el('cutterNote').textContent=NP.snapshot(nm0)?'Taking snapshot…':'Snapshot could not be saved.';return;}
-    if(!video.src||video.readyState<2||!video.videoWidth||!video.videoHeight){el('cutterNote').textContent='Pause or play the video at the frame you want, then tap Snapshot.';return;}
-    try{
-      var c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;
-      var cx=c.getContext('2d');cx.drawImage(video,0,0,c.width,c.height);
-      var data=c.toDataURL('image/jpeg',0.95);var nb=window.MYmusicNativeCutter;if(nb&&typeof nb.saveSnapshot==='function'){var nm=(files[index]&&files[index].name||'video');el('cutterNote').textContent=nb.saveSnapshot(data.slice(data.indexOf(',')+1),nm)===true?'Saving…':'Snapshot could not be saved.';return;}var a=document.createElement('a'),base=(files[index]&&files[index].name||'video').replace(/\.[^.]+$/,'');a.href=data;a.download=base+'-snapshot.jpg';document.body.appendChild(a);a.click();a.remove();el('cutterNote').textContent='JPEG snapshot created (full size, 95% quality).';
-    }catch(e){el('cutterNote').textContent='Snapshot could not be created from this video frame.';}
-  }
   async function transferFileToNativeCutter(file,payload,bridge){
     if(!bridge||typeof bridge.beginTransfer!=='function'||typeof bridge.appendChunk!=='function'||typeof bridge.finishTransfer!=='function'){
       throw new Error('Native cutting bridge is not installed in this APK.');
@@ -1550,7 +1631,7 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
     audioMode=!!isAudio;activeMedia=audioMode?audioMedia:video;try{video.pause();audioMedia.pause()}catch(e){}
     if(audioMode){video.removeAttribute('src');video.load();setSource(audioMedia,urls[index]);audioMedia.load();video.style.display='none';empty.style.display='grid';empty.innerHTML='<b>Audio cutter</b>Audio playback and trimming timeline';stage.classList.add('audio-mode');}
     else{audioMedia.removeAttribute('src');audioMedia.load();setSource(video,urls[index]);video.load();video.style.display='block';empty.style.display='none';stage.classList.remove('audio-mode');}
-    el('videoTitle').textContent=f.name||((audioMode?'Audio ':'Video ')+(index+1));el('videoPlay').textContent='▶';el('videoCurrent').textContent='00:00';el('videoDuration').textContent='00:00';el('videoSeek').value=0;resetCutter();el('videoSpeed').value=1;el('videoSpeedOut').textContent='1.00×';activeMedia.playbackRate=1;el('videoPrev').disabled=files.length<2;el('videoNext').disabled=files.length<2;el('cutterSnapshot').disabled=audioMode;el('cutterSnapshot').style.opacity=audioMode?'.45':'1';applyPicture();applyVolume();attachAudio();if(autoplay){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){el('videoPlay').textContent='▶';});}showControls();
+    el('videoTitle').textContent=f.name||((audioMode?'Audio ':'Video ')+(index+1));el('videoPlay').textContent='▶';el('videoCurrent').textContent='00:00';el('videoDuration').textContent='00:00';el('videoSeek').value=0;resetCutter();el('videoSpeed').value=1;el('videoSpeedOut').textContent='1.00×';activeMedia.playbackRate=1;el('videoPrev').disabled=files.length<2;el('videoNext').disabled=files.length<2;applyPicture();applyVolume();attachAudio();if(autoplay){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){el('videoPlay').textContent='▶';});}showControls();
   }
   function openFiles(list){
     if(!list||!list.length)return;urls.forEach(function(u){if(/^blob:/.test(u||''))try{URL.revokeObjectURL(u)}catch(e){}});
@@ -1559,7 +1640,7 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
   }
   launch.addEventListener('click',function(){show();choose();});
   el('videoAddMedia').addEventListener('click',function(){choose();});
-  el('videoClose').addEventListener('click',hide);pick.addEventListener('change',function(){openFiles(pick.files);});
+  el('videoClose').addEventListener('click',hide);pick.addEventListener('change',function(){addPicked(pick.files);});
   // Files sent from other apps ("Open with" / "Share"): Android serves them at a local
   // address; they are read into normal files so playback, waveform and cutting work as usual.
   window.__mymusicOpenShared=function(list){
@@ -1721,7 +1802,6 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
   el('cutterSetEnd').addEventListener('click',function(){setCutterPoint('cutterEnd')});
   el('cutterKeep').addEventListener('click',function(){nativeCutterAction('keep')});
   el('cutterRemove').addEventListener('click',function(){nativeCutterAction('remove-middle')});
-  el('cutterSnapshot').addEventListener('click',saveVideoSnapshot);
   el('videoSeek').addEventListener('input',function(){if(isFinite(activeMedia.duration)&&activeMedia.duration>0)activeMedia.currentTime=(+this.value/1000)*activeMedia.duration;showControls()});
   el('videoSpeed').addEventListener('input',function(){activeMedia.playbackRate=+this.value;el('videoSpeedOut').textContent=(+this.value).toFixed(2)+'×';showControls()});
   el('videoZoom').addEventListener('input',function(){applyPicture();showControls()});['videoBrightness','videoContrast','videoSaturation','videoHue','videoSharp'].forEach(function(id){el(id).addEventListener('input',function(){applyPicture();showControls()})});
@@ -1738,8 +1818,9 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
     var base=(cutter?cutter.offsetHeight:0)+(seek?seek.offsetHeight:0)+28,free=H-(head?head.offsetHeight:0)-base;
     // Sliders get between 70 and 100 px per row; the video gets what fits its shape,
     // and any height beyond the slider maximum also goes to the video area (pinch-zoom fills it).
-    var h=Math.min(W/aspect,free-rows*70);
-    if((free-h)/rows>100)h=free-rows*100;
+    var listMode=window.innerHeight>=window.innerWidth;
+    var h=listMode?Math.min(W/aspect,free-200):Math.min(W/aspect,free-rows*70);
+    if(!listMode&&(free-h)/rows>100)h=free-rows*100;
     h=Math.max(120,h);
     stage.style.flex='0 0 auto';stage.style.height=Math.round(h)+'px';
     applyPicture();reportGestureRects();
@@ -2333,6 +2414,223 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
     host.addEventListener('pointerup',end);host.addEventListener('pointercancel',end);host.addEventListener('lostpointercapture',end);
   }
   document.querySelectorAll('input[type=range]').forEach(thumbOnly);
+
+  // ======================= Multi-part cutter, file list, song finder =======================
+  function note(t){el('cutterNote').textContent=t||''}
+  var NC=window.MYmusicNativeCutter;
+
+  // ---- marks: every Start draws a blue line, every End a red line; each Start..End is a part
+  var marks=[],marksFor='';
+  function segs(){
+    var d=duration(),ms=marks.slice().sort(function(a,b){return a.t-b.t}),out=[],open=null;
+    ms.forEach(function(m){
+      if(m.type==='s'){if(open==null)open=m.t}
+      else{var s0=open!=null?open:(out.length?out[out.length-1][1]:0);if(m.t>s0+0.05)out.push([s0,m.t]);open=null}
+    });
+    if(open!=null&&d>open+0.05)out.push([open,d]);
+    return out;
+  }
+  function drawMarks(){
+    var L=el('markLayer'),d=duration();if(!L)return;L.innerHTML='';
+    var ss=d?segs():[];
+    ss.forEach(function(s){var r=document.createElement('i');r.className='mk-seg';r.style.left=(s[0]/d*100)+'%';r.style.width=((s[1]-s[0])/d*100)+'%';L.appendChild(r)});
+    if(d)marks.forEach(function(m){var x=document.createElement('i');x.className='mk-line '+(m.type==='s'?'s':'e');x.style.left=(m.t/d*100)+'%';L.appendChild(x)});
+    var tot=ss.reduce(function(a,s){return a+s[1]-s[0]},0);
+    el('cutterSelection').textContent=ss.length?ss.length+' part'+(ss.length>1?'s':'')+' · '+fmt(tot):'No parts marked';
+  }
+  function addMark(type){
+    var d=duration();if(!d){note('Choose a file first.');return}
+    var t=Math.max(0,Math.min(d,activeMedia.currentTime||0));marks.push({t:t,type:type});drawMarks();
+    note((type==='s'?'Start':'End')+' at '+fmt(t)+(type==='s'?' — move on, then tap End.':''));
+  }
+  [video,audioMedia].forEach(function(m){m.addEventListener('loadedmetadata',function(){if(m!==activeMedia)return;if(urls[index]!==marksFor){marksFor=urls[index];marks=[]}drawMarks()})});
+  el('markStart').addEventListener('click',function(){addMark('s')});
+  el('markEnd').addEventListener('click',function(){addMark('e')});
+  el('markUndo').addEventListener('click',function(){if(marks.length){marks.pop();drawMarks();note('Last mark removed.')}});
+  el('markClear').addEventListener('click',function(){if(!marks.length)return;marks=[];drawMarks();note('All marks removed.')});
+
+  // ---- play / pause and hold-to-step buttons (slow first, faster the longer they are held)
+  el('cxPlay').addEventListener('click',function(){if(!activeMedia||!activeMedia.src){note('Choose a file first.');return}if(activeMedia.paused){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){})}else activeMedia.pause()});
+  [video,audioMedia].forEach(function(m){m.addEventListener('play',function(){if(m===activeMedia)el('cxPlay').textContent='❚❚'});m.addEventListener('pause',function(){if(m===activeMedia)el('cxPlay').textContent='▶'})});
+  var stepTarget=null,stepInFlight=false,stepHeld=false;
+  [video,audioMedia].forEach(function(m){m.addEventListener('seeked',function(){if(m!==activeMedia)return;stepInFlight=false;if(stepHeld&&stepTarget!=null&&Math.abs((m.currentTime||0)-stepTarget)>0.03){stepInFlight=true;try{m.currentTime=stepTarget}catch(e){stepInFlight=false}}})});
+  function holdStep(id,dir){
+    var b=el(id),timer=0,t0=0;
+    function tick(){
+      var d=duration();if(!d)return;var held=performance.now()-t0;
+      var size=held<700?0.04:held<1600?0.25:held<3000?1:held<5000?5:15;
+      var base=stepTarget!=null?stepTarget:(activeMedia.currentTime||0);
+      stepTarget=Math.max(0,Math.min(d,base+dir*size));
+      el('cutterPlayhead').style.left=(stepTarget/d*100)+'%';el('cutterPos').textContent=fmt(stepTarget)+' / '+fmt(d);
+      if(NATIVE&&held>1600){try{NP.setScrubbing(true)}catch(e){}}
+      if(!stepInFlight){stepInFlight=true;try{activeMedia.currentTime=stepTarget}catch(e){stepInFlight=false}}
+      timer=setTimeout(tick,held<700?200:110);
+    }
+    b.addEventListener('pointerdown',function(e){e.preventDefault();if(!duration())return;try{b.setPointerCapture(e.pointerId)}catch(_){}stepHeld=true;stepTarget=null;t0=performance.now();tick()});
+    function stop(){if(!stepHeld)return;stepHeld=false;clearTimeout(timer);if(NATIVE){try{NP.setScrubbing(false)}catch(e){}}if(stepTarget!=null){try{activeMedia.currentTime=stepTarget}catch(e){}}stepTarget=null}
+    b.addEventListener('pointerup',stop);b.addEventListener('pointercancel',stop);b.addEventListener('lostpointercapture',stop);
+    b.addEventListener('contextmenu',function(e){e.preventDefault()});
+  }
+  holdStep('stepBack',-1);holdStep('stepFwd',1);
+
+  // ---- saving: parts as separate files, parts joined, or the file with the parts erased
+  function cutParts(mode){
+    var ss=segs();
+    if(!files[index]||!duration()){note('Choose a file first.');return}
+    if(!ss.length){note('Mark a part first: tap Start, move on, then tap End.');return}
+    var f=files[index],payload={fileName:f.name||(audioMode?'audio':'video'),mediaType:audioMode?'audio':'video',durationSeconds:duration(),mode:mode,
+      ranges:ss.map(function(s){return [s[0],s[1]]}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
+    if(!NC||typeof NC.cutPickedFile!=='function'){note('Saving works in the Android app (this preview cannot save files).');return}
+    var ok=false;try{ok=NC.cutPickedFile(JSON.stringify(payload))===true}catch(e){}
+    if(ok){note('Saving…');return}
+    note('Preparing…');
+    transferFileToNativeCutter(f,payload,NC).catch(function(err){note('Cut failed: '+(err&&err.message?err.message:String(err)))});
+  }
+  el('saveParts').addEventListener('click',function(){cutParts('parts')});
+  el('saveOne').addEventListener('click',function(){cutParts('join')});
+  el('eraseParts').addEventListener('click',function(){cutParts('remove')});
+  window.onNativeCutterProgress=function(p,label){note('Saving '+(label?label+' – ':'')+Math.max(0,Math.min(100,Math.round(p)))+'%')};
+  window.onNativeCutterResult=function(msg){note(String(msg||''))};
+
+  // ---- tools
+  el('cxEq').addEventListener('click',function(){eqOpen()});
+  el('cxAdd').addEventListener('click',function(){choose()});
+  el('cxFolder').addEventListener('click',function(){if(NATIVE&&NP.pickFolder){try{NP.pickFolder()}catch(e){}}else note('Folders can be opened in the Android app; here use ＋ Files.')});
+
+  // ---- file list (kept between sessions): tap to play, ▲▼ to move, tick to join or remove
+  var LIST_KEY='mmCutterList_v1',list=[],current=-1;
+  function keyOf(m){return m.orig||m.uri||m.url||m.name}
+  function saveList(){try{localStorage.setItem(LIST_KEY,JSON.stringify(list.filter(function(x){return x.key&&!/^blob:/.test(x.key)}).map(function(x){return {key:x.key,name:x.name,type:x.type,size:x.size,cut:!!x.cut}})))}catch(e){}}
+  function loadList(){try{var a=JSON.parse(localStorage.getItem(LIST_KEY)||'[]');if(Array.isArray(a))list=a.map(function(x){return {key:x.key,name:x.name,type:x.type,size:x.size,cut:!!x.cut}})}catch(e){}}
+  function upsert(m,cut,at){
+    var k=keyOf(m),i=list.findIndex(function(x){return x.key===k});
+    var item=i>=0?list[i]:{key:k,name:m.name,type:m.type||'',size:m.size||0,cut:!!cut};
+    item.name=m.name||item.name;item.url=m.url||item.url;item.uri=m.uri||item.uri;if(m.file)item.file=m.file;if(m.type)item.type=m.type;if(m.size)item.size=m.size;
+    if(i<0){if(at!=null&&at>=0&&at<=list.length)list.splice(at,0,item);else list.push(item);i=list.indexOf(item)}
+    return i;
+  }
+  function kindOf(x){var t=(x.type||'').split('/')[0];if(t==='audio'||t==='video')return t;return /\.(mp3|m4a|m4b|aac|wav|flac|ogg|oga|opus|amr|wma|aiff?|mka)$/i.test(x.name||'')?'audio':'video'}
+  function renderList(){
+    var host=el('mlItems');host.innerHTML='';
+    list.forEach(function(x,i){
+      var row=document.createElement('div');row.className='ml-item'+(i===current?' cur':'')+(x.cut?' cut':'');row.dataset.i=i;
+      row.innerHTML='<label class="ml-chk"><input type="checkbox"'+(x.checked?' checked':'')+'></label><button type="button" class="ml-name"><b></b><small></small></button><button type="button" class="ml-mv" data-mv="-1" aria-label="Move up">▲</button><button type="button" class="ml-mv" data-mv="1" aria-label="Move down">▼</button>';
+      row.querySelector('b').textContent=x.name||'file';
+      var mb=x.size>0?(x.size>=1048576?(x.size/1048576).toFixed(1)+' MB':Math.max(1,Math.round(x.size/1024))+' KB'):'';
+      row.querySelector('small').textContent=(x.cut?'CUT · ':'')+(kindOf(x)==='audio'?'♪ audio':'▶ video')+(mb?' · '+mb:'');
+      host.appendChild(row);
+    });
+    el('mlCount').textContent=list.length?' ('+list.length+')':'';
+    var n=list.filter(function(x){return x.checked}).length;el('mlJoin').disabled=n<2;el('mlRemove').disabled=n<1;
+  }
+  el('mlItems').addEventListener('click',function(e){
+    var row=e.target.closest('.ml-item');if(!row)return;var i=+row.dataset.i,x=list[i];if(!x)return;
+    if(e.target.closest('.ml-chk')){var cb=row.querySelector('input');if(e.target!==cb)return;x.checked=cb.checked;renderList();return}
+    var mv=e.target.closest('.ml-mv');
+    if(mv){var j=i+(+mv.dataset.mv);if(j<0||j>=list.length)return;list.splice(i,1);list.splice(j,0,x);if(current===i)current=j;else if(current===j)current=i;saveList();renderList();return}
+    if(e.target.closest('.ml-name'))playItem(i);
+  });
+  function playItem(i){
+    var x=list[i];if(!x)return;current=i;renderList();
+    if(x.file){openFiles([x.file]);if(files[0])files[0].__uri='';return}
+    if(x.url){var r=remoteMedia({url:x.url,name:x.name,type:x.type,size:x.size});r.__uri=x.uri||x.key;openFiles([r]);return}
+    if(NATIVE&&NP.openUri){note('Opening '+x.name+'…');try{NP.openUri(x.key)}catch(e){}}
+    else note('This file is no longer available here; add it again with ＋ Files.');
+  }
+  function playNext(){if(current>=0&&current<list.length-1)playItem(current+1)}
+  [video,audioMedia].forEach(function(m){m.addEventListener('ended',function(){if(m===activeMedia&&files.length<=1)playNext()})});
+  el('mlJoin').addEventListener('click',function(){
+    var sel=list.filter(function(x){return x.checked});if(sel.length<2){note('Tick at least two files to join.');return}
+    if(!NC||typeof NC.joinFiles!=='function'){note('Joining works in the Android app.');return}
+    note('Joining '+sel.length+' files…');
+    try{NC.joinFiles(JSON.stringify({items:sel.map(function(x){return {uri:x.key&&!/^blob:|^https?:/.test(x.key)?x.key:(x.uri||''),name:x.name}})}))}catch(e){note('Join failed.')}
+  });
+  el('mlRemove').addEventListener('click',function(){
+    var cur=list[current];list=list.filter(function(x){return !x.checked});current=cur?list.indexOf(cur):-1;saveList();renderList();note('Removed from the list (the files themselves are not deleted).');
+  });
+  // files arriving from Android (Add, Open with, Share, a tapped list item)
+  window.__mymusicOpenShared=function(arr){
+    if(!arr||!arr.length)return;show();if(isFullscreen())leaveFullscreen();
+    var first=-1;arr.forEach(function(m){var i=upsert(m);if(first<0)first=i});
+    saveList();playItem(first);
+  };
+  window.__mmFolder=function(arr){
+    if(!arr||!arr.length){note('No audio or video files in that folder.');return}
+    arr.forEach(function(m){upsert({orig:m.uri,uri:m.uri,name:m.name,type:m.type,size:m.size})});saveList();renderList();
+    note('Added '+arr.length+' file'+(arr.length>1?'s':'')+' from the folder. Tap a name to play it.');
+  };
+  // a saved part or joined file goes into the list right after the file it came from
+  window.onNativeCutterSaved=function(info){
+    if(!info||info.kind==='image')return;
+    upsert({orig:info.uri,uri:info.uri,url:info.url,name:info.name,type:info.mime},true,current>=0?current+1:null);
+    saveList();renderList();note('✓ Saved '+info.name);
+  };
+  function addPicked(fl){
+    var arr=Array.prototype.slice.call(fl||[]);if(!arr.length)return;var first=-1;
+    arr.forEach(function(f){var i=upsert({orig:'blob:'+f.name+':'+f.size,name:f.name,type:f.type,size:f.size,file:f});if(first<0)first=i});
+    renderList();playItem(first);
+  }
+  loadList();renderList();
+
+  // ---- song finder: loudness every 50 ms, quiet gaps longer than the chosen time split the songs
+  function findSongs(db,win,opt){
+    var n=db.length;if(!n)return [];
+    var v=[];for(var i=0;i<n;i++)if(db[i]>-99)v.push(db[i]);
+    if(v.length<10)return [];
+    v.sort(function(a,b){return a-b});
+    var floor=Math.max(-80,v[Math.floor(v.length*0.05)]),med=v[Math.floor(v.length*0.5)];
+    var thr=opt.thr!=null?opt.thr:Math.max(floor+4,Math.min(med-10,floor+(med-floor)*0.35));
+    // smooth over 0.3 s so a single quiet moment inside a song is not a gap
+    var k=Math.max(1,Math.round(0.3/win)),sm=new Float32Array(n),acc=0,q=[];
+    for(var j=0;j<n;j++){var p=Math.pow(10,db[j]/10);q.push(p);acc+=p;if(q.length>k)acc-=q.shift();sm[j]=10*Math.log10(acc/q.length+1e-12)}
+    var minGap=Math.max(1,Math.round(opt.minGap/win)),gaps=[],run=-1;
+    for(var g=0;g<=n;g++){var quiet=g<n&&sm[g]<thr;if(quiet&&run<0)run=g;if(!quiet&&run>=0){if(g-run>=minGap)gaps.push([run,g]);run=-1}}
+    var first=0;while(first<n&&sm[first]<thr)first++;var last=n-1;while(last>0&&sm[last]<thr)last--;
+    if(first>=last)return [];
+    var pts=[first];gaps.forEach(function(gp){if(gp[0]>first&&gp[1]<last){pts.push(gp[0]);pts.push(gp[1])}});pts.push(last+1);
+    var pad=0.3,out=[];
+    for(var s=0;s<pts.length;s+=2){out.push([Math.max(0,pts[s]*win-pad),Math.min(n*win,pts[s+1]*win+pad)])}
+    // songs shorter than the minimum join the next one (or the previous one at the end)
+    var merged=[];out.forEach(function(seg){merged.push(seg)});
+    var changed=true;while(changed&&merged.length>1){changed=false;for(var m=0;m<merged.length;m++){if(merged[m][1]-merged[m][0]<opt.minSong){if(m<merged.length-1){merged[m+1][0]=merged[m][0];merged.splice(m,1)}else{merged[m-1][1]=merged[m][1];merged.splice(m,1)}changed=true;break}}}
+    return {segs:merged,thr:thr};
+  }
+  window.__mmFindSongs=findSongs;
+  var levelsCache={},levelsJob=0;
+  function spOut(){var t=+el('spThr').value;el('spThrOut').textContent=t<=-71?'Auto':t+' dB';el('spGapOut').textContent=(+el('spGap').value).toFixed(1)+' s';el('spSongOut').textContent=el('spSong').value+' s'}
+  ['spThr','spGap','spSong'].forEach(function(id){el(id).addEventListener('input',spOut)});spOut();
+  el('findSongs').addEventListener('click',function(){if(!duration()){note('Choose a recording first.');return}el('songsPanel').hidden=false;el('spStatus').textContent=''});
+  el('spClose').addEventListener('click',function(){el('songsPanel').hidden=true});
+  function applySongs(L){
+    var t=+el('spThr').value,r=findSongs(L.db,L.win,{thr:t<=-71?null:t,minGap:+el('spGap').value,minSong:+el('spSong').value});
+    if(!r||!r.segs||!r.segs.length){el('spStatus').textContent='No songs found: try a higher silence level or a shorter gap.';return}
+    marks=[];r.segs.forEach(function(s){marks.push({t:s[0],type:'s'});marks.push({t:s[1],type:'e'})});drawMarks();
+    el('spStatus').textContent='Found '+r.segs.length+' song'+(r.segs.length>1?'s':'')+' (silence below '+Math.round(r.thr)+' dB).';
+    note('Found '+r.segs.length+' songs. Check the blue/red marks, then tap Save parts.');
+  }
+  el('spFind').addEventListener('click',function(){
+    var k=urls[index];if(!k)return;
+    if(levelsCache[k]){applySongs(levelsCache[k]);return}
+    var job=++levelsJob;el('spStatus').textContent='Listening to the recording… 0%';
+    if(NATIVE&&NC&&typeof NC.analyseLevels==='function'){try{NC.analyseLevels(k,job)}catch(e){el('spStatus').textContent='Could not read the sound.'}return}
+    // browser preview: decode in the page
+    var f=files[index];if(!f||typeof f.arrayBuffer!=='function'){el('spStatus').textContent='Could not read the sound.';return}
+    var AC=window.AudioContext||window.webkitAudioContext,ctx=new AC();
+    f.arrayBuffer().then(function(ab){return ctx.decodeAudioData(ab)}).then(function(buf){
+      var sr=buf.sampleRate,w=Math.round(sr*0.05),ch=[];for(var c=0;c<buf.numberOfChannels;c++)ch.push(buf.getChannelData(c));
+      var n=Math.floor(buf.length/w),db=new Float32Array(n);
+      for(var i=0;i<n;i++){var s=0;for(var j=i*w;j<(i+1)*w;j++){var m=0;for(var c2=0;c2<ch.length;c2++)m+=ch[c2][j];m/=ch.length;s+=m*m}db[i]=Math.max(-100,10*Math.log10(s/w+1e-12))}
+      try{ctx.close()}catch(e){}
+      if(job!==levelsJob)return;levelsCache[k]={win:0.05,db:db};applySongs(levelsCache[k]);
+    }).catch(function(){el('spStatus').textContent='Could not read the sound.'});
+  });
+  window.__mmLevelsProgress=function(job,p){if(job===levelsJob)el('spStatus').textContent='Listening to the recording… '+p+'%'};
+  window.__mmLevelsFailed=function(job,msg){if(job===levelsJob)el('spStatus').textContent='Could not read the sound: '+msg};
+  window.__mmLevels=function(job,res){
+    if(job!==levelsJob)return;var bin=atob(res.b64),db=new Float32Array(bin.length);
+    for(var i=0;i<bin.length;i++)db[i]=bin.charCodeAt(i)-100;
+    var k=urls[index];levelsCache[k]={win:res.win||0.05,db:db};applySongs(levelsCache[k]);
+  };
 })();
 </script>
 
