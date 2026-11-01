@@ -111,6 +111,10 @@ class NativePlayer(
         }
     }
 
+    private val refreshFrame = Runnable {
+        if (player.playbackState == Player.STATE_READY && !player.isPlaying) player.seekTo(player.currentPosition)
+    }
+
     private val seekFallback = Runnable {
         if (pendingSeek && player.playbackState == Player.STATE_READY) seekDone()
     }
@@ -455,9 +459,23 @@ class NativePlayer(
                 effectsOn = true
                 try {
                     player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen))
+                    // The picture processing is set up when the video decoder starts, so restart
+                    // the current file once at the same position (a short blink).
+                    val item = player.currentMediaItem
+                    if (item != null) {
+                        val pos = player.currentPosition
+                        val play = player.playWhenReady
+                        player.setMediaItem(item, pos)
+                        player.prepare()
+                        player.playWhenReady = play
+                    }
                 } catch (_: Exception) {
                     effectsOn = false; effectsBroken = true
                 }
+            } else if (effectsOn && !player.isPlaying) {
+                // Paused: redraw the current frame so the change is visible at once.
+                main.removeCallbacks(refreshFrame)
+                main.postDelayed(refreshFrame, 120)
             }
             // Colour settings that this phone cannot do on the graphics chip fall back to the TextureView.
             val needPaint = effectsBroken && !PictureFx.isNeutral()

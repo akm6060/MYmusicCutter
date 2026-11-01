@@ -25,7 +25,7 @@ object PictureFx {
     @Volatile var contrast = 100f     // %
     @Volatile var saturation = 100f   // %
     @Volatile var hue = 0f            // degrees
-    @Volatile var sharpness = 0f      // 0..100
+    @Volatile var sharpness = 0f      // -100 (softer) .. +100 (sharper)
 
     fun isNeutral() = brightness == 100f && contrast == 100f && saturation == 100f && hue == 0f && sharpness == 0f
 
@@ -100,7 +100,7 @@ uniform float uAmount;
 varying vec2 vTexSamplingCoord;
 void main() {
   vec4 c = texture2D(uTexSampler, vTexSamplingCoord);
-  if (uAmount <= 0.0) { gl_FragColor = c; return; }
+  if (abs(uAmount) < 0.001) { gl_FragColor = c; return; }
   vec3 n = texture2D(uTexSampler, vTexSamplingCoord + vec2(0.0, uTexelSize.y)).rgb;
   vec3 s = texture2D(uTexSampler, vTexSamplingCoord - vec2(0.0, uTexelSize.y)).rgb;
   vec3 e = texture2D(uTexSampler, vTexSamplingCoord + vec2(uTexelSize.x, 0.0)).rgb;
@@ -129,7 +129,7 @@ void main() {
                 program.use()
                 program.setSamplerTexIdUniform("uTexSampler", inputTexId, 0)
                 program.setFloatsUniform("uTexelSize", floatArrayOf(1f / w, 1f / h))
-                program.setFloatUniform("uAmount", sharpness / 100f * 1.2f)
+                program.setFloatUniform("uAmount", if (sharpness >= 0f) sharpness / 100f * 1.2f else sharpness / 100f * 0.22f)
                 program.bindAttributesAndUniforms()
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
             } catch (e: GlUtil.GlException) {
