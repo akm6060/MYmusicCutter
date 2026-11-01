@@ -33,6 +33,7 @@ import org.json.JSONObject
 class MainActivity : Activity() {
     private lateinit var nativePlayer: NativePlayer
     private val pickRequestCode = 4110
+    private val folderRequestCode = 4111
     private lateinit var webView: WebView
     private lateinit var cutter: MYmusicNativeCutter
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
@@ -232,6 +233,78 @@ class MainActivity : Activity() {
         }
     }
 
+    fun pickFolder() {
+        try {
+            val i = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+            @Suppress("DEPRECATION")
+            startActivityForResult(i, folderRequestCode)
+        } catch (_: Exception) {
+            Toast.makeText(this, "No folder picker found", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun openUriFromList(uriText: String) {
+        val uri = try { Uri.parse(uriText) } catch (_: Exception) { null } ?: return
+        deliverUris(arrayOf(uri), null)
+    }
+
+    private val mediaExt = setOf("mp4", "m4v", "mkv", "webm", "3gp", "mov", "avi", "ts", "m2ts", "mts", "flv", "wmv", "mpg", "mpeg",
+        "mp3", "m4a", "m4b", "aac", "wav", "flac", "ogg", "oga", "opus", "amr", "wma", "aiff", "aif", "mka")
+
+    /** Lists the audio and video files of a chosen folder (sorted by name) and sends them to the page. */
+    private fun listFolder(tree: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: Exception) {}
+        Thread {
+            val arr = org.json.JSONArray()
+            try {
+                val docId = android.provider.DocumentsContract.getTreeDocumentId(tree)
+                val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+                val cols = arrayOf(
+                    android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    android.provider.DocumentsContract.Document.COLUMN_SIZE
+                )
+                val rows = ArrayList<Array<Any>>()
+                contentResolver.query(children, cols, null, null, null)?.use { c ->
+                    while (c.moveToNext()) {
+                        val id = c.getString(0) ?: continue
+                        val name = c.getString(1) ?: continue
+                        val mime = c.getString(2) ?: ""
+                        val size = if (c.isNull(3)) -1L else c.getLong(3)
+                        val ext = name.substringAfterLast('.', "").lowercase()
+                        if (mime.startsWith("audio/") || mime.startsWith("video/") || ext in mediaExt) {
+                            rows.add(arrayOf<Any>(id, name, mime, size))
+                        }
+                    }
+                }
+                rows.sortWith { a, b -> naturalCompare(a[1] as String, b[1] as String) }
+                for (r in rows) {
+                    val u = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, r[0] as String)
+                    arr.put(JSONObject().put("uri", u.toString()).put("name", r[1]).put("type", r[2]).put("size", r[3]))
+                }
+            } catch (e: Exception) {
+                runOnUiThread { Toast.makeText(this, "This folder could not be read", Toast.LENGTH_LONG).show() }
+            }
+            val json = arr.toString()
+            runOnUiThread { if (pageReady) webView.evaluateJavascript("window.__mmFolder&&window.__mmFolder($json)", null) }
+        }.start()
+    }
+
+    /** "Song 2" before "Song 10". */
+    private fun naturalCompare(a: String, b: String): Int {
+        val ra = Regex("(\\d+)|(\\D+)").findAll(a.lowercase()).map { it.value }.toList()
+        val rb = Regex("(\\d+)|(\\D+)").findAll(b.lowercase()).map { it.value }.toList()
+        for (i in 0 until minOf(ra.size, rb.size)) {
+            val x = ra[i]; val y = rb[i]
+            val c = if (x[0].isDigit() && y[0].isDigit()) (x.toBigInteger().compareTo(y.toBigInteger())) else x.compareTo(y)
+            if (c != 0) return c
+        }
+        return ra.size - rb.size
+    }
+
     private fun deliverUris(array: Array<Uri>, intent: Intent?) {
         // Old file managers send file:// paths; reading those needs the storage permission (Android 12 and older).
         val readPerms = if (Build.VERSION.SDK_INT >= 33) arrayOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO")
@@ -336,6 +409,11 @@ class MainActivity : Activity() {
     @Deprecated("Deprecated in Android, retained for compatibility with WebView file chooser")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == folderRequestCode) {
+            val tree = data?.data
+            if (resultCode == RESULT_OK && tree != null) listFolder(tree)
+            return
+        }
         if (requestCode == pickRequestCode) {
             if (resultCode == RESULT_OK && data != null) {
                 val clip = data.clipData

@@ -335,6 +335,8 @@ class MYmusicNativeCutter(
                     .put("name", name)
                     .put("size", realSize)
                     .put("type", mime)
+                    .put("uri", (file?.let { Uri.fromFile(it) } ?: uri).toString())
+                    .put("orig", uri.toString())
             )
         }
         // Copies from the previous "Open with" are no longer needed.
@@ -513,7 +515,9 @@ class MYmusicNativeCutter(
     fun cutPickedFile(metaJson: String): Boolean {
         return try {
             val parsed = JSONObject(metaJson)
-            val uri = findPicked(parsed.optString("fileName", ""), parsed.optLong("fileSizeBytes", -1L))
+            val direct = parsed.optString("uri", "")
+            val uri = (if (direct.isNotBlank()) Uri.parse(direct) else null)
+                ?: findPicked(parsed.optString("fileName", ""), parsed.optLong("fileSizeBytes", -1L))
                 ?: return false
             startJob(parsed, Source(uri, null))
         } catch (_: Exception) {
@@ -581,17 +585,6 @@ class MYmusicNativeCutter(
 
     // ---------------------------------------------------------------- snapshot
 
-    @JavascriptInterface
-    fun saveSnapshot(base64Jpeg: String, fileName: String): Boolean {
-        val bytes = try {
-            Base64.decode(base64Jpeg, Base64.DEFAULT)
-        } catch (_: Exception) {
-            return false
-        }
-        saveSnapshotBytes(bytes, fileName)
-        return true
-    }
-
     /** Where the native player should read a shared or saved file from (private copy if one was made). */
     fun playableUri(id: String): Uri? {
         val item = shared[id] ?: return null
@@ -599,23 +592,6 @@ class MYmusicNativeCutter(
     }
 
     fun pageMessage(message: String) = notifyPage(message)
-
-    fun saveSnapshotBytes(bytes: ByteArray, fileName: String) {
-        worker.execute {
-            var target: OutputTarget? = null
-            try {
-                val t = createOutput(Kind.IMAGE, fileName, ".jpg", "image/jpeg")
-                target = t
-                writeAll(FileOutputStream(t.pfd.fileDescriptor).channel, bytes)
-                val saved = finishOutput(t)
-                target = null
-                notifySaved(saved, "image")
-            } catch (e: Exception) {
-                target?.let { abortOutput(it) }
-                notifyPage("Snapshot failed: " + (e.message ?: e.javaClass.simpleName))
-            }
-        }
-    }
 
     /** Opens a saved picture in the gallery (or another viewer). */
     @JavascriptInterface
@@ -636,72 +612,389 @@ class MYmusicNativeCutter(
 
     // ---------------------------------------------------------------- job
 
+    private var partLabel = ""
+
+    private fun rangesFrom(jobMeta: JSONObject): List<LongArray>? {
+        val arr = jobMeta.optJSONArray("ranges") ?: return null
+        val list = ArrayList<LongArray>()
+        for (i in 0 until arr.length()) {
+            val r = arr.optJSONArray(i) ?: continue
+            val a = (r.optDouble(0, 0.0) * 1_000_000).toLong()
+            val e = r.optDouble(1, -1.0)
+            val b = if (e < 0) Long.MAX_VALUE else (e * 1_000_000).toLong()
+            if (b > a) list.add(longArrayOf(maxOf(0L, a), b))
+        }
+        return list
+    }
+
+    /** Writes one output file holding [ranges] of the source, in the source's own format. */
+    private fun saveRanges(source: Source, name: String, format: String, isAudio: Boolean, ranges: List<LongArray>, durUs: Long): Saved {
+        var target: OutputTarget? = null
+        try {
+            var totalUs = 0L
+            for (r in ranges) totalUs += (if (r[1] == Long.MAX_VALUE) maxOf(durUs, r[0]) else r[1]) - r[0]
+            lastProgressAt = 0L
+            progressSent = -1
+            val saved: Saved = when (format) {
+                "mp3" -> {
+                    val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg"); target = t
+                    cutMp3(source, t, ranges, sourceSize(source)); finishOutput(t)
+                }
+                "adts" -> {
+                    val t = createOutput(Kind.AUDIO, name, ".aac", "audio/aac"); target = t
+                    cutAdts(source, t, ranges, sourceSize(source)); finishOutput(t)
+                }
+                "wav" -> {
+                    val t = createOutput(Kind.AUDIO, name, ".wav", "audio/wav"); target = t
+                    cutWav(source, t, ranges, sourceSize(source)); finishOutput(t)
+                }
+                else -> {
+                    val plan = probeContainer(source, isAudio)
+                    val ext = if (plan.webm) ".webm" else if (isAudio) extFor(name, ".m4a") else extFor(name, ".mp4")
+                    val mime = when {
+                        plan.webm && isAudio -> "audio/webm"
+                        plan.webm -> "video/webm"
+                        isAudio -> "audio/mp4"
+                        else -> "video/mp4"
+                    }
+                    val t = createOutput(if (isAudio) Kind.AUDIO else Kind.VIDEO, name, ext, mime); target = t
+                    muxCut(source, t, plan, ranges, maxOf(totalUs, 1L)); finishOutput(t)
+                }
+            }
+            target = null
+            return saved
+        } catch (e: Exception) {
+            target?.let { abortOutput(it) }
+            throw e
+        }
+    }
+
+    /** Keeps the original extension for MP4-family files (m4a, m4b, 3gp, mov...) so the result looks like the original. */
+    private fun extFor(name: String, fallback: String): String {
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return when (ext) {
+            "m4a", "m4b" -> ".$ext"
+            "mp4", "m4v", "3gp", "mov" -> if (fallback == ".m4a") ".m4a" else ".$ext"
+            else -> fallback
+        }
+    }
+
     private fun startJob(jobMeta: JSONObject, source: Source): Boolean {
         if (!busy.compareAndSet(false, true)) {
             notifyPage("Please wait: the previous cut is still saving.")
             return true
         }
         worker.execute {
-            var target: OutputTarget? = null
             try {
                 val isAudio = jobMeta.optString("mediaType", "video") == "audio"
                 val mode = jobMeta.optString("mode", "keep")
-                val startUs = (jobMeta.optDouble("startSeconds", 0.0) * 1_000_000).toLong()
-                val endUs = (jobMeta.optDouble("endSeconds", 0.0) * 1_000_000).toLong()
                 val durUs = (jobMeta.optDouble("durationSeconds", 0.0) * 1_000_000).toLong()
                 val name = jobMeta.optString("fileName", "media")
-                require(startUs >= 0 && endUs > startUs) { "The selected cutting range is invalid." }
-
-                val ranges: List<LongArray> = if (mode == "remove-middle") {
-                    listOf(longArrayOf(0L, startUs), longArrayOf(endUs, Long.MAX_VALUE)).filter { it[1] > it[0] }
+                val marked = rangesFrom(jobMeta)
+                // Which files to write: each entry is the list of ranges for one output file.
+                val outputs: List<List<LongArray>> = if (marked != null) {
+                    val parts = Ranges.normalize(marked)
+                    require(parts.isNotEmpty()) { "Mark at least one part first (Start, then End)." }
+                    when (mode) {
+                        "parts" -> parts.map { listOf(it) }
+                        "remove" -> listOf(Ranges.complement(parts).filter { it[1] == Long.MAX_VALUE && it[0] < durUs || it[1] - it[0] > 50_000 })
+                        else -> listOf(parts)
+                    }
                 } else {
-                    listOf(longArrayOf(startUs, endUs))
+                    val startUs = (jobMeta.optDouble("startSeconds", 0.0) * 1_000_000).toLong()
+                    val endUs = (jobMeta.optDouble("endSeconds", 0.0) * 1_000_000).toLong()
+                    require(startUs >= 0 && endUs > startUs) { "The selected cutting range is invalid." }
+                    if (mode == "remove-middle")
+                        listOf(listOf(longArrayOf(0L, startUs), longArrayOf(endUs, Long.MAX_VALUE)).filter { it[1] > it[0] })
+                    else listOf(listOf(longArrayOf(startUs, endUs)))
                 }
-                var totalUs = 0L
-                for (r in ranges) totalUs += (if (r[1] == Long.MAX_VALUE) maxOf(durUs, r[0]) else r[1]) - r[0]
-                lastProgressAt = 0L
-                progressSent = -1
-
+                require(outputs.all { it.isNotEmpty() }) { "Nothing would be left to save." }
                 val format = detectFormat(source, name)
-                val saved: Saved = when (format) {
-                    "mp3" -> {
-                        val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg")
-                        target = t
-                        cutMp3(source, t, ranges, sourceSize(source))
-                        finishOutput(t)
-                    }
-                    "wav" -> {
-                        val t = createOutput(Kind.AUDIO, name, ".wav", "audio/wav")
-                        target = t
-                        cutWav(source, t, ranges, sourceSize(source))
-                        finishOutput(t)
-                    }
-                    else -> {
-                        val plan = probeContainer(source, isAudio)
-                        val ext = if (plan.webm) ".webm" else if (isAudio) ".m4a" else ".mp4"
-                        val mime = when {
-                            plan.webm && isAudio -> "audio/webm"
-                            plan.webm -> "video/webm"
-                            isAudio -> "audio/mp4"
-                            else -> "video/mp4"
-                        }
-                        val t = createOutput(if (isAudio) Kind.AUDIO else Kind.VIDEO, name, ext, mime)
-                        target = t
-                        muxCut(source, t, plan, ranges, maxOf(totalUs, 1L))
-                        finishOutput(t)
-                    }
+                val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
+                for ((i, ranges) in outputs.withIndex()) {
+                    partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
+                    val saved = saveRanges(source, name, format, isAudio, ranges, durUs)
+                    notifySaved(saved, kind)
                 }
-                target = null
-                notifySaved(saved, if (isAudio || format == "mp3" || format == "wav") "audio" else "video")
+                partLabel = ""
+                if (outputs.size > 1) notifyPage("✓ Saved ${outputs.size} parts")
             } catch (e: Exception) {
-                target?.let { abortOutput(it) }
                 notifyPage("Cut failed: " + (e.message ?: e.javaClass.simpleName))
             } finally {
+                partLabel = ""
                 source.file?.delete()
                 busy.set(false)
             }
         }
         return true
+    }
+
+    // ---------------------------------------------------------------- joining files
+
+    /**
+     * Joins whole files end to end without re-encoding. All files must be the same kind
+     * (MP3, AAC, WAV, MP4/M4A or WebM) with the same audio/video settings.
+     */
+    @JavascriptInterface
+    fun joinFiles(json: String): Boolean {
+        val items = try { JSONObject(json).getJSONArray("items") } catch (_: Exception) { return false }
+        if (items.length() < 2) { notifyPage("Tick at least two files to join."); return true }
+        if (!busy.compareAndSet(false, true)) { notifyPage("Please wait: the previous job is still saving."); return true }
+        worker.execute {
+            var target: OutputTarget? = null
+            try {
+                val sources = ArrayList<Source>()
+                val names = ArrayList<String>()
+                for (i in 0 until items.length()) {
+                    val o = items.getJSONObject(i)
+                    val u = o.optString("uri", "")
+                    require(u.isNotBlank()) { "File ${i + 1} cannot be read any more; remove it from the list and add it again." }
+                    sources.add(Source(Uri.parse(u), null))
+                    names.add(o.optString("name", "media"))
+                }
+                val formats = sources.indices.map { detectFormat(sources[it], names[it]) }
+                require(formats.distinct().size == 1) {
+                    "These files are different kinds (" + formats.distinct().joinToString(", ") { it.uppercase() } +
+                        "). Only files of the same kind can be joined without re-encoding."
+                }
+                val total = sources.sumOf { maxOf(0L, sourceSize(it)) }
+                lastProgressAt = 0L
+                progressSent = -1
+                val name = names[0]
+                val saved: Saved
+                var kind = "audio"
+                when (formats[0]) {
+                    "mp3" -> {
+                        val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg"); target = t
+                        val out = java.io.BufferedOutputStream(FileOutputStream(t.pfd.fileDescriptor), 1 shl 16)
+                        val r = Mp3Tool.copy(sources.map { s -> { openInput(s) } }, out, null, total) { progress(it) }
+                        out.flush(); writeXing(t, r); saved = finishOutput(t)
+                    }
+                    "adts" -> {
+                        val t = createOutput(Kind.AUDIO, name, ".aac", "audio/aac"); target = t
+                        val out = java.io.BufferedOutputStream(FileOutputStream(t.pfd.fileDescriptor), 1 shl 16)
+                        AdtsTool.copy(sources.map { s -> { openInput(s) } }, out, null, total) { progress(it) }
+                        out.flush(); saved = finishOutput(t)
+                    }
+                    "wav" -> {
+                        val t = createOutput(Kind.AUDIO, name, ".wav", "audio/wav"); target = t
+                        WavTool.join(sources.map { s -> { openInput(s) } }, FileOutputStream(t.pfd.fileDescriptor).channel, total) { progress(it) }
+                        saved = finishOutput(t)
+                    }
+                    else -> {
+                        val plans = sources.map { probeContainer(it, false) }
+                        val isAudio = plans.all { p -> p.formats.values.all { (it.getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/") } }
+                        kind = if (isAudio) "audio" else "video"
+                        val first = plans[0]
+                        require(plans.all { it.webm == first.webm }) { "MP4 and WebM files cannot be joined together." }
+                        val ext = if (first.webm) ".webm" else if (isAudio) extFor(name, ".m4a") else extFor(name, ".mp4")
+                        val mime = when { first.webm && isAudio -> "audio/webm"; first.webm -> "video/webm"; isAudio -> "audio/mp4"; else -> "video/mp4" }
+                        val t = createOutput(if (isAudio) Kind.AUDIO else Kind.VIDEO, name, ext, mime); target = t
+                        joinContainers(sources, plans, t)
+                        saved = finishOutput(t)
+                    }
+                }
+                target = null
+                notifySaved(saved, kind)
+                notifyPage("✓ Joined ${sources.size} files")
+            } catch (e: Exception) {
+                target?.let { abortOutput(it) }
+                notifyPage("Join failed: " + (e.message ?: e.javaClass.simpleName))
+            } finally {
+                busy.set(false)
+            }
+        }
+        return true
+    }
+
+    private fun trackKind(f: MediaFormat) = if ((f.getString(MediaFormat.KEY_MIME) ?: "").startsWith("video/")) "video" else "audio"
+
+    private fun sameSettings(a: MediaFormat, b: MediaFormat): Boolean {
+        if (a.getString(MediaFormat.KEY_MIME) != b.getString(MediaFormat.KEY_MIME)) return false
+        fun int(f: MediaFormat, k: String) = if (f.containsKey(k)) f.getInteger(k) else -1
+        return if (trackKind(a) == "video")
+            int(a, MediaFormat.KEY_WIDTH) == int(b, MediaFormat.KEY_WIDTH) && int(a, MediaFormat.KEY_HEIGHT) == int(b, MediaFormat.KEY_HEIGHT)
+        else
+            int(a, MediaFormat.KEY_SAMPLE_RATE) == int(b, MediaFormat.KEY_SAMPLE_RATE) && int(a, MediaFormat.KEY_CHANNEL_COUNT) == int(b, MediaFormat.KEY_CHANNEL_COUNT)
+    }
+
+    private fun joinContainers(sources: List<Source>, plans: List<ContainerPlan>, t: OutputTarget) {
+        val first = plans[0]
+        val muxer = MediaMuxer(t.pfd.fileDescriptor,
+            if (first.webm) MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM else MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        var started = false
+        try {
+            // one output track per kind (video, audio), taken from the first file
+            val outByKind = LinkedHashMap<String, Int>()
+            val firstFormatByKind = HashMap<String, MediaFormat>()
+            for ((_, f) in first.formats) {
+                val k = trackKind(f)
+                if (k !in outByKind) { outByKind[k] = muxer.addTrack(f); firstFormatByKind[k] = f }
+            }
+            if (!first.webm && first.rotation != 0) muxer.setOrientationHint(first.rotation)
+            val maps = plans.mapIndexed { i, plan ->
+                val m = HashMap<Int, Int>()
+                for ((idx, f) in plan.formats) {
+                    val k = trackKind(f)
+                    val out = outByKind[k] ?: continue
+                    if (m.values.contains(out)) continue
+                    require(sameSettings(firstFormatByKind[k]!!, f)) {
+                        "File ${i + 1} has different " + (if (k == "video") "video size or codec" else "audio settings") +
+                            ", so it cannot be joined without re-encoding."
+                    }
+                    m[idx] = out
+                }
+                require(m.isNotEmpty()) { "File ${i + 1} has no matching audio or video." }
+                m
+            }
+            muxer.start()
+            started = true
+            val buffer = ByteBuffer.allocateDirect(plans.maxOf { it.maxInput }.coerceAtMost(32 * 1024 * 1024))
+            var totalUs = 0L
+            for (s in sources) totalUs += durationOf(s)
+            var offsetUs = 0L
+            var doneUs = 0L
+            for ((i, s) in sources.withIndex()) {
+                partLabel = "file ${i + 1} of ${sources.size}"
+                val lastUs = writeSegment(s, muxer, maps[i], buffer, 0L, Long.MAX_VALUE, offsetUs, doneUs, maxOf(totalUs, 1L))
+                if (lastUs >= 0) {
+                    doneUs += lastUs - offsetUs
+                    offsetUs = lastUs + 23_000L
+                }
+            }
+            partLabel = ""
+        } finally {
+            if (started) try { muxer.stop() } catch (_: Exception) {}
+            try { muxer.release() } catch (_: Exception) {}
+        }
+    }
+
+    private fun durationOf(source: Source): Long {
+        val ex = try { newExtractor(source) } catch (_: Exception) { return 0L }
+        try {
+            var d = 0L
+            for (i in 0 until ex.trackCount) {
+                val f = ex.getTrackFormat(i)
+                if (f.containsKey(MediaFormat.KEY_DURATION)) d = maxOf(d, f.getLong(MediaFormat.KEY_DURATION))
+            }
+            return d
+        } finally { ex.release() }
+    }
+
+    // ---------------------------------------------------------------- song finder (silence detection)
+
+    @Volatile private var levelsJob = -1
+
+    /**
+     * Decodes the sound once and reports its loudness every 50 ms; the page then finds the quiet
+     * gaps between songs (and can re-run that instantly with other settings).
+     */
+    @JavascriptInterface
+    fun analyseLevels(url: String, job: Int): Boolean {
+        val u = Uri.parse(url)
+        val uri = if (u.host == "appassets.androidplatform.net") playableUri(u.lastPathSegment ?: "") else u
+        if (uri == null) return false
+        levelsJob = job
+        Thread {
+            val ex = MediaExtractor()
+            var codec: MediaCodec? = null
+            try {
+                if (uri.scheme == "file") ex.setDataSource(uri.path ?: "") else ex.setDataSource(context, uri, null)
+                var track = -1
+                for (i in 0 until ex.trackCount) {
+                    if ((ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/")) { track = i; break }
+                }
+                require(track >= 0) { "This file has no sound." }
+                ex.selectTrack(track)
+                val fmt = ex.getTrackFormat(track)
+                val durUs = if (fmt.containsKey(MediaFormat.KEY_DURATION)) fmt.getLong(MediaFormat.KEY_DURATION) else 0L
+                var rate = if (fmt.containsKey(MediaFormat.KEY_SAMPLE_RATE)) fmt.getInteger(MediaFormat.KEY_SAMPLE_RATE) else 44100
+                var chans = if (fmt.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) fmt.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 2
+                var isFloat = false
+                val c = MediaCodec.createDecoderByType(fmt.getString(MediaFormat.KEY_MIME)!!)
+                codec = c
+                c.configure(fmt, null, null, 0)
+                c.start()
+                val levels = java.io.ByteArrayOutputStream()   // one byte per 50 ms: dB + 100
+                var winFrames = maxOf(1, rate / 20)
+                var acc = 0.0
+                var accN = 0
+                val info = MediaCodec.BufferInfo()
+                var inDone = false
+                var lastPct = -1
+                while (levelsJob == job) {
+                    if (!inDone) {
+                        val ii = c.dequeueInputBuffer(5000)
+                        if (ii >= 0) {
+                            val ib = c.getInputBuffer(ii)!!
+                            val n = ex.readSampleData(ib, 0)
+                            if (n < 0) { c.queueInputBuffer(ii, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); inDone = true }
+                            else { c.queueInputBuffer(ii, 0, n, ex.sampleTime, 0); ex.advance() }
+                        }
+                    }
+                    val oi = c.dequeueOutputBuffer(info, 5000)
+                    if (oi == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                        val of = c.outputFormat
+                        if (of.containsKey(MediaFormat.KEY_SAMPLE_RATE)) rate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                        if (of.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) chans = of.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                        isFloat = of.containsKey("pcm-encoding") && of.getInteger("pcm-encoding") == 4
+                        winFrames = maxOf(1, rate / 20)
+                    } else if (oi >= 0) {
+                        val ob = c.getOutputBuffer(oi)
+                        if (ob != null && info.size > 0) {
+                            ob.position(info.offset); ob.limit(info.offset + info.size)
+                            val bb = ob.slice().order(java.nio.ByteOrder.nativeOrder())
+                            if (isFloat) {
+                                val fb = bb.asFloatBuffer()
+                                val frames = fb.remaining() / chans
+                                for (f in 0 until frames) {
+                                    var m = 0f
+                                    for (k in 0 until chans) m += fb.get(f * chans + k)
+                                    m /= chans
+                                    acc += (m * m).toDouble(); accN++
+                                    if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
+                                }
+                            } else {
+                                val sb = bb.asShortBuffer()
+                                val frames = sb.remaining() / chans
+                                for (f in 0 until frames) {
+                                    var m = 0
+                                    for (k in 0 until chans) m += sb.get(f * chans + k).toInt()
+                                    val v = m.toDouble() / chans / 32768.0
+                                    acc += v * v; accN++
+                                    if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
+                                }
+                            }
+                        }
+                        c.releaseOutputBuffer(oi, false)
+                        if (durUs > 0) {
+                            val pct = (info.presentationTimeUs * 100 / durUs).toInt().coerceIn(0, 99)
+                            if (pct != lastPct) { lastPct = pct; sendJs("window.__mmLevelsProgress&&window.__mmLevelsProgress($job,$pct)") }
+                        }
+                        if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) break
+                    }
+                }
+                if (levelsJob != job) return@Thread
+                val b64 = Base64.encodeToString(levels.toByteArray(), Base64.NO_WRAP)
+                sendJs("window.__mmLevels&&window.__mmLevels($job,{win:0.05,b64:${JSONObject.quote(b64)}})")
+            } catch (e: Exception) {
+                sendJs("window.__mmLevelsFailed&&window.__mmLevelsFailed($job,${JSONObject.quote(e.message ?: e.javaClass.simpleName)})")
+            } finally {
+                try { codec?.stop() } catch (_: Exception) {}
+                try { codec?.release() } catch (_: Exception) {}
+                try { ex.release() } catch (_: Exception) {}
+            }
+        }.start()
+        return true
+    }
+
+    private fun dbByte(meanSquare: Double): Int {
+        val db = 10 * Math.log10(meanSquare + 1e-12)
+        return (db.coerceIn(-100.0, 0.0) + 100).toInt()
+    }
+
+    private fun sendJs(js: String) {
+        webView.post { webView.evaluateJavascript(js, null) }
     }
 
     private fun sourceSize(source: Source): Long =
@@ -718,7 +1011,7 @@ class MYmusicNativeCutter(
         lastProgressAt = now
         progressSent = pct
         webView.post {
-            webView.evaluateJavascript("window.onNativeCutterProgress&&window.onNativeCutterProgress($pct)", null)
+            webView.evaluateJavascript("window.onNativeCutterProgress&&window.onNativeCutterProgress($pct," + JSONObject.quote(partLabel) + ")", null)
         }
     }
 
@@ -731,6 +1024,7 @@ class MYmusicNativeCutter(
         val json = JSONObject()
             .put("id", id).put("kind", kind).put("name", s.name).put("mime", s.mime)
             .put("url", "https://appassets.androidplatform.net/mymusic-shared/$id")
+            .put("uri", s.playUri.toString())
             .toString()
         webView.post {
             webView.evaluateJavascript(
@@ -761,13 +1055,18 @@ class MYmusicNativeCutter(
         val ext = name.substringAfterLast('.', "").lowercase()
         if (ext == "mp3") return "mp3"
         if (ext == "wav" || ext == "wave") return "wav"
-        if (ext in setOf("mp4", "m4a", "m4v", "m4b", "mov", "3gp", "aac", "webm", "mkv")) return "container"
-        val head = ByteArray(12)
+        val head = ByteArray(64)
         val n = try {
-            openInput(source).use { readFully(it, head, 0, 12) }
+            openInput(source).use { readFully(it, head, 0, 64) }
         } catch (_: Exception) {
             0
         }
+        if (ext == "aac" || ext == "adts") {
+            val isMp4 = n >= 8 && String(head, 4, 4, Charsets.ISO_8859_1) == "ftyp"
+            if (!isMp4 && (n < 7 || AdtsTool.looksLikeAdts(head, n))) return "adts"
+            if (!isMp4) return "adts"
+        }
+        if (ext in setOf("mp4", "m4a", "m4v", "m4b", "mov", "3gp", "aac", "webm", "mkv")) return "container"
         if (n >= 12 && String(head, 0, 4, Charsets.ISO_8859_1) == "RIFF" &&
             String(head, 8, 4, Charsets.ISO_8859_1) == "WAVE") return "wav"
         if (n >= 3 && String(head, 0, 3, Charsets.ISO_8859_1) == "ID3") return "mp3"
@@ -880,6 +1179,7 @@ class MYmusicNativeCutter(
             trackMap.keys.forEach { ex.selectTrack(it) }
             ex.seekTo(fromUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             val info = MediaCodec.BufferInfo()
+            val lastPts = HashMap<Int, Long>()
             var baseUs = -1L
             while (true) {
                 val track = ex.sampleTrackIndex
@@ -890,14 +1190,20 @@ class MYmusicNativeCutter(
                 if (out != null) {
                     if (baseUs < 0) baseUs = timeUs
                     if (timeUs >= baseUs) { // skips leading frames that belong to the previous group
-                        buffer.clear()
-                        val size = ex.readSampleData(buffer, 0)
-                        if (size > 0) {
+                        try {
+                            buffer.clear()
+                            val size = ex.readSampleData(buffer, 0)
                             val pts = outputOffsetUs + (timeUs - baseUs)
-                            info.set(0, size, pts, ex.sampleFlags)
-                            muxer.writeSampleData(out, buffer, info)
-                            if (pts > lastOut) lastOut = pts
-                            progress((doneUs + (timeUs - baseUs)).toDouble() / totalUs)
+                            val prev = lastPts[out] ?: -1L
+                            if (size > 0 && pts > prev) {
+                                info.set(0, size, pts, ex.sampleFlags)
+                                muxer.writeSampleData(out, buffer, info)
+                                lastPts[out] = pts
+                                if (pts > lastOut) lastOut = pts
+                                progress((doneUs + (timeUs - baseUs)).toDouble() / totalUs)
+                            }
+                        } catch (_: Exception) {
+                            // a damaged frame: skip it and carry on
                         }
                     }
                 }
@@ -911,210 +1217,27 @@ class MYmusicNativeCutter(
 
     // ---------------------------------------------------------------- MP3
 
-    private class Mp3Header(
-        val version: Int, val layer: Int, val sampleRate: Int,
-        val frameLength: Int, val samples: Int, val mono: Boolean
-    ) {
-        companion object {
-            private val BR_V1_L1 = intArrayOf(0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448)
-            private val BR_V1_L2 = intArrayOf(0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384)
-            private val BR_V1_L3 = intArrayOf(0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)
-            private val BR_V2_L1 = intArrayOf(0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256)
-            private val BR_V2_L23 = intArrayOf(0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160)
-
-            /** version: 1 = MPEG-1, 2 = MPEG-2, 25 = MPEG-2.5. layer: 1, 2 or 3. */
-            fun parse(b: ByteArray, off: Int): Mp3Header? {
-                val b0 = b[off].toInt() and 0xFF
-                val b1 = b[off + 1].toInt() and 0xFF
-                val b2 = b[off + 2].toInt() and 0xFF
-                val b3 = b[off + 3].toInt() and 0xFF
-                if (b0 != 0xFF || (b1 and 0xE0) != 0xE0) return null
-                val version = when ((b1 shr 3) and 3) { 0 -> 25; 2 -> 2; 3 -> 1; else -> return null }
-                val layer = when ((b1 shr 1) and 3) { 1 -> 3; 2 -> 2; 3 -> 1; else -> return null }
-                val brIdx = (b2 shr 4) and 0xF
-                if (brIdx == 0 || brIdx == 15) return null
-                val srIdx = (b2 shr 2) and 3
-                if (srIdx == 3) return null
-                val padding = (b2 shr 1) and 1
-                val mono = ((b3 shr 6) and 3) == 3
-                val sampleRate = when (version) {
-                    1 -> intArrayOf(44100, 48000, 32000)[srIdx]
-                    2 -> intArrayOf(22050, 24000, 16000)[srIdx]
-                    else -> intArrayOf(11025, 12000, 8000)[srIdx]
-                }
-                val kbps = if (version == 1) {
-                    when (layer) {
-                        1 -> BR_V1_L1[brIdx]
-                        2 -> BR_V1_L2[brIdx]
-                        else -> BR_V1_L3[brIdx]
-                    }
-                } else {
-                    if (layer == 1) BR_V2_L1[brIdx] else BR_V2_L23[brIdx]
-                }
-                val bps = kbps * 1000
-                val frameLength = when {
-                    layer == 1 -> (12 * bps / sampleRate + padding) * 4
-                    layer == 3 && version != 1 -> 72 * bps / sampleRate + padding
-                    else -> 144 * bps / sampleRate + padding
-                }
-                val samples = when {
-                    layer == 1 -> 384
-                    layer == 3 && version != 1 -> 576
-                    else -> 1152
-                }
-                if (frameLength < 21) return null
-                return Mp3Header(version, layer, sampleRate, frameLength, samples, mono)
-            }
-        }
-    }
-
     private fun cutMp3(source: Source, t: OutputTarget, ranges: List<LongArray>, totalBytes: Long) {
-        var frames = 0
-        var kept = 0
-        var written = 0L
-        var xingFrame: ByteArray? = null
-        var xingTagOffset = 0
-        var xingPos = -1L
-        var audioBytes = 0L
-        var offsets = LongArray(4096) // byte offset of each kept frame, for the seek table
-        var consumed = 0L
-        openInput(source).use { raw ->
-            val input = BufferedInputStream(raw, 1 shl 16)
-            FileOutputStream(t.pfd.fileDescriptor).let { fileOut ->
-                val out = fileOut.buffered(1 shl 16)
-                // ID3v2 tag (title, artist, cover) is copied once at the start.
-                val head = ByteArray(10)
-                input.mark(16)
-                val n = readFully(input, head, 0, 10)
-                if (n == 10 && head[0] == 'I'.code.toByte() && head[1] == 'D'.code.toByte() && head[2] == '3'.code.toByte()) {
-                    val size = ((head[6].toInt() and 0x7F) shl 21) or ((head[7].toInt() and 0x7F) shl 14) or
-                        ((head[8].toInt() and 0x7F) shl 7) or (head[9].toInt() and 0x7F)
-                    val footer = if ((head[5].toInt() and 0x10) != 0) 10 else 0
-                    out.write(head)
-                    written += 10
-                    written += copyBytes(input, out, (size + footer).toLong())
-                    consumed = written
-                } else {
-                    input.reset()
-                }
-
-                val hdr = ByteArray(4)
-                val frame = ByteArray(8192)
-                var timeUs = 0.0
-                var lockVersion = -1
-                var lockLayer = -1
-                var lockRate = -1
-                var junk = 0L
-                while (true) {
-                    input.mark(8)
-                    if (readFully(input, hdr, 0, 4) < 4) break
-                    val h = Mp3Header.parse(hdr, 0)
-                    val matches = h != null && (lockVersion < 0 ||
-                        (h.version == lockVersion && h.layer == lockLayer && h.sampleRate == lockRate))
-                    if (h == null || !matches) {
-                        input.reset()
-                        if (input.skip(1) < 1) break
-                        junk++
-                        consumed++
-                        if (frames > 0 && junk > 1_000_000) break // trailing tags/garbage
-                        continue
-                    }
-                    junk = 0
-                    System.arraycopy(hdr, 0, frame, 0, 4)
-                    if (readFully(input, frame, 4, h.frameLength - 4) < h.frameLength - 4) break
-                    consumed += h.frameLength
-                    if (totalBytes > 0) progress(consumed.toDouble() / totalBytes)
-                    if (lockVersion < 0) {
-                        lockVersion = h.version
-                        lockLayer = h.layer
-                        lockRate = h.sampleRate
-                        // The Xing/Info header frame holds length and seek data; keep it and rewrite it below.
-                        val side = if (h.version == 1) (if (h.mono) 17 else 32) else (if (h.mono) 9 else 17)
-                        val tag = if (4 + side + 8 <= h.frameLength) String(frame, 4 + side, 4, Charsets.ISO_8859_1) else ""
-                        if (tag == "Xing" || tag == "Info") {
-                            xingFrame = frame.copyOf(h.frameLength)
-                            xingTagOffset = 4 + side
-                            xingPos = written
-                            out.write(frame, 0, h.frameLength)
-                            written += h.frameLength
-                            continue
-                        }
-                        if (h.frameLength >= 40 && String(frame, 36, 4, Charsets.ISO_8859_1) == "VBRI") continue
-                    }
-                    frames++
-                    val durUs = h.samples * 1_000_000.0 / h.sampleRate
-                    val start = timeUs
-                    val end = timeUs + durUs
-                    timeUs = end
-                    // Keep any frame that overlaps a kept range, so kept audio is never trimmed.
-                    val keep = ranges.any { r -> end > r[0] && (r[1] == Long.MAX_VALUE || start < r[1]) }
-                    if (keep) {
-                        if (kept == offsets.size) offsets = offsets.copyOf(offsets.size * 2)
-                        offsets[kept] = audioBytes
-                        out.write(frame, 0, h.frameLength)
-                        written += h.frameLength
-                        audioBytes += h.frameLength
-                        kept++
-                    }
-                }
-                out.flush()
-            }
-        }
-        require(frames > 0) { "No MP3 audio frames were found in this file." }
-        require(kept > 0) { "The selected range contained no audio to save." }
-
-        val xf = xingFrame
-        if (xf != null && xingPos >= 0) {
-            patchXing(xf, xingTagOffset, kept, audioBytes, offsets)
-            val ch = FileOutputStream(t.pfd.fileDescriptor).channel
-            ch.position(xingPos)
-            writeAll(ch, xf)
-        }
+        val raw = FileOutputStream(t.pfd.fileDescriptor)
+        val out = java.io.BufferedOutputStream(raw, 1 shl 16)
+        val r = Mp3Tool.copy(listOf({ openInput(source) }), out, ranges, totalBytes) { progress(it) }
+        out.flush()
+        writeXing(t, r)
     }
 
-    /** Updates frame count, byte count, seek table and LAME CRC so players show the new length. */
-    private fun patchXing(fr: ByteArray, tagOff: Int, kept: Int, audioBytes: Long, offsets: LongArray) {
-        fun putBE32(pos: Int, v: Long) {
-            if (pos + 4 > fr.size) return
-            fr[pos] = (v shr 24).toByte()
-            fr[pos + 1] = (v shr 16).toByte()
-            fr[pos + 2] = (v shr 8).toByte()
-            fr[pos + 3] = v.toByte()
-        }
-        if (tagOff + 8 > fr.size) return
-        val flags = ((fr[tagOff + 4].toInt() and 0xFF) shl 24) or ((fr[tagOff + 5].toInt() and 0xFF) shl 16) or
-            ((fr[tagOff + 6].toInt() and 0xFF) shl 8) or (fr[tagOff + 7].toInt() and 0xFF)
-        val total = fr.size.toLong() + audioBytes
-        var q = tagOff + 8
-        if ((flags and 1) != 0) {
-            putBE32(q, kept.toLong())
-            q += 4
-        }
-        if ((flags and 2) != 0) {
-            putBE32(q, total)
-            q += 4
-        }
-        if ((flags and 4) != 0 && q + 100 <= fr.size) {
-            for (i in 0 until 100) {
-                val k = minOf(kept - 1, (i.toLong() * kept / 100).toInt())
-                val pos = fr.size.toLong() + offsets[k]
-                fr[q + i] = minOf(255L, pos * 256 / total).toByte()
-            }
-        }
-        if (fr.size >= 192 && tagOff + 124 <= fr.size) {
-            val enc = String(fr, tagOff + 120, 4, Charsets.ISO_8859_1)
-            if (enc == "LAME" || enc == "Lavc" || enc == "Lavf" || enc == "GOGO") {
-                var crc = 0
-                for (i in 0 until 190) {
-                    crc = crc xor (fr[i].toInt() and 0xFF)
-                    for (bit in 0 until 8) {
-                        crc = if ((crc and 1) != 0) (crc ushr 1) xor 0xA001 else crc ushr 1
-                    }
-                }
-                fr[190] = (crc shr 8).toByte()
-                fr[191] = crc.toByte()
-            }
-        }
+    private fun writeXing(t: OutputTarget, r: Mp3Tool.Result) {
+        val xf = r.xing ?: return
+        if (r.xingPos < 0) return
+        Mp3Tool.patchXing(xf, r.tagOffset, r.kept, r.audioBytes, r.offsets)
+        val ch = FileOutputStream(t.pfd.fileDescriptor).channel
+        ch.position(r.xingPos)
+        writeAll(ch, xf)
+    }
+
+    private fun cutAdts(source: Source, t: OutputTarget, ranges: List<LongArray>, totalBytes: Long) {
+        val out = java.io.BufferedOutputStream(FileOutputStream(t.pfd.fileDescriptor), 1 shl 16)
+        AdtsTool.copy(listOf({ openInput(source) }), out, ranges, totalBytes) { progress(it) }
+        out.flush()
     }
 
     // ---------------------------------------------------------------- WAV
