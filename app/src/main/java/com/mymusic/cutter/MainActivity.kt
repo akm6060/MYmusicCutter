@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private lateinit var nativePlayer: NativePlayer
     private val pickRequestCode = 4110
     private val folderRequestCode = 4111
+    private val mediaPermissionCode = 4112
     private lateinit var webView: WebView
     private lateinit var cutter: MYmusicNativeCutter
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
@@ -79,6 +80,7 @@ class MainActivity : Activity() {
         videoDirect.layoutParams = FrameLayout.LayoutParams(1, 1)
         nativePlayer = NativePlayer(this, webView, cutter, videoTexture, videoDirect)
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
+        webView.addJavascriptInterface(FileBrowser(this, webView), "MYmusicFiles")
         val root = FrameLayout(this)
         root.setBackgroundColor(Color.rgb(5, 6, 16))
         root.addView(videoDirect)
@@ -233,6 +235,22 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun mediaPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= 33) arrayOf("android.permission.READ_MEDIA_AUDIO", "android.permission.READ_MEDIA_VIDEO")
+        else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+
+    /** The file manager needs permission to read music and videos on the phone. */
+    fun hasMediaPermission(): Boolean = mediaPermissions().all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+
+    fun requestMediaPermission() {
+        if (hasMediaPermission()) { tellFilePermission(true); return }
+        requestPermissions(mediaPermissions(), mediaPermissionCode)
+    }
+
+    private fun tellFilePermission(granted: Boolean) {
+        if (pageReady) webView.evaluateJavascript("window.__fmPermission&&window.__fmPermission(${if (granted) "true" else "false"})", null)
+    }
+
     fun pickFolder() {
         try {
             val i = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
@@ -328,6 +346,10 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == mediaPermissionCode) {
+            tellFilePermission(grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED })
+            return
+        }
         if (requestCode != readPermissionRequestCode) return
         val waiting = pendingFileIntent
         pendingFileIntent = null
