@@ -198,13 +198,15 @@ class NativePlayer(
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && effectsOn) {
+            if ((error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED ||
+                 error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED) && effectsOn) {
                 // Picture adjustments failed on this phone: play without them and use the simpler method.
                 effectsOn = false; effectsBroken = true
                 val pos = player.currentPosition
                 val wasPlaying = player.playWhenReady
                 player.setVideoEffects(emptyList())
-                player.prepare(); player.seekTo(pos); player.playWhenReady = wasPlaying
+                currentUri?.let { player.setMediaItem(MediaItem.fromUri(it), pos) }
+                player.prepare(); player.playWhenReady = wasPlaying
                 cutter.pageMessage("Sharpness is not supported on this phone; colour settings use a simpler method.")
                 main.post { val pf = PictureFx; if (!pf.isNeutral()) { val p = Paint(); p.colorFilter = ColorMatrixColorFilter(colourMatrix(pf.brightness, pf.contrast, pf.saturation, pf.hue, 0f)); textureView.setLayerPaint(p); applyOutput(true) } }
                 return
@@ -246,6 +248,7 @@ class NativePlayer(
         player.setHandleAudioBecomingNoisy(true)
         player.setVideoSurfaceView(surfaceView)
         textureView.visibility = View.INVISIBLE
+        installEffects()
         player.addListener(listener)
         textureView.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -300,6 +303,21 @@ class NativePlayer(
         if (lp.leftMargin != nl || lp.topMargin != nt || lp.width != nw || lp.height != nh) {
             lp.leftMargin = nl; lp.topMargin = nt; lp.width = nw; lp.height = nh
             surfaceView.layoutParams = lp
+        }
+    }
+
+    /**
+     * The picture settings (brightness, contrast, saturation, hue, sharpness) are processed by the
+     * player on the graphics chip. They must be in place before a video starts; their values are
+     * then read for every frame, so moving a slider changes the picture at once.
+     */
+    private fun installEffects() {
+        if (effectsOn || effectsBroken) return
+        try {
+            player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen))
+            effectsOn = true
+        } catch (_: Exception) {
+            effectsBroken = true
         }
     }
 
@@ -371,6 +389,7 @@ class NativePlayer(
             currentUri = uri
             videoW = 0; videoH = 0; rotation = 0; par = 1f
             player.setSeekParameters(SeekParameters.EXACT)
+            installEffects()
             player.setMediaItem(MediaItem.fromUri(uri))
             player.playWhenReady = false
             player.prepare()
@@ -455,24 +474,7 @@ class NativePlayer(
             PictureFx.saturation = o.optDouble("s", 100.0).toFloat()
             PictureFx.hue = o.optDouble("h", 0.0).toFloat()
             PictureFx.sharpness = o.optDouble("sharp", 0.0).toFloat()
-            if (!PictureFx.isNeutral() && !effectsOn && !effectsBroken) {
-                effectsOn = true
-                try {
-                    player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen))
-                    // The picture processing is set up when the video decoder starts, so restart
-                    // the current file once at the same position (a short blink).
-                    val item = player.currentMediaItem
-                    if (item != null) {
-                        val pos = player.currentPosition
-                        val play = player.playWhenReady
-                        player.setMediaItem(item, pos)
-                        player.prepare()
-                        player.playWhenReady = play
-                    }
-                } catch (_: Exception) {
-                    effectsOn = false; effectsBroken = true
-                }
-            } else if (effectsOn && !player.isPlaying) {
+            if (effectsOn && !player.isPlaying) {
                 // Paused: redraw the current frame so the change is visible at once.
                 main.removeCallbacks(refreshFrame)
                 main.postDelayed(refreshFrame, 120)
