@@ -711,6 +711,7 @@ class MYmusicNativeCutter(
                 require(outputs.all { it.isNotEmpty() }) { "Nothing would be left to save." }
                 val format = detectFormat(source, name)
                 val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
+                beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), name)
                 for ((i, ranges) in outputs.withIndex()) {
                     partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
                     val saved = saveRanges(source, name, format, isAudio, ranges, durUs)
@@ -763,6 +764,10 @@ class MYmusicNativeCutter(
                 val name = names[0]
                 val saved: Saved
                 var kind = "audio"
+                val allAudio = formats[0] != "container" || sources.all { s ->
+                    try { probeContainer(s, false).formats.values.all { (it.getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/") } } catch (_: Exception) { false }
+                }
+                beginJob(if (allAudio) "Audio" else "Video", "Save as one", outputStem(name) + " joined")
                 when (formats[0]) {
                     "mp3" -> {
                         val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg"); target = t
@@ -881,6 +886,48 @@ class MYmusicNativeCutter(
         } finally { ex.release() }
     }
 
+    // ---------------------------------------------------------------- playlist autosave
+
+    @Volatile private var playlistText = ""
+    private val playlistWriter = Executors.newSingleThreadExecutor()
+
+    /** Saves the current playlist as "MYmusic Cutter/Playlists/Current playlist.m3u8" (replaced each time; removed when empty). */
+    @JavascriptInterface
+    fun savePlaylist(text: String) {
+        playlistText = text
+        playlistWriter.execute {
+            val t = playlistText
+            if (t != text) return@execute   // a newer version is queued
+            try { writePlaylist(t) } catch (_: Exception) {}
+        }
+    }
+
+    private fun writePlaylist(text: String) {
+        val name = "Current playlist.m3u8"
+        val empty = text.lines().none { it.isNotBlank() && !it.startsWith("#") }
+        if (Build.VERSION.SDK_INT >= 29) {
+            val rel = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/Playlists/"
+            val col = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            var existing: Uri? = null
+            context.contentResolver.query(col, arrayOf(MediaStore.MediaColumns._ID),
+                "${MediaStore.MediaColumns.RELATIVE_PATH}=? AND ${MediaStore.MediaColumns.DISPLAY_NAME}=?", arrayOf(rel, name), null)?.use { c ->
+                if (c.moveToFirst()) existing = android.content.ContentUris.withAppendedId(col, c.getLong(0))
+            }
+            if (empty) { existing?.let { context.contentResolver.delete(it, null, null) }; return }
+            val uri = existing ?: context.contentResolver.insert(col, ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, "audio/x-mpegurl")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
+            }) ?: return
+            context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+        } else {
+            val f = File(legacyRoot(), "Playlists/$name")
+            if (empty) { f.delete(); return }
+            f.parentFile?.mkdirs()
+            f.writeText(text, Charsets.UTF_8)
+        }
+    }
+
     // ---------------------------------------------------------------- song finder (silence detection)
 
     @Volatile private var levelsJob = -1
@@ -915,68 +962,85 @@ class MYmusicNativeCutter(
                 codec = c
                 c.configure(fmt, null, null, 0)
                 c.start()
-                val levels = java.io.ByteArrayOutputStream()   // one byte per 50 ms: dB + 100
-                var winFrames = maxOf(1, rate / 20)
+                val levels = java.io.ByteArrayOutputStream(1 shl 16)   // one byte per 10 ms: dB + 100
+                var winFrames = maxOf(1, rate / 100)
                 var acc = 0.0
                 var accN = 0
                 val info = MediaCodec.BufferInfo()
                 var inDone = false
+                var outDone = false
                 var lastPct = -1
-                while (levelsJob == job) {
-                    if (!inDone) {
-                        val ii = c.dequeueInputBuffer(5000)
-                        if (ii >= 0) {
-                            val ib = c.getInputBuffer(ii)!!
-                            val n = ex.readSampleData(ib, 0)
-                            if (n < 0) { c.queueInputBuffer(ii, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); inDone = true }
-                            else { c.queueInputBuffer(ii, 0, n, ex.sampleTime, 0); ex.advance() }
-                        }
+                var shorts = ShortArray(0)
+                var floats = FloatArray(0)
+                while (levelsJob == job && !outDone) {
+                    // feed every free input buffer at once
+                    while (!inDone) {
+                        val ii = c.dequeueInputBuffer(0)
+                        if (ii < 0) break
+                        val ib = c.getInputBuffer(ii)!!
+                        val n = ex.readSampleData(ib, 0)
+                        if (n < 0) { c.queueInputBuffer(ii, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); inDone = true }
+                        else { c.queueInputBuffer(ii, 0, n, ex.sampleTime, 0); ex.advance() }
                     }
-                    val oi = c.dequeueOutputBuffer(info, 5000)
-                    if (oi == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        val of = c.outputFormat
-                        if (of.containsKey(MediaFormat.KEY_SAMPLE_RATE)) rate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                        if (of.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) chans = of.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                        isFloat = of.containsKey("pcm-encoding") && of.getInteger("pcm-encoding") == 4
-                        winFrames = maxOf(1, rate / 20)
-                    } else if (oi >= 0) {
-                        val ob = c.getOutputBuffer(oi)
-                        if (ob != null && info.size > 0) {
-                            ob.position(info.offset); ob.limit(info.offset + info.size)
-                            val bb = ob.slice().order(java.nio.ByteOrder.nativeOrder())
-                            if (isFloat) {
-                                val fb = bb.asFloatBuffer()
-                                val frames = fb.remaining() / chans
-                                for (f in 0 until frames) {
-                                    var m = 0f
-                                    for (k in 0 until chans) m += fb.get(f * chans + k)
-                                    m /= chans
-                                    acc += (m * m).toDouble(); accN++
-                                    if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
-                                }
-                            } else {
-                                val sb = bb.asShortBuffer()
-                                val frames = sb.remaining() / chans
-                                for (f in 0 until frames) {
-                                    var m = 0
-                                    for (k in 0 until chans) m += sb.get(f * chans + k).toInt()
-                                    val v = m.toDouble() / chans / 32768.0
-                                    acc += v * v; accN++
-                                    if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
+                    // take every finished output buffer; wait only briefly when there is none
+                    var oi = c.dequeueOutputBuffer(info, 2000)
+                    while (oi != MediaCodec.INFO_TRY_AGAIN_LATER) {
+                        if (oi == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                            val of = c.outputFormat
+                            if (of.containsKey(MediaFormat.KEY_SAMPLE_RATE)) rate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                            if (of.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) chans = of.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                            isFloat = of.containsKey("pcm-encoding") && of.getInteger("pcm-encoding") == 4
+                            winFrames = maxOf(1, rate / 100)
+                        } else if (oi >= 0) {
+                            val ob = c.getOutputBuffer(oi)
+                            if (ob != null && info.size > 0) {
+                                ob.position(info.offset); ob.limit(info.offset + info.size)
+                                val bb = ob.slice().order(java.nio.ByteOrder.nativeOrder())
+                                val ch = maxOf(1, chans)
+                                if (isFloat) {
+                                    val fb = bb.asFloatBuffer()
+                                    val total = fb.remaining()
+                                    if (floats.size < total) floats = FloatArray(total)
+                                    fb.get(floats, 0, total)
+                                    var i = 0
+                                    while (i + ch <= total) {
+                                        var m = 0f
+                                        for (k in 0 until ch) m += floats[i + k]
+                                        m /= ch
+                                        acc += (m * m).toDouble(); accN++
+                                        if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
+                                        i += ch
+                                    }
+                                } else {
+                                    val sb = bb.asShortBuffer()
+                                    val total = sb.remaining()
+                                    if (shorts.size < total) shorts = ShortArray(total)
+                                    sb.get(shorts, 0, total)
+                                    val scale = 1.0 / (32768.0 * ch)
+                                    var i = 0
+                                    while (i + ch <= total) {
+                                        var m = 0
+                                        for (k in 0 until ch) m += shorts[i + k]
+                                        val v = m * scale
+                                        acc += v * v; accN++
+                                        if (accN >= winFrames) { levels.write(dbByte(acc / accN)); acc = 0.0; accN = 0 }
+                                        i += ch
+                                    }
                                 }
                             }
+                            c.releaseOutputBuffer(oi, false)
+                            if (durUs > 0) {
+                                val pct = (info.presentationTimeUs * 100 / durUs).toInt().coerceIn(0, 99)
+                                if (pct != lastPct) { lastPct = pct; sendJs("window.__mmLevelsProgress&&window.__mmLevelsProgress($job,$pct)") }
+                            }
+                            if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) { outDone = true; break }
                         }
-                        c.releaseOutputBuffer(oi, false)
-                        if (durUs > 0) {
-                            val pct = (info.presentationTimeUs * 100 / durUs).toInt().coerceIn(0, 99)
-                            if (pct != lastPct) { lastPct = pct; sendJs("window.__mmLevelsProgress&&window.__mmLevelsProgress($job,$pct)") }
-                        }
-                        if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) break
+                        oi = c.dequeueOutputBuffer(info, 0)
                     }
                 }
                 if (levelsJob != job) return@Thread
                 val b64 = Base64.encodeToString(levels.toByteArray(), Base64.NO_WRAP)
-                sendJs("window.__mmLevels&&window.__mmLevels($job,{win:0.05,b64:${JSONObject.quote(b64)}})")
+                sendJs("window.__mmLevels&&window.__mmLevels($job,{win:0.01,b64:${JSONObject.quote(b64)}})")
             } catch (e: Exception) {
                 sendJs("window.__mmLevelsFailed&&window.__mmLevelsFailed($job,${JSONObject.quote(e.message ?: e.javaClass.simpleName)})")
             } finally {
@@ -1340,18 +1404,64 @@ class MYmusicNativeCutter(
      * Movies/Music/Pictures › MYmusicCuts. n is one higher than the highest number already used.
      * The result is written straight into this file: no temporary copy.
      */
+    // All results go into one folder, "MYmusic Cutter" (inside Download on Android 10 and newer,
+    // where apps may only create folders inside the standard ones; on the main storage before that):
+    //   Audio | Video  ›  Save parts | Save as one | Erase parts  ›  "<name> <job number>"  ›  files
+    //   Playlists  ›  Current playlist.m3u8
+    private val rootName = "MYmusic Cutter"
+    @Volatile private var jobDir = "Audio/Save as one/media 1"
+
+    private fun categoryFor(mode: String) = when (mode) {
+        "parts" -> "Save parts"
+        "remove", "remove-middle" -> "Erase parts"
+        else -> "Save as one"
+    }
+
+    @Suppress("DEPRECATION")
+    private fun legacyRoot(): File {
+        val canWritePublic = context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        return if (canWritePublic) File(Environment.getExternalStorageDirectory(), rootName)
+               else File(context.getExternalFilesDir(null) ?: context.filesDir, rootName)
+    }
+
+    /** Picks a fresh sub-folder for this job: "<name> 1", "<name> 2", ... */
+    private fun beginJob(kindFolder: String, category: String, originalName: String) {
+        val stem = outputStem(originalName)
+        val base = "$kindFolder/$category"
+        val pat = Regex("^" + Regex.escape(stem) + " (\\d{1,6})$", RegexOption.IGNORE_CASE)
+        var max = 0
+        if (Build.VERSION.SDK_INT >= 29) {
+            val prefix = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/$base/"
+            try {
+                context.contentResolver.query(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH),
+                    "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?", arrayOf("$prefix%"), null
+                )?.use { c ->
+                    while (c.moveToNext()) {
+                        val rp = c.getString(0) ?: continue
+                        if (!rp.startsWith(prefix)) continue
+                        val folder = rp.substring(prefix.length).trimEnd('/').substringBefore('/')
+                        val n = pat.matchEntire(folder)?.groupValues?.get(1)?.toIntOrNull() ?: continue
+                        if (n > max) max = n
+                    }
+                }
+            } catch (_: Exception) {}
+        } else {
+            File(legacyRoot(), base).list()?.forEach { n ->
+                val v = pat.matchEntire(n)?.groupValues?.get(1)?.toIntOrNull() ?: return@forEach
+                if (v > max) max = v
+            }
+        }
+        jobDir = "$base/$stem ${max + 1}"
+    }
+
     private fun createOutput(kind: Kind, originalName: String, ext: String, mime: String): OutputTarget {
-        val folder = folderFor(kind)
-        val relPath = "$folder/MYmusicCuts"
+        val relPath = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/$jobDir"
         val stem = outputStem(originalName)
         val pattern = numberPattern(stem)
 
         if (Build.VERSION.SDK_INT >= 29) {
-            val collection: Uri = when (kind) {
-                Kind.VIDEO -> MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                Kind.AUDIO -> MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                Kind.IMAGE -> MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            }
+            val collection: Uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             var number = highestUsedNumber(collection, relPath, pattern) + 1
             for (attempt in 0 until 100) {
                 val displayName = "$stem $number$ext"
@@ -1393,14 +1503,7 @@ class MYmusicNativeCutter(
         }
 
         // Android 9 and older.
-        val canWritePublic = context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-            PackageManager.PERMISSION_GRANTED
-        val root = if (canWritePublic) {
-            publicDirectory(folder)
-        } else {
-            context.getExternalFilesDir(folder) ?: context.filesDir
-        }
-        val dir = File(root, "MYmusicCuts").apply { mkdirs() }
+        val dir = File(legacyRoot(), jobDir).apply { mkdirs() }
         var number = 1 + (dir.list()?.mapNotNull { n ->
             pattern.matchEntire(n)?.groupValues?.get(1)?.toIntOrNull()
         }?.maxOrNull() ?: 0)

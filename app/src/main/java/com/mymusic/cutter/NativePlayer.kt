@@ -83,6 +83,14 @@ class NativePlayer(
     private var stageW = 1f
     private var stageH = 1f
     private var currentUri: Uri? = null
+    private var contentW = 1f
+    private var contentH = 1f
+
+    private fun updateFrameEffect() {
+        PictureFx.zoom = zoom
+        PictureFx.panX = if (contentW > 1f) panX * density / (contentW / 2f) else 0f
+        PictureFx.panY = if (contentH > 1f) -panY * density / (contentH / 2f) else 0f
+    }
     private var effectsOn = false
     private var effectsBroken = false
     private var pendingSeek = false
@@ -281,8 +289,10 @@ class NativePlayer(
             m.setScale(dw / vw, dh / vh, vw / 2, vh / 2)
             if (rotation == 180) m.postRotate(180f, vw / 2, vh / 2)
         }
-        m.postScale(zoom, zoom, vw / 2, vh / 2)
-        m.postTranslate(panX * density, panY * density)
+        if (useTexture) {
+            m.postScale(zoom, zoom, vw / 2, vh / 2)
+            m.postTranslate(panX * density, panY * density)
+        }
         textureView.setTransform(m)
         textureView.invalidate()
     }
@@ -299,6 +309,8 @@ class NativePlayer(
             x = stageX + (stageW - w) / 2
             y = stageY + (stageH - h) / 2
         }
+        contentW = w; contentH = h
+        updateFrameEffect()
         val nl = x.roundToInt(); val nt = y.roundToInt(); val nw = max(1, w.roundToInt()); val nh = max(1, h.roundToInt())
         if (lp.leftMargin != nl || lp.topMargin != nt || lp.width != nw || lp.height != nh) {
             lp.leftMargin = nl; lp.topMargin = nt; lp.width = nw; lp.height = nh
@@ -314,7 +326,7 @@ class NativePlayer(
     private fun installEffects() {
         if (effectsOn || effectsBroken) return
         try {
-            player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen))
+            player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen, PictureFx.frame))
             effectsOn = true
         } catch (_: Exception) {
             effectsBroken = true
@@ -486,9 +498,12 @@ class NativePlayer(
                 p.colorFilter = ColorMatrixColorFilter(colourMatrix(PictureFx.brightness, PictureFx.contrast, PictureFx.saturation, PictureFx.hue, 0f))
                 textureView.setLayerPaint(p)
             } else textureView.setLayerPaint(null)
-            applyOutput(zoom > 1.001f || needPaint)
+            // Zoom and pan are done by the player's picture processing; only phones where that is
+            // not available fall back to the TextureView for them.
+            applyOutput(effectsBroken && (zoom > 1.001f || needPaint))
             layoutSurface()
-            applyTransform()
+            updateFrameEffect()
+            if (useTexture) applyTransform() else textureView.setTransform(null)
         }
     }
 
@@ -525,6 +540,43 @@ class NativePlayer(
             .put("frames", r[0].toDouble()).put("rmsAcc", r[1].toDouble())
             .put("humOn", r[2].toDouble()).put("humOff", r[3].toDouble()).put("sub", r[4].toDouble())
             .put("acc", acc).toString()
+    }
+
+    /** Thumbnails at given times (seconds) for the zoomed timeline; exact frames when zoomed far in. */
+    @JavascriptInterface
+    fun thumbnailsAt(url: String, job: Int, timesJson: String, w: Int, h: Int, exact: Boolean) {
+        val uri = uriFor(url) ?: return
+        val times = try { org.json.JSONArray(timesJson) } catch (_: Exception) { return }
+        thumbJob = job
+        worker.execute {
+            val mmr = MediaMetadataRetriever()
+            try {
+                if (uri.scheme == "file") mmr.setDataSource(uri.path) else mmr.setDataSource(activity, uri)
+                val opt = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                for (i in 0 until times.length()) {
+                    if (thumbJob != job || released) break
+                    val tUs = (times.optDouble(i, 0.0) * 1_000_000).toLong()
+                    val bmp: Bitmap? = try {
+                        if (Build.VERSION.SDK_INT >= 27) mmr.getScaledFrameAtTime(tUs, opt, w, h)
+                        else mmr.getFrameAtTime(tUs, opt)?.let { Bitmap.createScaledBitmap(it, w, h, true) }
+                    } catch (_: Exception) { null }
+                    if (bmp == null) continue
+                    val bos = ByteArrayOutputStream()
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 60, bos)
+                    val data = "data:image/jpeg;base64," + Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
+                    send("thumb", JSONObject().put("job", job).put("i", i).put("data", data))
+                }
+            } catch (_: Exception) {
+            } finally {
+                try { mmr.release() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    /** Light or dark colours for the window behind the page and for the status bar icons. */
+    @JavascriptInterface
+    fun setTheme(light: Boolean) {
+        main.post { activity.applyTheme(light) }
     }
 
     /** Thumbnails for the cutter strip, made natively and sent one by one. */

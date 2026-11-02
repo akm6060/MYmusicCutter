@@ -251,6 +251,19 @@ class MainActivity : Activity() {
         if (pageReady) webView.evaluateJavascript("window.__fmPermission&&window.__fmPermission(${if (granted) "true" else "false"})", null)
     }
 
+    /** Light theme: pale window and dark status-bar icons; dark theme: the reverse. */
+    fun applyTheme(light: Boolean) {
+        rootView?.setBackgroundColor(if (light) Color.rgb(244, 245, 251) else Color.rgb(5, 6, 16))
+        if (Build.VERSION.SDK_INT >= 30) {
+            val c = window.insetsController
+            val flags = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            c?.setSystemBarsAppearance(if (light && !barsHidden) flags else 0, flags)
+        } else if (!barsHidden) {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = if (light) View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else View.SYSTEM_UI_FLAG_VISIBLE
+        }
+    }
+
     fun pickFolder() {
         try {
             val i = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)

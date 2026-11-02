@@ -10,6 +10,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
+import androidx.media3.effect.MatrixTransformation
 import androidx.media3.effect.RgbMatrix
 import kotlin.math.cos
 import kotlin.math.sin
@@ -28,6 +29,20 @@ object PictureFx {
     @Volatile var sharpness = 0f      // -100 (softer) .. +100 (sharper)
 
     fun isNeutral() = brightness == 100f && contrast == 100f && saturation == 100f && hue == 0f && sharpness == 0f
+
+    // Pinch zoom and panning, also done by the player (so the direct, true-colour display is kept).
+    @Volatile var zoom = 1f
+    @Volatile var panX = 0f      // fraction of the picture's half-width (NDC units)
+    @Volatile var panY = 0f
+
+    val frame = object : MatrixTransformation {
+        override fun getMatrix(presentationTimeUs: Long): android.graphics.Matrix {
+            val m = android.graphics.Matrix()
+            m.setScale(zoom, zoom)
+            m.postTranslate(panX, panY)
+            return m
+        }
+    }
 
     // Each step is out = A*in + a (3x3 rows + offset), applied in the CSS filter order:
     // brightness, contrast, saturation, hue.
