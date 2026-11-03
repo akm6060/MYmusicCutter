@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-    <!-- Network storage (files streamed by file managers over Wi-Fi) and the one-time voice packs. -->
+    <!-- Network storage: files streamed by file managers over Wi-Fi. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Background playback: a media notification with Play / Pause. -->

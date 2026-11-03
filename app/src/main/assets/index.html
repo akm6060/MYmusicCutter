@@ -990,8 +990,8 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden !important; back
   .cutter-playhead:after{
     content:""!important;position:absolute!important;display:block!important;
     top:auto!important;bottom:0!important;left:50%!important;right:auto!important;
-    width:18px!important;height:18px!important;transform:translateX(-50%)!important;
-    border-radius:50%!important;background:#fff!important;border:2px solid #dce3ec!important;
+    width:24px!important;height:24px!important;transform:translateX(-50%)!important;
+    border-radius:50%!important;background:#fff!important;border:3px solid #ffb21e!important;
     box-shadow:0 2px 7px #0009!important;z-index:12!important;
   }
   .cutter-handle-rail{z-index:4}
@@ -1303,7 +1303,7 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
 .zoom-bar button{width:28px;height:24px;border-radius:6px;border:1px solid #3d4566;background:#1c2040;color:#e6e3ff;font:700 14px/1 system-ui,sans-serif;padding:0}
 .zoom-bar button:disabled{opacity:.35}
 .zoom-bar b{min-width:34px;text-align:center;font:700 11px/1 system-ui,sans-serif;color:#ffc24d}
-.strip-scroll{position:relative;width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;touch-action:pan-x}
+.strip-scroll{position:relative;width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;touch-action:pan-x;padding-bottom:44px;margin-bottom:-44px}
 .strip-scroll::-webkit-scrollbar{display:none}
 .strip-scroll .cutter-strip{touch-action:pan-x!important;min-width:100%}
 .zoom-thumbs{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
@@ -1388,19 +1388,6 @@ html.light .fm-msg{color:#4c4870}
 html.light .fm-foot{border-color:#d5d8ea}
 html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a8748!important;color:#fff!important}
 
-/* part names in the Songs panel */
-.sp-card{max-height:calc(100% - 20px);overflow-y:auto}
-.sp-names{display:grid;gap:4px;max-height:34vh;overflow-y:auto;padding-right:2px}
-.sp-names[hidden]{display:none}
-.sp-name{display:grid;grid-template-columns:22px 44px 1fr;align-items:center;gap:6px;font-size:12px}
-.sp-name b{color:#ffc24d;text-align:right}
-.sp-name small{color:#9b9dbd}
-.sp-name input{min-width:0;height:32px;border-radius:8px;border:1px solid #3d4566;background:#0d0e1c;color:#eceaff;padding:0 8px;font-size:13px}
-.sp-btns #spVoice{background:#123d36;border-color:#2fb3a0}
-.sp-btns button{font-size:13px}
-html.light .sp-name input{background:#fff;border-color:#c9cde6;color:#1b1838}
-html.light .sp-name b{color:#b25d00}
-html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#06514a}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1525,8 +1512,7 @@ html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#0651
       <label class="sp-row"><span>Shortest gap between songs <output id="spGapOut">2.0 s</output></span><input id="spGap" type="range" min="0.5" max="8" step="0.5" value="2"></label>
       <label class="sp-row"><span>Shortest song <output id="spSongOut">30 s</output></span><input id="spSong" type="range" min="5" max="180" step="5" value="30"></label>
       <p class="sp-status" id="spStatus"></p>
-      <div class="sp-names" id="spNames" hidden></div>
-      <div class="sp-btns"><button type="button" id="spFind">Find songs</button><button type="button" id="spVoice" title="Listen to the first words of each part and use them as its name">🎤 Name by voice</button><button type="button" id="spClose">Close</button></div>
+      <div class="sp-btns"><button type="button" id="spFind">Find songs</button><button type="button" id="spClose">Close</button></div>
     </div>
   </section>
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
@@ -2629,20 +2615,37 @@ html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#0651
   [video,audioMedia].forEach(function(m){m.addEventListener('play',function(){if(m===activeMedia)el('cxPlay').textContent='❚❚'});m.addEventListener('pause',function(){if(m===activeMedia)el('cxPlay').textContent='▶'})});
   var stepTarget=null,stepInFlight=false,stepHeld=false;
   [video,audioMedia].forEach(function(m){m.addEventListener('seeked',function(){if(m!==activeMedia)return;stepInFlight=false;if(stepHeld&&stepTarget!=null&&Math.abs((m.currentTime||0)-stepTarget)>0.03){stepInFlight=true;try{m.currentTime=stepTarget}catch(e){stepInFlight=false}}})});
+  // Tap: 1 second back / forward. Hold: moves slowly at first, then faster and faster
+  // (about half real speed at the start, 2x after 2 s, 10x after 4 s, 45x after 6 s, up to 10 min per second).
+  var tapTarget=null,tapAt=0;
   function holdStep(id,dir){
-    var b=el(id),timer=0,t0=0;
+    var b=el(id),timer=0,t0=0,last=0,holding=false;
+    function show(t,d){el('cutterPlayhead').style.left=(t/d*100)+'%';el('cutterPos').textContent=fmt(t)+' / '+fmt(d);if(window.__mmFollow)window.__mmFollow(t,d)}
+    function seekTo(t){if(!stepInFlight){stepInFlight=true;try{activeMedia.currentTime=t}catch(e){stepInFlight=false}}}
     function tick(){
-      var d=duration();if(!d)return;var held=performance.now()-t0;
-      var size=held<700?0.04:held<1600?0.25:held<3000?1:held<5000?5:15;
+      var d=duration();if(!d||!stepHeld)return;var now=performance.now(),held=now-t0;
+      if(held<350){timer=setTimeout(tick,40);return}          // still a tap
+      if(!holding){holding=true;last=now;if(NATIVE){try{NP.setScrubbing(true)}catch(e){}}}
+      var h=(held-350)/1000,rate=Math.min(600,0.5*Math.exp(0.75*h)),dt=(now-last)/1000;last=now;
       var base=stepTarget!=null?stepTarget:(activeMedia.currentTime||0);
-      stepTarget=Math.max(0,Math.min(d,base+dir*size));
-      el('cutterPlayhead').style.left=(stepTarget/d*100)+'%';el('cutterPos').textContent=fmt(stepTarget)+' / '+fmt(d);
-      if(NATIVE&&held>1600){try{NP.setScrubbing(true)}catch(e){}}
-      if(!stepInFlight){stepInFlight=true;try{activeMedia.currentTime=stepTarget}catch(e){stepInFlight=false}}
-      timer=setTimeout(tick,held<700?200:110);
+      stepTarget=Math.max(0,Math.min(d,base+dir*rate*dt));show(stepTarget,d);seekTo(stepTarget);
+      timer=setTimeout(tick,60);
     }
-    b.addEventListener('pointerdown',function(e){e.preventDefault();if(!duration())return;try{b.setPointerCapture(e.pointerId)}catch(_){}stepHeld=true;stepTarget=null;t0=performance.now();tick()});
-    function stop(){if(!stepHeld)return;stepHeld=false;clearTimeout(timer);if(NATIVE){try{NP.setScrubbing(false)}catch(e){}}if(stepTarget!=null){try{activeMedia.currentTime=stepTarget}catch(e){}}stepTarget=null}
+    b.addEventListener('pointerdown',function(e){e.preventDefault();if(!duration())return;try{b.setPointerCapture(e.pointerId)}catch(_){}
+      stepHeld=true;holding=false;stepTarget=null;t0=performance.now();clearTimeout(timer);tick()});
+    function stop(){
+      if(!stepHeld)return;stepHeld=false;clearTimeout(timer);var d=duration();
+      if(!holding&&d){ // a short tap: exactly one second, taps add up
+        var now=performance.now(),base=(tapTarget!=null&&now-tapAt<800)?tapTarget:(activeMedia.currentTime||0);
+        tapTarget=Math.max(0,Math.min(d,base+dir));tapAt=now;show(tapTarget,d);
+        try{activeMedia.currentTime=tapTarget}catch(e){}
+      }else{
+        if(NATIVE){try{NP.setScrubbing(false)}catch(e){}}
+        if(stepTarget!=null){try{activeMedia.currentTime=stepTarget}catch(e){}}
+        tapTarget=null;
+      }
+      holding=false;stepTarget=null;
+    }
     b.addEventListener('pointerup',stop);b.addEventListener('pointercancel',stop);b.addEventListener('lostpointercapture',stop);
     b.addEventListener('contextmenu',function(e){e.preventDefault()});
   }
@@ -2654,7 +2657,7 @@ html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#0651
     if(!files[index]||!duration()){note('Choose a file first.');return}
     if(!ss.length){note('Mark a part first: tap Start, move on, then tap End.');return}
     var f=files[index],payload={fileName:f.name||(audioMode?'audio':'video'),mediaType:audioMode?'audio':'video',durationSeconds:duration(),mode:mode,
-      ranges:ss.map(function(s){return [s[0],s[1]]}),names:ss.map(function(s){return partNames[pkey(s[0])]||''}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
+      ranges:ss.map(function(s){return [s[0],s[1]]}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
     if(!NC||typeof NC.cutPickedFile!=='function'){note('Saving works in the Android app (this preview cannot save files).');return}
     var ok=false;try{ok=NC.cutPickedFile(JSON.stringify(payload))===true}catch(e){}
     if(ok){note('Saving…');return}
@@ -3016,43 +3019,6 @@ html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#0651
       im.style.left=((times[i2]-step/2)/d*100)+'%';im.style.width=(step/d*100)+'%';layer2.appendChild(im)};
     try{NP.thumbnailsAt(urls[index],job,JSON.stringify(times),112,64,zoomVal()>=8)}catch(e){}
   }
-  // ---- part names: typed, or heard from the first words sung / spoken (Hindi or English)
-  var partNames={},VO=window.MYmusicVoice,voiceJob=0,voiceBusy=false;
-  function pkey(t){return (Math.round(t*10)/10).toFixed(1)}
-  function spSay(t){el('spStatus').textContent=t}
-  function renderNames(){
-    var ss=segs(),h=el('spNames');h.innerHTML='';h.hidden=!ss.length;
-    ss.forEach(function(sg,i){
-      var row=document.createElement('label');row.className='sp-name';
-      row.innerHTML='<b>'+(i+1)+'</b><small>'+fmt(sg[0])+'</small><input type="text" maxlength="40" autocomplete="off" placeholder="Part '+(i+1)+' (short name)">';
-      var inp=row.querySelector('input');inp.value=partNames[pkey(sg[0])]||'';
-      inp.addEventListener('input',function(){partNames[pkey(sg[0])]=inp.value.replace(/[\\/:*?"<>|]/g,' ').trim()});
-      h.appendChild(row);
-    });
-  }
-  el('findSongs').addEventListener('click',function(){setTimeout(renderNames,0)});
-  var applySongs0=applySongs;applySongs=function(L){applySongs0(L);renderNames()};
-  function voiceDone(msg){voiceBusy=false;el('spVoice').textContent='🎤 Name by voice';if(msg)spSay(msg)}
-  el('spVoice').addEventListener('click',function(){
-    var ss=segs();
-    if(voiceBusy){try{VO.cancel()}catch(e){}voiceJob++;voiceDone('Stopped.');return}
-    if(!ss.length){spSay('Find songs (or mark parts) first, then tap Name by voice.');return}
-    if(!VO||typeof VO.nameParts!=='function'){spSay('Naming by voice works in the Android app.');return}
-    voiceBusy=true;el('spVoice').textContent='■ Stop';var job=++voiceJob,named=0;
-    var hasPacks=false;try{hasPacks=VO.hasPacks()}catch(e){}
-    spSay(hasPacks?'Listening…':'Getting the Hindi + English voice packs (about 80 MB, only once; needs internet)…');
-    window.__mmVoice=function(j,ev){
-      if(j!==voiceJob)return;
-      if(ev.type==='download')spSay('Downloading voice packs (only once)… '+ev.pct+'%');
-      else if(ev.type==='loading')spSay('Loading the voice packs…');
-      else if(ev.type==='part')spSay('Listening to part '+(ev.i+1)+' of '+ss.length+'…');
-      else if(ev.type==='name'){var sg=ss[ev.i];if(sg&&ev.text){partNames[pkey(sg[0])]=ev.text;named++}renderNames()}
-      else if(ev.type==='done')voiceDone('Named '+named+' of '+ss.length+' part'+(ss.length>1?'s':'')+'. Correct any name, then tap Save parts.');
-      else if(ev.type==='error')voiceDone('Could not name the parts: '+ev.message);
-    };
-    try{VO.nameParts(urls[index],job,JSON.stringify(ss.map(function(sg){return [sg[0],sg[1]]})))}catch(e){voiceDone('Could not start listening.')}
-  });
-
   // ---- light / dark theme (player and file manager; the equalizer keeps its analog look)
   function applyTheme(light){document.documentElement.classList.toggle('light',!!light);try{localStorage.setItem('mmTheme',light?'light':'dark')}catch(e){}
     if(NATIVE&&NP.setTheme){try{NP.setTheme(!!light)}catch(e){}}el('cxTheme').textContent=el('fmTheme').textContent=light?'☾':'☀';drawWave();}
