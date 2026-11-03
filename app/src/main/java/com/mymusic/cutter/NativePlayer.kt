@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewOutlineProvider
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.util.Log
 import android.widget.FrameLayout
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -199,6 +200,7 @@ class NativePlayer(
         override fun onVideoSizeChanged(videoSize: VideoSize) {
             videoW = videoSize.width
             videoH = videoSize.height
+            Log.i("MMP", "videoSize ${videoSize.width}x${videoSize.height} rot=${videoSize.unappliedRotationDegrees} par=${videoSize.pixelWidthHeightRatio}")
             @Suppress("DEPRECATION")
             rotation = videoSize.unappliedRotationDegrees
             par = if (videoSize.pixelWidthHeightRatio > 0) videoSize.pixelWidthHeightRatio else 1f
@@ -317,6 +319,7 @@ class NativePlayer(
             y = stageY + (stageH - h) / 2
         }
         contentW = w; contentH = h
+        Log.i("MMP", "layout stage=${stageX.toInt()},${stageY.toInt()} ${stageW.toInt()}x${stageH.toInt()} video=${vw0}x${vh0} fill=$fill fillAspect=$fillAspect -> ${x.toInt()},${y.toInt()} ${w.toInt()}x${h.toInt()} texture=$useTexture")
         updateFrameEffect()
         val nl = x.roundToInt(); val nt = y.roundToInt(); val nw = max(1, w.roundToInt()); val nh = max(1, h.roundToInt())
         if (lp.leftMargin != nl || lp.topMargin != nt || lp.width != nw || lp.height != nh) {
@@ -380,6 +383,7 @@ class NativePlayer(
     private fun syncFill() {
         val want = wantedFillAspect()
         if (kotlin.math.abs(want - fillAspect) < 0.01f) return
+        Log.i("MMP", "syncFill $fillAspect -> $want state=${player.playbackState}")
         fillAspect = want
         layoutSurface()
         if (!effectsOn) return

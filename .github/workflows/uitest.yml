@@ -1,0 +1,51 @@
+name: UI test on emulator
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+  uitest:
+    if: contains(github.event.head_commit.message, '[uitest]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build debug APK
+        run: gradle assembleDebug
+      - name: Test video and tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=30 -f lavfi -i sine=frequency=440 -t 40 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest /tmp/t.mp4
+          pip install websocket-client
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: ./ci/uitest.sh
+      - name: Publish results to the "uitest" branch
+        if: always()
+        run: |
+          mkdir -p /tmp/uitest && cd /tmp/uitest && git init -q && git checkout -q -b uitest
+          git add -A
+          git -c user.name=apk-bot -c user.email=apk-bot@users.noreply.github.com commit -q -m "uitest ${GITHUB_SHA::7}" --allow-empty
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" uitest
