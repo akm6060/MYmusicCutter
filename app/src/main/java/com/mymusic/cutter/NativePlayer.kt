@@ -121,13 +121,19 @@ class NativePlayer(
     }
 
     private var redrawFrom = 0L
-    private val redrawCheck = Runnable {
-        if (released) return@Runnable
-        if (player.playbackState == Player.STATE_READY && kotlin.math.abs(player.currentPosition - redrawFrom) < 60) {
-            Log.i("MMP", "redraw at new size")
-            redrawNow()
+    private var redrawTries = 0
+    private val redrawCheck: Runnable = object : Runnable {
+        override fun run() {
+            if (released) return
+            if (player.playbackState == Player.STATE_BUFFERING && redrawTries++ < 8) { main.postDelayed(this, 300); return }
+            if (player.playbackState == Player.STATE_READY && kotlin.math.abs(player.currentPosition - redrawFrom) < 60) {
+                Log.i("MMP", "redraw at new size")
+                redrawNow()
+            }
         }
     }
+    // a second look a little later: during a screen rotation the window settles in several steps
+    private val redrawLate = Runnable { if (!released && !player.isPlaying) { redrawFrom = player.currentPosition; redrawTries = 0; redrawCheck.run() } }
 
     private val refreshFrame = Runnable {
         if (player.playbackState == Player.STATE_READY && !player.isPlaying) redrawNow()
@@ -308,8 +314,11 @@ class NativePlayer(
                 // Redraw unless frames are clearly flowing (playing and the position moving).
                 val p0 = player.currentPosition
                 main.removeCallbacks(redrawCheck)
+                main.removeCallbacks(redrawLate)
                 redrawFrom = p0
+                redrawTries = 0
                 main.postDelayed(redrawCheck, 250)
+                main.postDelayed(redrawLate, 1100)
             }
         })
         textureView.visibility = View.INVISIBLE
