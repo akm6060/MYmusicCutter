@@ -29,6 +29,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
+import androidx.media3.common.Effect
+import androidx.media3.effect.Presentation
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -211,7 +213,7 @@ class NativePlayer(
             if ((error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED ||
                  error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED) && effectsOn) {
                 // Picture adjustments failed on this phone: play without them and use the simpler method.
-                effectsOn = false; effectsBroken = true
+                effectsOn = false; effectsBroken = true; fillAspect = 0f
                 val pos = player.currentPosition
                 val wasPlaying = player.playWhenReady
                 player.setVideoEffects(emptyList())
@@ -305,7 +307,9 @@ class NativePlayer(
         val lp = (surfaceView.layoutParams as? FrameLayout.LayoutParams) ?: FrameLayout.LayoutParams(1, 1)
         val (vw0, vh0) = displaySize()
         var x = stageX; var y = stageY; var w = stageW; var h = stageH
-        if (vw0 > 0 && vh0 > 0 && stageW > 1 && stageH > 1) {
+        if (fillAspect > 0f && !useTexture) {
+            // Fill done by the pipeline: the window covers the stage exactly.
+        } else if (vw0 > 0 && vh0 > 0 && stageW > 1 && stageH > 1) {
             val aspect = vw0.toFloat() / vh0
             val heightLimited = (stageW / stageH > aspect) != fill
             if (heightLimited) { h = stageH; w = stageH * aspect } else { w = stageW; h = stageW / aspect }
@@ -347,14 +351,50 @@ class NativePlayer(
      * then read for every frame, so moving a slider changes the picture at once.
      */
     private fun installEffects() {
-        if (effectsOn || effectsBroken) return
+        if (effectsBroken) return
         try {
-            player.setVideoEffects(listOf(PictureFx.colour, PictureFx.sharpen, PictureFx.frame))
+            player.setVideoEffects(effectList())
             effectsOn = true
         } catch (_: Exception) {
             effectsBroken = true
         }
     }
+
+    /**
+     * Fill: the picture is cropped to the shape of the screen inside the picture pipeline, and the
+     * video window stays exactly the size of the screen. aspect 0 = Fit (no crop).
+     */
+    private var fillAspect = 0f
+    private fun effectList(): List<Effect> {
+        val l = ArrayList<Effect>()
+        l.add(PictureFx.colour); l.add(PictureFx.sharpen)
+        if (fillAspect > 0f) l.add(Presentation.createForAspectRatio(fillAspect, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP))
+        l.add(PictureFx.frame)
+        return l
+    }
+
+    private fun wantedFillAspect(): Float =
+        if (fill && !effectsBroken && stageW > 1f && stageH > 1f) stageW / stageH else 0f
+
+    /** The pipeline is built when a video starts, so a new crop needs a quick restart at the same spot. */
+    private fun syncFill() {
+        val want = wantedFillAspect()
+        if (kotlin.math.abs(want - fillAspect) < 0.01f) return
+        fillAspect = want
+        layoutSurface()
+        if (!effectsOn) return
+        val uri = currentUri ?: return
+        if (player.playbackState == Player.STATE_IDLE) { installEffects(); return }
+        val pos = player.currentPosition
+        val play = player.playWhenReady
+        installEffects()
+        pendingSeek = false
+        player.setMediaItem(MediaItem.fromUri(uri), pos)
+        player.prepare()
+        player.playWhenReady = play
+    }
+
+    private val fillSync: Runnable by lazy { Runnable { if (!released) syncFill() } }
 
     private fun applyOutput(wantTexture: Boolean) {
         if (wantTexture != useTexture) {
@@ -424,6 +464,7 @@ class NativePlayer(
             currentUri = uri
             videoW = 0; videoH = 0; rotation = 0; par = 1f
             player.setSeekParameters(SeekParameters.EXACT)
+            fillAspect = wantedFillAspect()
             installEffects()
             player.setMediaItem(MediaItem.fromUri(uri))
             player.playWhenReady = false
@@ -513,6 +554,7 @@ class NativePlayer(
         main.post {
             stageX = (x * density).toFloat(); stageY = (y * density).toFloat()
             stageW = max(1f, (w * density).toFloat()); stageH = max(1f, (h * density).toFloat())
+            if (fill || fillAspect > 0f) { main.removeCallbacks(fillSync); main.postDelayed(fillSync, 350) }
             layoutSurface()
             val lp = (textureView.layoutParams as? FrameLayout.LayoutParams)
                 ?: FrameLayout.LayoutParams(0, 0)
@@ -559,6 +601,8 @@ class NativePlayer(
             // Zoom and pan are done by the player's picture processing; only phones where that is
             // not available fall back to the TextureView for them.
             applyOutput(effectsBroken && (zoom > 1.001f || needPaint))
+            main.removeCallbacks(fillSync)
+            syncFill()
             layoutSurface()
             updateFrameEffect()
             if (useTexture) applyTransform() else textureView.setTransform(null)
