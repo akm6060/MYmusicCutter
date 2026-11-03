@@ -280,6 +280,19 @@ class NativePlayer(
         player.setHandleAudioBecomingNoisy(true)
         player.setWakeMode(C.WAKE_MODE_LOCAL)   // keeps the CPU awake for background sound
         player.setVideoSurfaceView(surfaceView)
+        // When paused, nothing redraws the picture after Fit / Fill / full screen change the window
+        // size, so the old-size picture stayed in a corner: draw the current frame again.
+        surfaceView.holder.addCallback(object : android.view.SurfaceHolder.Callback {
+            override fun surfaceCreated(holder: android.view.SurfaceHolder) {}
+            override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {}
+            override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, width: Int, height: Int) {
+                Log.i("MMP", "surfaceChanged ${width}x${height} playing=${player.isPlaying}")
+                if (effectsOn && !player.isPlaying) {
+                    main.removeCallbacks(refreshFrame)
+                    main.postDelayed(refreshFrame, 80)
+                }
+            }
+        })
         textureView.visibility = View.INVISIBLE
         installEffects()
         player.addListener(listener)
