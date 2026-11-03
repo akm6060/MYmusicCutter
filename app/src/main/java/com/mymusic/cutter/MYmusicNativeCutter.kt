@@ -1232,7 +1232,13 @@ class MYmusicNativeCutter(
         require(wroteAny) { "The selected range contained no media to save." }
     }
 
-    /** Copies samples from the keyframe at or before fromUs up to toUs. Returns the last output time, or -1. */
+    /**
+     * Copies samples from the video keyframe at or before fromUs up to toUs, without re-coding.
+     * Video is kept in decode order with every frame (B-frames have lower times than the frame
+     * before them, which is normal), so the picture stays sharp. At the end a few frames past toUs
+     * are kept so the last pictures still have the frames they are built from.
+     * Returns the last output time, or -1.
+     */
     private fun writeSegment(
         source: Source, muxer: MediaMuxer, trackMap: Map<Int, Int>, buffer: ByteBuffer,
         fromUs: Long, toUs: Long, outputOffsetUs: Long, doneUs: Long, totalUs: Long
@@ -1240,36 +1246,70 @@ class MYmusicNativeCutter(
         val ex = newExtractor(source)
         var lastOut = -1L
         try {
+            var videoTrack = -1
+            for (t in trackMap.keys) {
+                val mime = try { ex.getTrackFormat(t).getString(MediaFormat.KEY_MIME) ?: "" } catch (_: Exception) { "" }
+                if (mime.startsWith("video/")) { videoTrack = t; break }
+            }
+            // where the picture can really start: the keyframe at or before fromUs
+            var startUs = fromUs
+            if (videoTrack >= 0) {
+                val probe = newExtractor(source)
+                try {
+                    probe.selectTrack(videoTrack)
+                    probe.seekTo(fromUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+                    val t = probe.sampleTime
+                    if (t >= 0 && t <= fromUs + 1_000L) startUs = t
+                } finally { probe.release() }
+            }
             trackMap.keys.forEach { ex.selectTrack(it) }
-            ex.seekTo(fromUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            ex.seekTo(startUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             val info = MediaCodec.BufferInfo()
             val lastPts = HashMap<Int, Long>()
-            var baseUs = -1L
+            val done = HashSet<Int>()
+            val tailUs = 200_000L
+            var videoStarted = videoTrack < 0
+            var videoWrote = false
             while (true) {
                 val track = ex.sampleTrackIndex
                 val timeUs = ex.sampleTime
                 if (track < 0 || timeUs < 0) break
-                if (toUs != Long.MAX_VALUE && timeUs >= toUs) break
                 val out = trackMap[track]
-                if (out != null) {
-                    if (baseUs < 0) baseUs = timeUs
-                    if (timeUs >= baseUs) { // skips leading frames that belong to the previous group
+                if (out != null && track !in done) {
+                    val sync = (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0
+                    var write: Boolean
+                    if (track == videoTrack) {
+                        if (!videoStarted && sync && timeUs >= startUs - 1_000L) videoStarted = true
+                        write = videoStarted && timeUs >= startUs
+                        if (toUs != Long.MAX_VALUE && (timeUs >= toUs + tailUs || (sync && videoWrote && timeUs >= toUs))) {
+                            done.add(track); write = false
+                        }
+                    } else {
+                        write = timeUs >= startUs
+                        if (toUs != Long.MAX_VALUE && timeUs >= toUs) { done.add(track); write = false }
+                    }
+                    if (write) {
                         try {
                             buffer.clear()
                             val size = ex.readSampleData(buffer, 0)
-                            val pts = outputOffsetUs + (timeUs - baseUs)
+                            val pts = outputOffsetUs + (timeUs - startUs)
                             val prev = lastPts[out] ?: -1L
-                            if (size > 0 && pts > prev) {
-                                info.set(0, size, pts, ex.sampleFlags)
+                            // audio must move forward; video may go back a little (B-frames)
+                            if (size > 0 && (track == videoTrack || pts > prev)) {
+                                var flags = 0
+                                if (sync) flags = flags or MediaCodec.BUFFER_FLAG_KEY_FRAME
+                                info.set(0, size, pts, flags)
                                 muxer.writeSampleData(out, buffer, info)
-                                lastPts[out] = pts
+                                if (track == videoTrack) videoWrote = true
+                                if (pts > prev) lastPts[out] = pts
                                 if (pts > lastOut) lastOut = pts
-                                progress((doneUs + (timeUs - baseUs)).toDouble() / totalUs)
+                                progress((doneUs + (timeUs - startUs)).toDouble() / totalUs)
                             }
                         } catch (_: Exception) {
                             // a damaged frame: skip it and carry on
                         }
                     }
+                    if (done.size == trackMap.size) break
                 }
                 if (!ex.advance()) break
             }

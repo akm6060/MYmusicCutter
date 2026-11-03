@@ -79,6 +79,15 @@ class MainActivity : Activity() {
         val videoDirect = SurfaceView(this)
         videoDirect.layoutParams = FrameLayout.LayoutParams(1, 1)
         nativePlayer = NativePlayer(this, webView, cutter, videoTexture, videoDirect)
+        PlaybackService.control = object : PlaybackService.Control {
+            override fun toggle() { runOnUiThread { if (::nativePlayer.isInitialized) nativePlayer.remoteToggle() } }
+            override fun close() {
+                runOnUiThread {
+                    if (::nativePlayer.isInitialized) nativePlayer.pauseFromActivity()
+                    pausePlayback()
+                }
+            }
+        }
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
         webView.addJavascriptInterface(FileBrowser(this, webView), "MYmusicFiles")
         val root = FrameLayout(this)
@@ -514,16 +523,28 @@ class MainActivity : Activity() {
         }
     }
 
-    // Nothing keeps playing once the app leaves the screen (Home, app switch, screen off).
+    // Sound keeps playing in the background (Home, app switch, screen off);
+    // the notification has Play / Pause and Close.
     override fun onPause() {
-        pausePlayback()
-        if (::nativePlayer.isInitialized) nativePlayer.pauseFromActivity()
         super.onPause()
+    }
+
+    private var notifAsked = false
+    fun askNotificationsOnce() {
+        if (notifAsked || Build.VERSION.SDK_INT < 33) return
+        notifAsked = true
+        val prefs = getSharedPreferences("mm", MODE_PRIVATE)
+        if (prefs.getBoolean("notifAsked", false)) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        prefs.edit().putBoolean("notifAsked", true).apply()
+        runOnUiThread { try { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7301) } catch (_: Exception) {} }
     }
 
     override fun onDestroy() {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = null
+        PlaybackService.control = null
+        PlaybackService.stop(this)
         if (::nativePlayer.isInitialized) nativePlayer.release()
         if (::cutter.isInitialized) {
             cutter.shutdown()

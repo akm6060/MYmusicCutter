@@ -164,7 +164,9 @@ class NativePlayer(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            PlaybackService.update(activity, cachedTitle(), isPlaying)
             if (isPlaying) {
+                activity.askNotificationsOnce()
                 send("playing", JSONObject().put("t", posSec()))
                 main.removeCallbacks(ticker)
                 main.post(ticker)
@@ -254,6 +256,7 @@ class NativePlayer(
             true
         )
         player.setHandleAudioBecomingNoisy(true)
+        player.setWakeMode(C.WAKE_MODE_LOCAL)   // keeps the CPU awake for background sound
         player.setVideoSurfaceView(surfaceView)
         textureView.visibility = View.INVISIBLE
         installEffects()
@@ -429,6 +432,41 @@ class NativePlayer(
 
     fun pauseFromActivity() {
         player.playWhenReady = false
+    }
+
+    /** Play / Pause from the notification. */
+    fun remoteToggle() {
+        if (player.isPlaying || player.playWhenReady) {
+            player.playWhenReady = false
+            send("paused", JSONObject().put("t", posSec()))
+        } else {
+            if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+            if (player.playbackState == Player.STATE_IDLE) player.prepare()
+            player.playWhenReady = true
+        }
+    }
+
+    private var titleUri: Uri? = null
+    private var titleText = ""
+    private fun cachedTitle(): String {
+        val u = currentUri
+        if (u != titleUri) { titleUri = u; titleText = titleFor(u) }
+        return titleText
+    }
+
+    private fun titleFor(u: Uri?): String {
+        if (u == null) return "MYmusic Cutter"
+        var name: String? = null
+        if (u.scheme == "content") {
+            try {
+                activity.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) name = c.getString(0)
+                }
+            } catch (_: Exception) {
+            }
+        }
+        if (name.isNullOrBlank()) name = u.lastPathSegment?.substringAfterLast('/')
+        return (name ?: "MYmusic Cutter").substringBeforeLast('.')
     }
 
     @JavascriptInterface
