@@ -17,7 +17,7 @@ say("pid", pid)
 adb("forward", "tcp:9222", f"localabstract:webview_devtools_remote_{pid}")
 pages = json.load(urllib.request.urlopen("http://127.0.0.1:9222/json"))
 say("pages", [p.get("url") for p in pages])
-ws = websocket.create_connection([p for p in pages if "appassets" in p.get("url", "")][0]["webSocketDebuggerUrl"], timeout=8)
+ws = websocket.create_connection([p for p in pages if "appassets" in p.get("url", "")][0]["webSocketDebuggerUrl"], timeout=8, suppress_origin=True)
 mid = [0]
 def js(expr):
     mid[0] += 1
@@ -61,3 +61,13 @@ say("Fill while playing", js("document.getElementById('videoFill').click();'ok'"
 alive("fill-playing"); shot("8_fill_playing")
 say("exit while playing", js("document.getElementById('videoFull').click();'ok'")); time.sleep(4)
 alive("exit-playing"); shot("9_exit_playing")
+
+for k in range(4):
+    say("cycle", k, js("document.getElementById('videoFull').click();'ok'")); time.sleep(3)
+    alive(f"cycle{k}-in")
+    say("fill toggle", js("document.getElementById('videoFill').click();'ok'")); time.sleep(2)
+    alive(f"cycle{k}-fill"); shot(f"c{k}_fill")
+    say("exit", js("document.getElementById('videoFull').click();'ok'")); time.sleep(3)
+    alive(f"cycle{k}-out")
+say("tap on screen"); adb("shell", "input", "tap", "500", "500"); time.sleep(8)
+alive("end"); shot("z_end")

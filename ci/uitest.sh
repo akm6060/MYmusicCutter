@@ -7,7 +7,7 @@ adb shell pm grant com.mymusic.cutter android.permission.POST_NOTIFICATIONS || t
 adb logcat -c
 adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Download/t.mp4 -t video/mp4 -n com.mymusic.cutter/.MainActivity
 sleep 12
-python3 ci/drive.py $OUT || echo "driver failed" >> $OUT/drive.txt
+python3 ci/drive.py $OUT 2>> $OUT/drive_err.txt || echo "driver failed" >> $OUT/drive.txt
 adb logcat -d > $OUT/logcat.txt
 grep -E "MMP|ANR|FATAL|AndroidRuntime|VideoFrameProcessor|ExoPlayerImpl" $OUT/logcat.txt > $OUT/logcat_short.txt || true
 exit 0

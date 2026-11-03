@@ -235,11 +235,15 @@ class MYmusicNativeCutter(
      * (.sec) folders and any source too slow for smooth seeking (decrypting on the fly).
      */
     private fun needsLocalCopy(uri: Uri): Boolean {
-        if (uri.scheme == "http" || uri.scheme == "https") return true   // network storage: copied once
+        // Network storage plays at once, streamed (like ARC / Tiny player); copied only when cutting.
+        if (uri.scheme == "http" || uri.scheme == "https") return false
         val text = Uri.decode(uri.toString()).lowercase()
         if (text.contains(".sec/") || text.endsWith(".sec")) return true
         if (!isSeekable(uri)) return true
         if (uri.scheme == "file") return false
+        // The speed check is only for Solid Explorer's encrypted files (decrypted on the fly);
+        // anything else - including network storage - plays straight away.
+        if (!(uri.authority ?: "").lowercase().contains("solidexplorer")) return false
         return try {
             context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
                 val size = pfd.statSize
@@ -695,13 +699,24 @@ class MYmusicNativeCutter(
         }
     }
 
-    private fun startJob(jobMeta: JSONObject, source: Source): Boolean {
+    private fun startJob(jobMeta: JSONObject, given: Source): Boolean {
         if (!busy.compareAndSet(false, true)) {
             notifyPage("Please wait: the previous cut is still saving.")
             return true
         }
         worker.execute {
+            var netCopy: File? = null
             try {
+                // Network files play straight from the network; only for cutting are they copied
+                // to the phone for a moment (deleted again when the cut is saved).
+                val gu = given.uri
+                val source = if (given.file == null && gu != null && (gu.scheme == "http" || gu.scheme == "https")) {
+                    notifyPage("Copying from network storage for cutting…")
+                    val nm = jobMeta.optString("fileName", "media")
+                    val f = copyToCache(gu, nm, -1L) { pct -> if (pct < 0) notifyPage("Copying from network storage… ${-pct - 1} MB") }
+                    netCopy = f
+                    Source(null, f)
+                } else given
                 val isAudio = jobMeta.optString("mediaType", "video") == "audio"
                 val mode = jobMeta.optString("mode", "keep")
                 val durUs = (jobMeta.optDouble("durationSeconds", 0.0) * 1_000_000).toLong()
@@ -742,7 +757,8 @@ class MYmusicNativeCutter(
                 notifyPage("Cut failed: " + (e.message ?: e.javaClass.simpleName))
             } finally {
                 partLabel = ""
-                source.file?.delete()
+                given.file?.delete()
+                netCopy?.delete()
                 busy.set(false)
             }
         }
