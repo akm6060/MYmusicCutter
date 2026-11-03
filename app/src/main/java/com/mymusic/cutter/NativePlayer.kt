@@ -124,12 +124,21 @@ class NativePlayer(
     private val redrawCheck = Runnable {
         if (released) return@Runnable
         if (player.playbackState == Player.STATE_READY && kotlin.math.abs(player.currentPosition - redrawFrom) < 60) {
-            player.seekTo(player.currentPosition)
+            Log.i("MMP", "redraw at new size")
+            redrawNow()
         }
     }
 
     private val refreshFrame = Runnable {
-        if (player.playbackState == Player.STATE_READY && !player.isPlaying) player.seekTo(player.currentPosition)
+        if (player.playbackState == Player.STATE_READY && !player.isPlaying) redrawNow()
+    }
+
+    /** A seek to exactly the current spot is skipped by the player, so go 1 ms on: same picture, drawn again. */
+    private fun redrawNow() {
+        val d = player.duration
+        var t = player.currentPosition + 1
+        if (d > 0 && t >= d) t = maxOf(0L, player.currentPosition - 1)
+        player.seekTo(t)
     }
 
     private val seekFallback = Runnable {
