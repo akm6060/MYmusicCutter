@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
+    <!-- Network storage (files streamed by file managers over Wi-Fi) and the one-time voice packs. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Background playback: a media notification with Play / Pause. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -39,7 +42,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="true">
         <service
             android:name=".PlaybackService"
             android:exported="false"
@@ -64,6 +67,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
+                <!-- network storage: file managers stream SMB / FTP / cloud files over http -->
+                <data android:scheme="http" />
+                <data android:scheme="https" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="video/*" />
                 <data android:mimeType="application/ogg" />
@@ -86,6 +92,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="file" />
                 <data android:scheme="content" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
                 <data android:host="*" />
                 <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\.mp4" />
@@ -305,6 +313,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="file" />
                 <data android:scheme="content" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
                 <data android:host="*" />
                 <data android:pathPattern=".*\\.mp4" />
                 <data android:pathPattern=".*\\..*\\.mp4" />

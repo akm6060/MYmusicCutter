@@ -136,6 +136,17 @@ class MYmusicNativeCutter(
     private fun nameAndSize(uri: Uri): Pair<String, Long> {
         var name = uri.lastPathSegment?.substringAfterLast('/') ?: "media"
         var size = -1L
+        if (uri.scheme == "http" || uri.scheme == "https") {
+            try {
+                val c = java.net.URL(uri.toString()).openConnection() as java.net.HttpURLConnection
+                c.requestMethod = "HEAD"; c.connectTimeout = 8000; c.readTimeout = 8000
+                if (c.responseCode in 200..299) size = c.contentLengthLong
+                val cd = c.getHeaderField("Content-Disposition")
+                Regex("filename\\*?=(?:UTF-8'')?\"?([^\";]+)").find(cd ?: "")?.groupValues?.get(1)?.let { name = Uri.decode(it) }
+                c.disconnect()
+            } catch (_: Exception) {}
+            return Pair(name, size)
+        }
         if (uri.scheme == "file") {
             val f = File(uri.path ?: "")
             return Pair(f.name.ifBlank { name }, if (f.isFile) f.length() else -1L)
@@ -224,6 +235,7 @@ class MYmusicNativeCutter(
      * (.sec) folders and any source too slow for smooth seeking (decrypting on the fly).
      */
     private fun needsLocalCopy(uri: Uri): Boolean {
+        if (uri.scheme == "http" || uri.scheme == "https") return true   // network storage: copied once
         val text = Uri.decode(uri.toString()).lowercase()
         if (text.contains(".sec/") || text.endsWith(".sec")) return true
         if (!isSeekable(uri)) return true
@@ -268,7 +280,11 @@ class MYmusicNativeCutter(
 
     private fun copyToCache(uri: Uri, name: String, knownSize: Long, onProgress: (Int) -> Unit): File {
         val out = File(sharedDir, UUID.randomUUID().toString().take(8) + "_" + safeName(name))
-        val input = context.contentResolver.openInputStream(uri) ?: throw IllegalStateException("The other app did not hand over the file.")
+        val input = if (uri.scheme == "http" || uri.scheme == "https") {
+            val c = java.net.URL(uri.toString()).openConnection()
+            c.connectTimeout = 20000; c.readTimeout = 60000
+            c.getInputStream()
+        } else context.contentResolver.openInputStream(uri) ?: throw IllegalStateException("The other app did not hand over the file.")
         try {
             input.use { inp ->
                 FileOutputStream(out).use { fos ->
@@ -711,10 +727,13 @@ class MYmusicNativeCutter(
                 require(outputs.all { it.isNotEmpty() }) { "Nothing would be left to save." }
                 val format = detectFormat(source, name)
                 val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
-                beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), name)
+                beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), shortStem(name))
+                val names = jobMeta.optJSONArray("names")
                 for ((i, ranges) in outputs.withIndex()) {
                     partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
-                    val saved = saveRanges(source, name, format, isAudio, ranges, durUs)
+                    val given = if (mode == "parts") names?.optString(i, "")?.trim().orEmpty() else ""
+                    outLabel = if (given.isNotEmpty()) "${i + 1} " + given else null
+                    val saved = try { saveRanges(source, name, format, isAudio, ranges, durUs) } finally { outLabel = null }
                     notifySaved(saved, kind)
                 }
                 partLabel = ""
@@ -767,7 +786,7 @@ class MYmusicNativeCutter(
                 val allAudio = formats[0] != "container" || sources.all { s ->
                     try { probeContainer(s, false).formats.values.all { (it.getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/") } } catch (_: Exception) { false }
                 }
-                beginJob(if (allAudio) "Audio" else "Video", "Save as one", outputStem(name) + " joined")
+                beginJob(if (allAudio) "Audio" else "Video", "Save as one", shortStem(name) + " joined")
                 when (formats[0]) {
                     "mp3" -> {
                         val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg"); target = t
@@ -1495,16 +1514,37 @@ class MYmusicNativeCutter(
         jobDir = "$base/$stem ${max + 1}"
     }
 
+    /** A name given to the part being saved (e.g. from the first words sung), or null. */
+    @Volatile private var outLabel: String? = null
+
+    /** Short file names: the first words of the original name, at most about 16 letters. */
+    private fun shortStem(originalName: String): String {
+        val full = outputStem(originalName)
+        val words = full.split(' ').filter { it.isNotBlank() }
+        val sb = StringBuilder()
+        for (w in words) {
+            if (sb.isNotEmpty() && sb.length + 1 + w.length > 16) break
+            if (sb.isNotEmpty()) sb.append(' ')
+            sb.append(w)
+            if (sb.length >= 16) break
+        }
+        var r = sb.toString()
+        if (r.length > 16) r = r.substring(0, 16).trim()
+        return r.ifBlank { "cut" }
+    }
+
     private fun createOutput(kind: Kind, originalName: String, ext: String, mime: String): OutputTarget {
         val relPath = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/$jobDir"
-        val stem = outputStem(originalName)
+        val label = outLabel?.let { outputStem(it + ".x").take(48).trim() }?.takeIf { it.isNotBlank() }
+        val stem = label ?: shortStem(originalName)
         val pattern = numberPattern(stem)
+        fun nameFor(n: Int) = if (label != null && n <= 1) "$stem$ext" else "$stem $n$ext"
 
         if (Build.VERSION.SDK_INT >= 29) {
             val collection: Uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-            var number = highestUsedNumber(collection, relPath, pattern) + 1
+            var number = if (label != null) 1 else highestUsedNumber(collection, relPath, pattern) + 1
             for (attempt in 0 until 100) {
-                val displayName = "$stem $number$ext"
+                val displayName = nameFor(number)
                 val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
                     put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -1544,13 +1584,13 @@ class MYmusicNativeCutter(
 
         // Android 9 and older.
         val dir = File(legacyRoot(), jobDir).apply { mkdirs() }
-        var number = 1 + (dir.list()?.mapNotNull { n ->
+        var number = if (label != null) 1 else 1 + (dir.list()?.mapNotNull { n ->
             pattern.matchEntire(n)?.groupValues?.get(1)?.toIntOrNull()
         }?.maxOrNull() ?: 0)
-        var dest = File(dir, "$stem $number$ext")
+        var dest = File(dir, nameFor(number))
         while (dest.exists()) {
             number++
-            dest = File(dir, "$stem $number$ext")
+            dest = File(dir, nameFor(number))
         }
         val pfd = ParcelFileDescriptor.open(
             dest,

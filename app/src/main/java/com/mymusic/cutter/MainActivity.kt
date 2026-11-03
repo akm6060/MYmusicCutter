@@ -90,6 +90,7 @@ class MainActivity : Activity() {
         }
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
         webView.addJavascriptInterface(FileBrowser(this, webView), "MYmusicFiles")
+        webView.addJavascriptInterface(VoiceNamer(this, webView, cutter), "MYmusicVoice")
         val root = FrameLayout(this)
         root.setBackgroundColor(Color.rgb(5, 6, 16))
         root.addView(videoDirect)

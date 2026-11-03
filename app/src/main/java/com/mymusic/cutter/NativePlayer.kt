@@ -316,10 +316,30 @@ class NativePlayer(
         updateFrameEffect()
         val nl = x.roundToInt(); val nt = y.roundToInt(); val nw = max(1, w.roundToInt()); val nh = max(1, h.roundToInt())
         if (lp.leftMargin != nl || lp.topMargin != nt || lp.width != nw || lp.height != nh) {
+            val sizeChanged = lp.width != nw || lp.height != nh
             lp.leftMargin = nl; lp.topMargin = nt; lp.width = nw; lp.height = nh
             surfaceView.layoutParams = lp
+            if (sizeChanged) {
+                // The picture pipeline must learn the new size, otherwise Fit / Fill and
+                // full screen keep the old picture size: fix the buffer size and re-attach.
+                try { surfaceView.holder.setFixedSize(nw, nh) } catch (_: Exception) {}
+                main.removeCallbacks(reattach)
+                main.postDelayed(reattach, 60)
+            }
         }
     }
+
+    private val reattach: Runnable by lazy { Runnable {
+        if (released || useTexture) return@Runnable
+        try {
+            player.setVideoSurfaceView(surfaceView)
+            if (effectsOn && !player.isPlaying) {
+                main.removeCallbacks(refreshFrame)
+                main.postDelayed(refreshFrame, 120)
+            }
+        } catch (_: Exception) {
+        }
+    } }
 
     /**
      * The picture settings (brightness, contrast, saturation, hue, sharpness) are processed by the

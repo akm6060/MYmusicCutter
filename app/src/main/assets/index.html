@@ -1387,6 +1387,20 @@ html.light .view-grid .fm-item{border-color:#d5d8ea;background:#fff}
 html.light .fm-msg{color:#4c4870}
 html.light .fm-foot{border-color:#d5d8ea}
 html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a8748!important;color:#fff!important}
+
+/* part names in the Songs panel */
+.sp-card{max-height:calc(100% - 20px);overflow-y:auto}
+.sp-names{display:grid;gap:4px;max-height:34vh;overflow-y:auto;padding-right:2px}
+.sp-names[hidden]{display:none}
+.sp-name{display:grid;grid-template-columns:22px 44px 1fr;align-items:center;gap:6px;font-size:12px}
+.sp-name b{color:#ffc24d;text-align:right}
+.sp-name small{color:#9b9dbd}
+.sp-name input{min-width:0;height:32px;border-radius:8px;border:1px solid #3d4566;background:#0d0e1c;color:#eceaff;padding:0 8px;font-size:13px}
+.sp-btns #spVoice{background:#123d36;border-color:#2fb3a0}
+.sp-btns button{font-size:13px}
+html.light .sp-name input{background:#fff;border-color:#c9cde6;color:#1b1838}
+html.light .sp-name b{color:#b25d00}
+html.light .sp-btns #spVoice{background:#d9f5f1;border-color:#2fb3a0;color:#06514a}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1511,7 +1525,8 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
       <label class="sp-row"><span>Shortest gap between songs <output id="spGapOut">2.0 s</output></span><input id="spGap" type="range" min="0.5" max="8" step="0.5" value="2"></label>
       <label class="sp-row"><span>Shortest song <output id="spSongOut">30 s</output></span><input id="spSong" type="range" min="5" max="180" step="5" value="30"></label>
       <p class="sp-status" id="spStatus"></p>
-      <div class="sp-btns"><button type="button" id="spFind">Find songs</button><button type="button" id="spClose">Close</button></div>
+      <div class="sp-names" id="spNames" hidden></div>
+      <div class="sp-btns"><button type="button" id="spFind">Find songs</button><button type="button" id="spVoice" title="Listen to the first words of each part and use them as its name">🎤 Name by voice</button><button type="button" id="spClose">Close</button></div>
     </div>
   </section>
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
@@ -2525,6 +2540,8 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
   function edgeZone(t,target){
     if(!isFullscreen()||!layer.classList.contains('open')||layer.classList.contains('eq-page-open'))return null;
     if(target&&target.closest&&target.closest('.video-head,.video-stage-actions,.audio-eq-page,.video-seek,.video-settings'))return null;
+    // the top band holds the Fit / Fill and Full screen buttons: never a swipe zone
+    if(t.clientY<64)return null;
     var w=window.innerWidth;if(t.clientX<w*0.1)return 'bright';if(t.clientX>w*0.9)return 'vol';return null;
   }
   function zoneValue(z){
@@ -2637,7 +2654,7 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
     if(!files[index]||!duration()){note('Choose a file first.');return}
     if(!ss.length){note('Mark a part first: tap Start, move on, then tap End.');return}
     var f=files[index],payload={fileName:f.name||(audioMode?'audio':'video'),mediaType:audioMode?'audio':'video',durationSeconds:duration(),mode:mode,
-      ranges:ss.map(function(s){return [s[0],s[1]]}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
+      ranges:ss.map(function(s){return [s[0],s[1]]}),names:ss.map(function(s){return partNames[pkey(s[0])]||''}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
     if(!NC||typeof NC.cutPickedFile!=='function'){note('Saving works in the Android app (this preview cannot save files).');return}
     var ok=false;try{ok=NC.cutPickedFile(JSON.stringify(payload))===true}catch(e){}
     if(ok){note('Saving…');return}
@@ -2999,6 +3016,43 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
       im.style.left=((times[i2]-step/2)/d*100)+'%';im.style.width=(step/d*100)+'%';layer2.appendChild(im)};
     try{NP.thumbnailsAt(urls[index],job,JSON.stringify(times),112,64,zoomVal()>=8)}catch(e){}
   }
+  // ---- part names: typed, or heard from the first words sung / spoken (Hindi or English)
+  var partNames={},VO=window.MYmusicVoice,voiceJob=0,voiceBusy=false;
+  function pkey(t){return (Math.round(t*10)/10).toFixed(1)}
+  function spSay(t){el('spStatus').textContent=t}
+  function renderNames(){
+    var ss=segs(),h=el('spNames');h.innerHTML='';h.hidden=!ss.length;
+    ss.forEach(function(sg,i){
+      var row=document.createElement('label');row.className='sp-name';
+      row.innerHTML='<b>'+(i+1)+'</b><small>'+fmt(sg[0])+'</small><input type="text" maxlength="40" autocomplete="off" placeholder="Part '+(i+1)+' (short name)">';
+      var inp=row.querySelector('input');inp.value=partNames[pkey(sg[0])]||'';
+      inp.addEventListener('input',function(){partNames[pkey(sg[0])]=inp.value.replace(/[\\/:*?"<>|]/g,' ').trim()});
+      h.appendChild(row);
+    });
+  }
+  el('findSongs').addEventListener('click',function(){setTimeout(renderNames,0)});
+  var applySongs0=applySongs;applySongs=function(L){applySongs0(L);renderNames()};
+  function voiceDone(msg){voiceBusy=false;el('spVoice').textContent='🎤 Name by voice';if(msg)spSay(msg)}
+  el('spVoice').addEventListener('click',function(){
+    var ss=segs();
+    if(voiceBusy){try{VO.cancel()}catch(e){}voiceJob++;voiceDone('Stopped.');return}
+    if(!ss.length){spSay('Find songs (or mark parts) first, then tap Name by voice.');return}
+    if(!VO||typeof VO.nameParts!=='function'){spSay('Naming by voice works in the Android app.');return}
+    voiceBusy=true;el('spVoice').textContent='■ Stop';var job=++voiceJob,named=0;
+    var hasPacks=false;try{hasPacks=VO.hasPacks()}catch(e){}
+    spSay(hasPacks?'Listening…':'Getting the Hindi + English voice packs (about 80 MB, only once; needs internet)…');
+    window.__mmVoice=function(j,ev){
+      if(j!==voiceJob)return;
+      if(ev.type==='download')spSay('Downloading voice packs (only once)… '+ev.pct+'%');
+      else if(ev.type==='loading')spSay('Loading the voice packs…');
+      else if(ev.type==='part')spSay('Listening to part '+(ev.i+1)+' of '+ss.length+'…');
+      else if(ev.type==='name'){var sg=ss[ev.i];if(sg&&ev.text){partNames[pkey(sg[0])]=ev.text;named++}renderNames()}
+      else if(ev.type==='done')voiceDone('Named '+named+' of '+ss.length+' part'+(ss.length>1?'s':'')+'. Correct any name, then tap Save parts.');
+      else if(ev.type==='error')voiceDone('Could not name the parts: '+ev.message);
+    };
+    try{VO.nameParts(urls[index],job,JSON.stringify(ss.map(function(sg){return [sg[0],sg[1]]})))}catch(e){voiceDone('Could not start listening.')}
+  });
+
   // ---- light / dark theme (player and file manager; the equalizer keeps its analog look)
   function applyTheme(light){document.documentElement.classList.toggle('light',!!light);try{localStorage.setItem('mmTheme',light?'light':'dark')}catch(e){}
     if(NATIVE&&NP.setTheme){try{NP.setTheme(!!light)}catch(e){}}el('cxTheme').textContent=el('fmTheme').textContent=light?'☾':'☀';drawWave();}

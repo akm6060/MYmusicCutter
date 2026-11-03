@@ -11,8 +11,8 @@ android {
         applicationId "com.mymusic.cutter"
         minSdk 26
         targetSdk 35
-        versionCode 22
-        versionName "4.2"
+        versionCode 23
+        versionName "4.3"
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
         }
@@ -48,4 +48,7 @@ dependencies {
     implementation "androidx.media3:media3-effect:1.5.0"
     // FFmpeg audio decoders (AC3, E-AC3, DTS, TrueHD, ...) for films whose sound the phone cannot decode
     implementation "org.jellyfin.media3:media3-ffmpeg-decoder:1.5.0+1"
+    // Offline speech recognition (Hindi / English) used to name cut parts from their first words
+    implementation "net.java.dev.jna:jna:5.13.0@aar"
+    implementation "com.alphacephei:vosk-android:0.3.47@aar"
 }
