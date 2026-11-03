@@ -1,6 +1,7 @@
 #!/bin/bash
 # Runs on the emulator: install, open a test video, drive the buttons, collect screenshots + logs.
 OUT=/tmp/uitest; mkdir -p $OUT
+(cd /tmp && python3 -m http.server 8000 >/dev/null 2>&1 &)
 adb install -r -g app/build/outputs/apk/debug/app-debug.apk
 adb push /tmp/t.mp4 /sdcard/Download/t.mp4
 adb shell pm grant com.mymusic.cutter android.permission.POST_NOTIFICATIONS || true

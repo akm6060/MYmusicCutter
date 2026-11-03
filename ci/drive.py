@@ -71,3 +71,22 @@ for k in range(4):
     alive(f"cycle{k}-out")
 say("tap on screen"); adb("shell", "input", "tap", "500", "500"); time.sleep(8)
 alive("end"); shot("z_end")
+
+# ---- network storage: a file streamed over http (like SMB/FTP file managers do)
+say("open network file")
+adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "http://10.0.2.2:8000/t.mp4", "-t", "video/mp4", "-n", "com.mymusic.cutter/.MainActivity")
+time.sleep(6)
+for k in range(3):
+    say("net", k, js(STATE)); time.sleep(2)
+shot("n1_network")
+say("note", js("document.getElementById('cutterNote').textContent"))
+# cut a part from the network file
+say("mark", js("(()=>{const m=document.querySelector('video')||{};document.getElementById('markStart').click();return 'start'})()"))
+time.sleep(3)
+say("mark end", js("document.getElementById('markEnd').click();'end'"))
+say("save", js("document.getElementById('saveParts').click();'save'"))
+for k in range(10):
+    time.sleep(2); n = js("document.getElementById('cutterNote').textContent"); say("note", n)
+    if n and ("Saved" in n or "failed" in n): break
+shot("n2_after_cut")
+say("files", adb("shell", "ls", "-R", "/sdcard/Download/MYmusic Cutter"))

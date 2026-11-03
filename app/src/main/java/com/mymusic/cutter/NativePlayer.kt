@@ -120,6 +120,14 @@ class NativePlayer(
         }
     }
 
+    private var redrawFrom = 0L
+    private val redrawCheck = Runnable {
+        if (released) return@Runnable
+        if (player.playbackState == Player.STATE_READY && kotlin.math.abs(player.currentPosition - redrawFrom) < 60) {
+            player.seekTo(player.currentPosition)
+        }
+    }
+
     private val refreshFrame = Runnable {
         if (player.playbackState == Player.STATE_READY && !player.isPlaying) player.seekTo(player.currentPosition)
     }
@@ -287,10 +295,12 @@ class NativePlayer(
             override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {}
             override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, width: Int, height: Int) {
                 Log.i("MMP", "surfaceChanged ${width}x${height} playing=${player.isPlaying}")
-                if (effectsOn && !player.isPlaying) {
-                    main.removeCallbacks(refreshFrame)
-                    main.postDelayed(refreshFrame, 80)
-                }
+                if (!effectsOn) return
+                // Redraw unless frames are clearly flowing (playing and the position moving).
+                val p0 = player.currentPosition
+                main.removeCallbacks(redrawCheck)
+                redrawFrom = p0
+                main.postDelayed(redrawCheck, 250)
             }
         })
         textureView.visibility = View.INVISIBLE
