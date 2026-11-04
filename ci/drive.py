@@ -117,7 +117,12 @@ if isinstance(r, list):
     shot("l1_locked")
     sr = js("(()=>{const r=document.getElementById('stripScroll').getBoundingClientRect();return [r.x,r.y+r.height/3,r.width,devicePixelRatio]})()")
     if isinstance(sr, list):
-        y2 = int(sr[1]*sr[3]); x1 = int((sr[0]+sr[2]*0.8)*sr[3]); x2 = int((sr[0]+sr[2]*0.3)*sr[3])
+        # the page starts below the status bar: add that offset (screen height - page height - navigation bar)
+        ih = js("innerHeight"); scr = adb("shell", "wm", "size").split()[-1].split("x"); sh = int(scr[1])
+        nav = sh - int(ih*sr[3])
+        top = nav // 2
+        say("offset", top, "page", ih)
+        y2 = int(sr[1]*sr[3]) + top; x1 = int((sr[0]+sr[2]*0.8)*sr[3]); x2 = int((sr[0]+sr[2]*0.3)*sr[3])
         say("pos before", js("document.getElementById('cutterPos').textContent"))
         say("scroll before", js("document.getElementById('stripScroll').scrollLeft"), "swipe", x1, x2, y2)
         adb("shell", "input", "swipe", str(x1), str(y2), str(x2), str(y2), "900"); time.sleep(2)
