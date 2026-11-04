@@ -3,7 +3,9 @@
 // before it reaches the speaker or headphones. Nothing travels back and forth through the
 // web page, so there is no feedback delay. The chain is the one from version 2.1:
 // rumble > hum > bass > 8 bands > clarity > hiss > [click repair] > [tube amp] > [bass enhancer]
-//   > [dialogue + stereo width] > [virtualizer] > [volume leveler] > [limiter]
+//   > [tape NR] > [B-decode] > [tube amp] > [bass enhancer] > [clarity HD]
+//   > [dialogue + stereo width] > [wide 3D] > [virtualizer] > [volume leveler] > [limiter]
+// (the four stages added in 4.8 - tape NR, B-decode, clarity HD, wide 3D - are skipped while at 0)
 // When every setting is neutral the sound is copied through untouched.
 
 #include <jni.h>
@@ -17,9 +19,10 @@
 
 namespace {
 
-constexpr int NPARAM = 24;
+constexpr int NPARAM = 28;
 // 0..7 bands, 8 bass, 9 clarity, 10 virtual, 11 hiss, 12 click, 13 hum, 14 rumble, 15 tube,
-// 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral
+// 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral,
+// 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D
 std::atomic<float> gParam[NPARAM];
 std::atomic<int> gAnalyse{0};
 
@@ -139,6 +142,15 @@ struct Engine {
     Biquad bxLp, bxHp, bxTop;
     // dialogue / width
     Biquad ms0, ms1, ms2;
+    // tape NR: treble split, envelope, learned hiss floor, smoothed gain
+    Biquad nrHp, nrHp2, nrLp, nrLp2; double nrEnv = 0, nrFloor = 1e-3, nrG = 1, nrBlk = 0; int nrN = 0;
+    double nrAtt = 0, nrRel = 0, nrOpen = 0, nrClose = 0, nrRise = 1;
+    // B-decode: level-dependent treble cut
+    Biquad bdHp, bdHp2, bdLp, bdLp2; double bdEnv = 0, bdG = 1, bdAtt = 0, bdRel = 0, bdSm = 0;
+    // clarity HD: three bands, lows and mids slightly later than highs, dynamic high lift
+    Biquad bbLo, bbHi; Delay bbDL[2], bbDM[2]; double bbFast = 0, bbSlow = 0, bbFa = 0, bbFr = 0, bbSa = 0, bbSr = 0;
+    // wide 3D: side widening above the bass, a little space, bass lift
+    Biquad wHpS, wAmbHp, wAmbLp, wBass; Delay wDel; int wAmbD = 600;
     // virtualizer
     Delay vxL, vxR, vxSide; Biquad vxShadow, vxRear; Comb cbL[4], cbR[4]; Allpass apL[2], apR[2];
     int itd = 13, sideD = 720;
@@ -172,10 +184,22 @@ struct Engine {
         tK = -1; tDrive = -1;
         bxLp.lowpass(sr, 120, 0.707); bxHp.highpass(sr, 90, 0.707); bxTop.lowpass(sr, 420, 0.707);
         tDc.highpass(sr, 12, 0.707);
+        auto tc = [&](double sec) { return 1 - std::exp(-1.0 / (sec * sr)); };
+        // Linkwitz-Riley crossovers: low + high add back to the original sound exactly
+        nrHp.highpass(sr, 3500, -3.01); nrHp2 = nrHp; nrLp.lowpass(sr, 3500, -3.01); nrLp2 = nrLp;
+        nrAtt = tc(0.005); nrRel = tc(0.10); nrOpen = tc(0.003); nrClose = tc(0.06);
+        nrRise = std::pow(10.0, 3.0 / 20.0 * 64.0 / (2.0 * sr));   // the learned floor creeps up 3 dB per 2 s
+        bdHp.highpass(sr, 1500, -3.01); bdHp2 = bdHp; bdLp.lowpass(sr, 1500, -3.01); bdLp2 = bdLp; bdAtt = tc(0.002); bdRel = tc(0.05); bdSm = tc(0.004);
+        bbLo.lowpass(sr, 150, -3.01); bbHi.highpass(sr, 2400, -3.01);
+        for (int c = 0; c < 2; c++) { bbDL[c].init((int)(0.0025 * sr) + 4); bbDM[c].init((int)(0.0008 * sr) + 4); }
+        bbFa = tc(0.001); bbFr = tc(0.02); bbSa = tc(0.03); bbSr = tc(0.3);
+        wHpS.highpass(sr, 180, -3.01); wAmbHp.highpass(sr, 300, -3.01); wAmbLp.lowpass(sr, 7000, -3.01);
+        wAmbD = (int)std::lround(0.013 * sr); wDel.init(wAmbD + 4);
         resetState();
     }
     void resetState() {
-        Biquad *all[] = {&rumble, &hum, &bass, &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear};
+        Biquad *all[] = {&rumble, &hum, &bass, &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear,
+                         &nrHp, &nrHp2, &nrLp, &nrLp2, &bdHp, &bdHp2, &bdLp, &bdLp2, &bbLo, &bbHi, &wHpS, &wAmbHp, &wAmbLp, &wBass};
         for (auto *b : all) b->reset();
         for (auto &b : bands) b.reset();
         for (auto &d : dc) { std::fill(d.buf.begin(), d.buf.end(), 0.f); std::fill(d.bad.begin(), d.bad.end(), 0); d.x1 = d.x2 = 0; d.hold = 0; }
@@ -186,6 +210,9 @@ struct Engine {
         for (auto &a : apR) std::fill(a.b.begin(), a.b.end(), 0.f);
         std::fill(lb0.begin(), lb0.end(), 0.f); std::fill(lb1.begin(), lb1.end(), 0.f); std::fill(req.begin(), req.end(), 1.f);
         lh = lt = lw = 0; lg = 1; levEnv = 0; tPrev[0] = tPrev[1] = 0; anPos = 0;
+        nrEnv = 0; nrFloor = 1e-3; nrG = 1; nrBlk = 0; nrN = 0; bdEnv = 0; bdG = 1; bbFast = bbSlow = 0;
+        for (int c = 0; c < 2; c++) { if (!bbDL[c].b.empty()) bbDL[c].clear(); if (!bbDM[c].b.empty()) bbDM[c].clear(); }
+        if (!wDel.b.empty()) wDel.clear();
     }
 
     void design() {
@@ -200,6 +227,7 @@ struct Engine {
         tLo.lowshelf(sr, 180, w * 4 + dr / 100 * 1.5);
         tHi.highshelf(sr, 6500, -w * 3 - dr / 100 * 2);
         double t = S[17] / 100.0;
+        wBass.lowshelf(sr, 90, S[26] / 100.0 * 4.0);
         ms0.peaking(sr, 300, 0.9, -t * 3); ms1.peaking(sr, 2600, 0.8, t * 7); ms2.peaking(sr, 5200, 1.1, t * 3);
         double k = std::round((1 + dr / 100 * 4) * 20) / 20;
         if (k != tK || dr != tDrive) {
@@ -322,7 +350,8 @@ struct Engine {
             }
             if (!neutral) {
                 bool changed = false;
-                for (int i = 0; i <= 20; i++) {
+                for (int i = 0; i < NPARAM; i++) {
+                    if (i == 21 || i == 22) continue;
                     S[i] += (P[i] - S[i]) * smoothK;
                     if (std::fabs(S[i] - P[i]) < 1e-3f) S[i] = P[i];
                     if (std::fabs(S[i] - C[i]) > 1e-3f) changed = true;
@@ -376,6 +405,42 @@ struct Engine {
             }
             dcW = w0 + n;
         }
+        // tape NR (single-ended, DNR-style): the treble above ~3.5 kHz is turned down only while it is
+        // close to the hiss level learned from the quietest moments; louder treble passes untouched.
+        if (S[23] > 0.01f) {
+            const double a = S[23] / 100.0;
+            const double gmin = dbToGain(-20.0 * a), margin = dbToGain(6.0 + 6.0 * a), ratio = 1.0 + a;
+            for (int j = 0; j < n; j++) {
+                float hl = nrHp2.run(nrHp.run(Lb[j], 0), 0), hr = nrHp2.run(nrHp.run(Rb[j], 1), 1);
+                float ll = nrLp2.run(nrLp.run(Lb[j], 0), 0), lr = nrLp2.run(nrLp.run(Rb[j], 1), 1);
+                double e = std::max(std::fabs(hl), std::fabs(hr));
+                nrEnv += (e - nrEnv) * (e > nrEnv ? nrAtt : nrRel);
+                nrBlk += nrEnv;
+                if (++nrN >= 64) {   // learn the hiss floor: follows the quietest level, creeps up slowly
+                    double m = nrBlk / nrN; nrBlk = 0; nrN = 0;
+                    if (m < nrFloor) nrFloor = nrFloor * 0.8 + m * 0.2; else nrFloor *= nrRise;
+                    nrFloor = std::min(0.05, std::max(3e-5, nrFloor));
+                }
+                double r = nrEnv / (nrFloor * margin);
+                double tg = r >= 1 ? 1.0 : std::max(gmin, std::pow(r, ratio));
+                nrG += (tg - nrG) * (tg > nrG ? nrOpen : nrClose);
+                Lb[j] = ll + (float)nrG * hl; Rb[j] = lr + (float)nrG * hr;
+            }
+        }
+        // B-decode (Dolby-B-style playback): quiet treble is cut by up to 10 dB, loud treble is not cut
+        if (S[24] > 0.01f) {
+            const double maxCut = 10.0 * S[24] / 100.0;
+            for (int j = 0; j < n; j++) {
+                float hl = bdHp2.run(bdHp.run(Lb[j], 0), 0), hr = bdHp2.run(bdHp.run(Rb[j], 1), 1);
+                float ll = bdLp2.run(bdLp.run(Lb[j], 0), 0), lr = bdLp2.run(bdLp.run(Rb[j], 1), 1);
+                double e = std::max(std::fabs(hl), std::fabs(hr));
+                bdEnv += (e - bdEnv) * (e > bdEnv ? bdAtt : bdRel);
+                double ld = 20.0 * std::log10(bdEnv + 1e-9);
+                double cut = maxCut * clampf((float)((-15.0 - ld) / 30.0), 0.f, 1.f);
+                bdG += (dbToGain(-cut) - bdG) * bdSm;
+                Lb[j] = ll + (float)bdG * hl; Rb[j] = lr + (float)bdG * hr;
+            }
+        }
         // tube amplifier (2x oversampled shaping)
         if (S[15] > 0.01f) {
             for (int c = 0; c < 2; c++) {
@@ -401,6 +466,28 @@ struct Engine {
                 }
             }
         }
+        // clarity HD (BBE-style): highs first, mids ~0.5 ms and lows ~2 ms later, plus a high lift that grows on attacks
+        if (S[25] > 0.01f) {
+            const double a = S[25] / 100.0;
+            const int dl = (int)std::lround(a * 0.0020 * sr), dm = (int)std::lround(a * 0.0005 * sr);
+            const double gLo = dbToGain(a * 2.5), trim = dbToGain(-a * 1.5);
+            for (int j = 0; j < n; j++) {
+                float lo[2], hi[2], md[2], in2[2] = {Lb[j], Rb[j]};
+                for (int c = 0; c < 2; c++) {
+                    lo[c] = bbLo.run(in2[c], c); hi[c] = bbHi.run(in2[c], c); md[c] = in2[c] - lo[c] - hi[c];
+                    bbDL[c].push(lo[c]); bbDM[c].push(md[c]);
+                }
+                double e = std::max(std::fabs(hi[0]), std::fabs(hi[1]));
+                bbFast += (e - bbFast) * (e > bbFast ? bbFa : bbFr);
+                bbSlow += (e - bbSlow) * (e > bbSlow ? bbSa : bbSr);
+                double tr = std::min(1.0, std::max(0.0, bbFast / (bbSlow + 1e-6) - 1.0));
+                double gHi = std::exp((a * 3.5 + a * 3.0 * tr) * 0.11512925);
+                for (int c = 0; c < 2; c++) {
+                    float y = (float)(bbDL[c].tap(dl) * gLo + bbDM[c].tap(dm) + hi[c] * gHi);
+                    (c ? Rb : Lb)[j] = (float)(y * trim);
+                }
+            }
+        }
         // dialogue enhancer and stereo width (mid/side)
         if (S[17] > 0.01f || std::fabs(S[18] - 100) > 0.01f) {
             const float t = S[17] / 100.f, sg = (S[18] / 100.f) * (1 - t * 0.35f);
@@ -409,6 +496,18 @@ struct Engine {
                 m = ms0.run(m, 0); m = ms1.run(m, 0); m = ms2.run(m, 0);
                 s *= sg;
                 Lb[j] = m + s; Rb[j] = m - s;
+            }
+        }
+        // wide 3D (ViVA-style): wider stereo above the bass, a little space (also spreads mono tapes), bass lift
+        if (S[26] > 0.01f) {
+            const float w = S[26] / 100.f, trim = (float)dbToGain(-1.0 * w);
+            for (int j = 0; j < n; j++) {
+                float m = 0.5f * (Lb[j] + Rb[j]), sd = 0.5f * (Lb[j] - Rb[j]);
+                wDel.push(m);
+                float amb = wAmbLp.run(wAmbHp.run(wDel.tap(wAmbD), 0), 0);
+                float sw = sd + wHpS.run(sd, 0) * 1.6f * w + amb * 0.35f * w;
+                float mb = wBass.run(m, 0);
+                Lb[j] = (mb + sw) * trim; Rb[j] = (mb - sw) * trim;
             }
         }
         // virtualizer: speakers at the front, delayed sides behind, a small room
