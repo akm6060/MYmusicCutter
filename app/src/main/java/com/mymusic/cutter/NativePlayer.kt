@@ -295,7 +295,13 @@ class NativePlayer(
         }
         renderers.setEnableDecoderFallback(true)
         renderers.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
-        player = ExoPlayer.Builder(activity, renderers).build()
+        // Raw .aac (ADTS) files have no index: let the player estimate their length so they can be
+        // sought, cut and searched for songs like MP3 / M4A files.
+        val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setConstantBitrateSeekingAlwaysEnabled(true)
+        player = ExoPlayer.Builder(activity, renderers,
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(activity, extractors)).build()
         player.setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
             true

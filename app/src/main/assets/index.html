@@ -1388,6 +1388,18 @@ html.light .fm-msg{color:#4c4870}
 html.light .fm-foot{border-color:#d5d8ea}
 html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a8748!important;color:#fff!important}
 
+
+/* fixed seeker (double-tap the seeker handle) */
+.cutter-timeline-wrap{position:relative}
+.strip-scroll{display:flex;align-items:flex-start}
+.strip-scroll>*{flex:0 0 auto}
+.lock-pad{width:0;height:1px;align-self:stretch}
+.lock-head{position:absolute;z-index:12;width:28px;transform:translateX(-14px);pointer-events:none}
+.lock-head[hidden]{display:none}
+.lock-head:before{content:"";position:absolute;top:0;bottom:12px;left:13px;width:2px;background:#ffb21e;box-shadow:0 0 0 1px #111,0 0 6px #ffb21e}
+.lock-grip{position:absolute;left:50%;bottom:0;width:26px;height:26px;transform:translateX(-50%);border-radius:50%;background:#ffb21e;border:3px solid #fff;box-shadow:0 2px 7px #0009;pointer-events:auto;touch-action:none}
+.seeker-fixed .cutter-playhead{visibility:hidden!important}
+html.light .lock-grip{border-color:#1b1838}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1413,7 +1425,9 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
     <section class="video-cutter" id="videoCutter" aria-label="Video cutter">
       <div class="cutter-title"><strong id="cutterPos" class="pos">00:00 / 00:00</strong><span class="zoom-bar"><button type="button" id="zoomOut" aria-label="Zoom timeline out">−</button><b id="zoomLabel">1×</b><button type="button" id="zoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="zoomReset" aria-label="Show the whole timeline">⟲</button></span><span id="cutterSelection">Select a section</span><span id="cutterStartOut" hidden></span><span id="cutterEndOut" hidden></span></div>
       <div class="cutter-timeline-wrap">
+        <div class="lock-head" id="lockHead" hidden><span class="lock-grip" id="lockGrip" aria-label="Fixed seeker: double-tap to release"></span></div>
         <div class="strip-scroll" id="stripScroll">
+        <div class="lock-pad" id="lockPadA"></div>
         <div class="cutter-strip" id="cutterStrip" role="group" aria-label="Video thumbnail strip">
           <div class="zoom-thumbs" id="zoomThumbs"></div>
           <div class="cutter-frames" id="cutterFrames"></div>
@@ -1421,6 +1435,7 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
           <div class="mark-layer" id="markLayer" aria-hidden="true"></div>
           <div class="cutter-playhead" id="cutterPlayhead" aria-hidden="true"></div>
         </div>
+        <div class="lock-pad" id="lockPadB"></div>
         </div>
         <div class="cutter-handle-rail" id="cutterHandleRail" aria-label="Video selection handles">
           <div class="cutter-handle start" id="cutterStartHandle" role="slider" tabindex="0" aria-label="Start selection marker"></div>
@@ -2955,7 +2970,7 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
   function drawWave(msg){if(waveRaf)return;waveRaf=requestAnimationFrame(function(){waveRaf=0;paintWave(msg)})}
   function paintWave(msg){
     var cv=el('waveCanvas');if(!cv||!audioMode)return;
-    var sc=el('stripScroll'),strip=el('cutterStrip'),vw=sc.clientWidth||300,H0=strip.clientHeight||64,sl=sc.scrollLeft,SW=strip.clientWidth||vw;
+    var sc=el('stripScroll'),strip=el('cutterStrip'),vw=sc.clientWidth||300,H0=strip.clientHeight||64,sl=sc.scrollLeft-lockPadW,SW=strip.clientWidth||vw;
     cv.style.left=sl+'px';cv.style.width=vw+'px';
     var ratio=Math.max(1,Math.min(2,window.devicePixelRatio||1)),W=Math.round(vw*ratio),H=Math.round(H0*ratio);
     if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;
@@ -3001,6 +3016,7 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
     zoomI=Math.max(0,Math.min(ZOOMS.length-1,i));strip.style.width=(zoomVal()*100)+'%';el('zoomLabel').textContent=zoomVal()+'×';
     el('zoomOut').disabled=zoomI===0;el('zoomIn').disabled=zoomI===ZOOMS.length-1;
     var nw=strip.clientWidth;progScroll=true;sc.scrollLeft=d?Math.max(0,t/d*nw-screenX):0;
+    if(lockOn){lockPads();lockScrollTo(lockEstimate(),true)}
     drawWave();scheduleZoomThumbs();reportGestureRects&&reportGestureRects();
   }
   el('zoomIn').addEventListener('click',function(){setZoom(zoomI+1)});
@@ -3009,6 +3025,7 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
   el('stripScroll').addEventListener('scroll',function(){if(!progScroll)userScrollUntil=performance.now()+1500;progScroll=false;drawWave();scheduleZoomThumbs()},{passive:true});
   el('stripScroll').addEventListener('pointerdown',function(){userScrollUntil=performance.now()+3000},{passive:true});
   window.__mmFollow=function(t,d){
+    if(lockOn){lockT=t;lockTAt=performance.now();return}
     if(zoomI===0||performance.now()<userScrollUntil||playhead.classList.contains('dragging'))return;
     var sc=el('stripScroll'),W=el('cutterStrip').clientWidth,vw=sc.clientWidth,x=t/d*W;
     if(x<sc.scrollLeft+vw*0.06||x>sc.scrollLeft+vw*0.94){progScroll=true;sc.scrollLeft=Math.max(0,x-vw*0.3)}
@@ -3019,13 +3036,78 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
   function zoomThumbs(){
     var layer2=el('zoomThumbs');if(zoomI===0||audioMode||!NATIVE||!NP.thumbnailsAt||!duration()){layer2.innerHTML='';return}
     var sc=el('stripScroll'),W=el('cutterStrip').clientWidth,vw=sc.clientWidth,d=duration();
-    var t0=sc.scrollLeft/W*d,t1=(sc.scrollLeft+vw)/W*d,n=Math.max(4,Math.round(vw/56)),step=(t1-t0)/n,times=[];
+    var sx=sc.scrollLeft-lockPadW,t0=Math.max(0,sx/W*d),t1=Math.min(d,(sx+vw)/W*d),n=Math.max(4,Math.round(vw/56)),step=(t1-t0)/n,times=[];
     for(var i=0;i<n;i++)times.push(Math.min(d-0.05,t0+step*(i+0.5)));
     var job=++zthumbJob;layer2.innerHTML='';
     window.__mmZoomThumb=function(j,i2,data){if(j!==job)return;var im=document.createElement('img');im.src=data;im.alt='';
       im.style.left=((times[i2]-step/2)/d*100)+'%';im.style.width=(step/d*100)+'%';layer2.appendChild(im)};
     try{NP.thumbnailsAt(urls[index],job,JSON.stringify(times),112,64,zoomVal()>=8)}catch(e){}
   }
+  // ---- fixed seeker: double-tap the seeker handle. The seeker stays in the middle and the strip
+  // runs under it; drag the strip (playing or paused) to hear and see that spot. Double-tap again to release.
+  var lockOn=false,lockPadW=0,lockT=0,lockTAt=0,lockRaf=0,lockDrag=false,lockDragUntil=0,lockEndTimer=0,
+      lockWasPaused=false,lockScrubbing=false,lockSeekBusy=false,lockSeekAt=0,lockTarget=null;
+  function lockPads(){var w=lockOn?Math.round(el('stripScroll').clientWidth/2):0;lockPadW=w;el('lockPadA').style.width=el('lockPadB').style.width=w+'px'}
+  function lockEstimate(){var t=lockT;if(!activeMedia.paused&&!lockScrubbing){t+=Math.min(0.6,(performance.now()-lockTAt)/1000)*(activeMedia.playbackRate||1)}var d=duration();return Math.max(0,Math.min(d||0,t))}
+  function lockScrollTo(t,force){var sc=el('stripScroll'),W=el('cutterStrip').clientWidth,d=duration();if(!d||!W)return;var x=t/d*W;if(force||Math.abs(sc.scrollLeft-x)>=0.5){progScroll=true;sc.scrollLeft=x}}
+  function lockPlaceHead(){var h=el('lockHead'),strip=el('cutterStrip'),sc=el('stripScroll');h.style.left=(sc.offsetLeft+sc.clientWidth/2)+'px';h.style.top=strip.offsetTop+'px';h.style.height=(strip.offsetHeight+40)+'px'}
+  function lockLoop(){lockRaf=0;if(!lockOn)return;if(!lockDrag&&performance.now()>lockDragUntil)lockScrollTo(lockEstimate(),false);lockRaf=requestAnimationFrame(lockLoop)}
+  function setLock(on){
+    if(on&&!duration())return;
+    lockOn=!!on;el('lockHead').hidden=!lockOn;el('videoCutter').classList.toggle('seeker-fixed',lockOn);
+    lockT=Math.max(0,activeMedia.currentTime||0);lockTAt=performance.now();
+    lockPads();if(lockOn){lockPlaceHead();lockScrollTo(lockT,true);if(!lockRaf)lockRaf=requestAnimationFrame(lockLoop)}
+    else{var sc=el('stripScroll'),d=duration(),W=el('cutterStrip').clientWidth;progScroll=true;sc.scrollLeft=d&&zoomI>0?Math.max(0,lockT/d*W-sc.clientWidth*0.3):0}
+    drawWave();scheduleZoomThumbs();
+    note(lockOn?'Seeker fixed: the strip runs under it. Drag the strip to any spot. Double-tap the seeker to release.':'Seeker released.');
+  }
+  // double-tap on the seeker handle (normal mode) or on the fixed seeker (to release)
+  function doubleTap(node,fn){var t0=0,x0=0,last=0;
+    node.addEventListener('pointerdown',function(e){t0=performance.now();x0=e.clientX},true);
+    node.addEventListener('pointerup',function(e){var now=performance.now();if(Math.abs(e.clientX-x0)<14&&now-t0<350){if(now-last<420){last=0;fn()}else last=now}else last=0},true);}
+  doubleTap(playhead,function(){setLock(true)});
+  doubleTap(el('lockGrip'),function(){setLock(false)});
+  el('lockGrip').addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation()});
+  // dragging the strip while the seeker is fixed: picture and sound follow the spot under the seeker
+  function lockSeek(){
+    if(lockTarget==null)return;var now=performance.now();
+    if(lockSeekBusy&&now-lockSeekAt<600)return;
+    if(now-lockSeekAt<110){clearTimeout(lockSeek.t);lockSeek.t=setTimeout(lockSeek,110-(now-lockSeekAt));return}
+    if(Math.abs((activeMedia.currentTime||0)-lockTarget)<0.04)return;
+    lockSeekBusy=true;lockSeekAt=now;try{activeMedia.currentTime=lockTarget}catch(e){lockSeekBusy=false}
+  }
+  [video,audioMedia].forEach(function(m){m.addEventListener('seeked',function(){if(m!==activeMedia||!lockOn)return;lockSeekBusy=false;if(lockScrubbing&&lockTarget!=null&&Math.abs((m.currentTime||0)-lockTarget)>0.05)lockSeek()})});
+  function lockScrubStart(){
+    if(lockScrubbing)return;lockScrubbing=true;lockWasPaused=activeMedia.paused;
+    if(NATIVE&&!audioMode){try{NP.setScrubbing(true)}catch(e){}}
+    if(lockWasPaused){try{var p=activeMedia.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}   // sound while moving
+  }
+  function lockScrubEnd(){
+    if(!lockScrubbing)return;lockScrubbing=false;clearTimeout(lockSeek.t);
+    if(NATIVE&&!audioMode){try{NP.setScrubbing(false)}catch(e){}}
+    if(lockTarget!=null){try{activeMedia.currentTime=lockTarget}catch(e){}lockT=lockTarget;lockTAt=performance.now()}
+    if(lockWasPaused){try{activeMedia.pause()}catch(e){}}
+    lockTarget=null;
+  }
+  var sc0=el('stripScroll');
+  function lockTouchStart(){if(!lockOn)return;lockDrag=true;clearTimeout(lockEndTimer)}
+  function lockTouchEnd(){if(!lockOn||!lockDrag)return;lockDrag=false;lockDragUntil=performance.now()+350;clearTimeout(lockEndTimer);lockEndTimer=setTimeout(function(){if(!lockDrag)lockScrubEnd()},380)}
+  sc0.addEventListener('touchstart',lockTouchStart,{passive:true});sc0.addEventListener('pointerdown',lockTouchStart,{passive:true});
+  sc0.addEventListener('touchend',lockTouchEnd,{passive:true});sc0.addEventListener('touchcancel',lockTouchEnd,{passive:true});
+  document.addEventListener('pointerup',lockTouchEnd,{passive:true});
+  sc0.addEventListener('scroll',function(){
+    if(!lockOn)return;var now=performance.now();
+    if(!(lockDrag||now<lockDragUntil))return;            // moved by the playing loop, not by a finger
+    if(!lockDrag){lockDragUntil=now+250;clearTimeout(lockEndTimer);lockEndTimer=setTimeout(function(){if(!lockDrag)lockScrubEnd()},280)}  // still gliding
+    var d=duration(),W=el('cutterStrip').clientWidth;if(!d||!W)return;
+    var t=Math.max(0,Math.min(d,sc0.scrollLeft/W*d));lockScrubStart();
+    lockTarget=t;lockT=t;lockTAt=now;el('cutterPos').textContent=fmt(t)+' / '+fmt(d);
+    try{el('cutterPlayhead').style.left=(t/d*100)+'%'}catch(e){}
+    lockSeek();
+  },{passive:true});
+  window.addEventListener('resize',function(){if(lockOn){lockPads();lockPlaceHead();lockScrollTo(lockEstimate(),true)}});
+  [video,audioMedia].forEach(function(m){m.addEventListener('loadedmetadata',function(){if(m===activeMedia&&lockOn){lockT=0;lockTAt=performance.now();setTimeout(function(){lockPads();lockPlaceHead();lockScrollTo(0,true)},50)}})});
+
   // ---- light / dark theme (player and file manager; the equalizer keeps its analog look)
   function applyTheme(light){document.documentElement.classList.toggle('light',!!light);try{localStorage.setItem('mmTheme',light?'light':'dark')}catch(e){}
     if(NATIVE&&NP.setTheme){try{NP.setTheme(!!light)}catch(e){}}el('cxTheme').textContent=el('fmTheme').textContent=light?'☾':'☀';drawWave();}

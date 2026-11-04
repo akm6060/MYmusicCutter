@@ -90,3 +90,35 @@ for k in range(10):
     if n and ("Saved" in n or "failed" in n): break
 shot("n2_after_cut")
 say("files", adb("shell", "ls", "-R", "/sdcard/Download/MYmusic Cutter"))
+
+# ---- .aac cassette: song finder and saving parts
+say("open aac")
+adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///sdcard/Download/cassette.aac", "-t", "audio/aac", "-n", "com.mymusic.cutter/.MainActivity")
+time.sleep(8)
+say("aac", js(STATE))
+say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
+for k in range(30):
+    time.sleep(2); st = js("document.getElementById('spStatus').textContent"); say("status", st)
+    if st and ("Found" in st or "No songs" in st or "Could not" in st): break
+say("close", js("document.getElementById('spClose').click();'ok'"))
+say("save", js("document.getElementById('saveParts').click();'ok'"))
+for k in range(20):
+    time.sleep(2); n = js("document.getElementById('cutterNote').textContent"); say("note", n)
+    if n and ("Saved 3" in n or "failed" in n): break
+say("files", adb("shell", "ls", "-lR", "/sdcard/Download/MYmusic Cutter/Audio"))
+# fixed seeker: double-tap the seeker handle, then drag the strip
+r = js("(()=>{const r=document.getElementById('cutterPlayhead').getBoundingClientRect();return [r.x+r.width/2,r.bottom-12,devicePixelRatio]})()")
+say("playhead", r)
+if isinstance(r, list):
+    x, y = int(r[0]*r[2]), int(r[1]*r[2])
+    subprocess.run(["adb", "shell", f"input tap {x} {y}; input tap {x} {y}"], timeout=30)
+    time.sleep(1)
+    say("locked", js("!document.getElementById('lockHead').hidden"))
+    shot("l1_locked")
+    sr = js("(()=>{const r=document.getElementById('stripScroll').getBoundingClientRect();return [r.x,r.y+r.height/3,r.width,devicePixelRatio]})()")
+    if isinstance(sr, list):
+        y2 = int(sr[1]*sr[3]); x1 = int((sr[0]+sr[2]*0.8)*sr[3]); x2 = int((sr[0]+sr[2]*0.3)*sr[3])
+        say("pos before", js("document.getElementById('cutterPos').textContent"))
+        adb("shell", "input", "swipe", str(x1), str(y2), str(x2), str(y2), "900"); time.sleep(2)
+        say("pos after drag", js("document.getElementById('cutterPos').textContent"), js("document.querySelector('audio')?document.querySelector('audio').paused:'n/a'"))
+        shot("l2_dragged")
