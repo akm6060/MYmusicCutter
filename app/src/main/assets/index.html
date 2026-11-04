@@ -3097,14 +3097,14 @@ html.light .lock-grip{border-color:#1b1838}
   function lockTouchStart(){if(!lockOn)return;lockDrag=true;clearTimeout(lockEndTimer)}
   function lockTouchEnd(){if(!lockOn||!lockDrag)return;lockDrag=false;lockDragUntil=performance.now()+350;clearTimeout(lockEndTimer);lockEndTimer=setTimeout(function(){if(!lockDrag)lockScrubEnd()},380)}
   // the finger moves the strip directly (does not depend on the browser's own scrolling)
-  var lp=null;
+  var lp=null,lst=window.__mmLockStats={down:0,move:0,scroll:0,seek:0};
   sc0.addEventListener('pointerdown',function(e){
     if(!lockOn||(e.target.closest&&e.target.closest('#cutterPlayhead,.cutter-handle,.lock-grip')))return;
-    lp={id:e.pointerId,x:e.clientX,sl:sc0.scrollLeft,moved:false};try{sc0.setPointerCapture(e.pointerId)}catch(_){}
+    lst.down++;lp={id:e.pointerId,x:e.clientX,sl:sc0.scrollLeft,moved:false};try{sc0.setPointerCapture(e.pointerId)}catch(_){}
     lockTouchStart();
   });
   sc0.addEventListener('pointermove',function(e){
-    if(!lp||e.pointerId!==lp.id)return;var dx=e.clientX-lp.x;
+    if(!lp||e.pointerId!==lp.id)return;lst.move++;var dx=e.clientX-lp.x;
     if(!lp.moved&&Math.abs(dx)<4)return;lp.moved=true;e.preventDefault();
     sc0.scrollLeft=lp.sl-dx;
   },{passive:false});
@@ -3115,7 +3115,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(!(lockDrag||now<lockDragUntil))return;            // moved by the playing loop, not by a finger
     if(!lockDrag){lockDragUntil=now+250;clearTimeout(lockEndTimer);lockEndTimer=setTimeout(function(){if(!lockDrag)lockScrubEnd()},280)}  // still gliding
     var d=duration(),W=el('cutterStrip').clientWidth;if(!d||!W)return;
-    var t=Math.max(0,Math.min(d,sc0.scrollLeft/W*d));lockScrubStart();
+    lst.scroll++;var t=Math.max(0,Math.min(d,sc0.scrollLeft/W*d));lockScrubStart();
     lockTarget=t;lockT=t;lockTAt=now;el('cutterPos').textContent=fmt(t)+' / '+fmt(d);
     try{el('cutterPlayhead').style.left=(t/d*100)+'%'}catch(e){}
     lockSeek();

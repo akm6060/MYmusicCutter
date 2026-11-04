@@ -119,6 +119,7 @@ if isinstance(r, list):
     if isinstance(sr, list):
         y2 = int(sr[1]*sr[3]); x1 = int((sr[0]+sr[2]*0.8)*sr[3]); x2 = int((sr[0]+sr[2]*0.3)*sr[3])
         say("pos before", js("document.getElementById('cutterPos').textContent"))
+        say("scroll before", js("document.getElementById('stripScroll').scrollLeft"), "swipe", x1, x2, y2)
         adb("shell", "input", "swipe", str(x1), str(y2), str(x2), str(y2), "900"); time.sleep(2)
-        say("pos after drag", js("document.getElementById('cutterPos').textContent"), js("document.querySelector('audio')?document.querySelector('audio').paused:'n/a'"))
+        say("pos after drag", js("document.getElementById('cutterPos').textContent"), js("JSON.stringify(window.__mmLockStats)"), js("document.getElementById('stripScroll').scrollLeft"))
         shot("l2_dragged")

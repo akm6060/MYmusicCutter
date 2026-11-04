@@ -92,6 +92,7 @@ class NativePlayer(
         PictureFx.panX = if (contentW > 1f) panX * density / (contentW / 2f) else 0f
         PictureFx.panY = if (contentH > 1f) -panY * density / (contentH / 2f) else 0f
     }
+    private var timeoutRetries = 0
     private var effectsOn = false
     private var effectsBroken = false
     private var pendingSeek = false
@@ -266,6 +267,16 @@ class NativePlayer(
                 main.post { val pf = PictureFx; if (!pf.isNeutral()) { val p = Paint(); p.colorFilter = ColorMatrixColorFilter(colourMatrix(pf.brightness, pf.contrast, pf.saturation, pf.hue, 0f)); textureView.setLayerPaint(p); applyOutput(true) } }
                 return
             }
+            if (error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT && timeoutRetries < 2) {
+                // The window was handed over too slowly (e.g. video -> audio): simply carry on.
+                timeoutRetries++
+                Log.i("MMP", "timeout: retry $timeoutRetries")
+                val pos = player.currentPosition
+                val play = player.playWhenReady
+                currentUri?.let { player.setMediaItem(MediaItem.fromUri(it), pos) }
+                player.prepare(); player.playWhenReady = play
+                return
+            }
             val msg = when (error.errorCode) {
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ->
@@ -301,7 +312,9 @@ class NativePlayer(
             .setConstantBitrateSeekingEnabled(true)
             .setConstantBitrateSeekingAlwaysEnabled(true)
         player = ExoPlayer.Builder(activity, renderers,
-            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(activity, extractors)).build()
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(activity, extractors))
+            .setDetachSurfaceTimeoutMs(8000)   // give a busy picture pipeline time to let go of the window
+            .build()
         player.setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
             true
@@ -471,6 +484,7 @@ class NativePlayer(
             }
             metaSent = false
             pendingSeek = false
+            timeoutRetries = 0
             currentUri = uri
             videoW = 0; videoH = 0; rotation = 0; par = 1f
             player.setSeekParameters(SeekParameters.EXACT)

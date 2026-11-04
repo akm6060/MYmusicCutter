@@ -8,6 +8,7 @@ adb install -r -g app/build/outputs/apk/debug/app-debug.apk
 adb push /tmp/t.mp4 /sdcard/Download/t.mp4
 adb push /tmp/cassette.aac /sdcard/Download/cassette.aac
 adb shell pm grant com.mymusic.cutter android.permission.POST_NOTIFICATIONS || true
+adb logcat -G 16M || true
 adb logcat -c
 adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Download/t.mp4 -t video/mp4 -n com.mymusic.cutter/.MainActivity
 sleep 12
