@@ -1308,7 +1308,7 @@ input[type=text],input[type=number],textarea,[contenteditable="true"]{-webkit-us
 .strip-scroll .cutter-strip{touch-action:pan-x!important;min-width:100%}
 .zoom-thumbs{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
 .zoom-thumbs img{position:absolute;top:0;height:100%;object-fit:cover}
-#cutterFrames .cutter-waveform{right:auto!important;width:auto}
+#cutterFrames .cutter-waveform{right:auto!important;width:auto;touch-action:pan-x!important}
 .cx-tools .cx-theme{flex:0 0 46px;font-size:17px!important}
 #fmTheme{font-size:17px}
 /* playlist: one compact row */
@@ -2806,6 +2806,8 @@ html.light .lock-grip{border-color:#1b1838}
     v.sort(function(a,b){return a-b});
     var floor=Math.max(-80,v[Math.floor(v.length*0.05)]),med=v[Math.floor(v.length*0.5)];
     var thr=opt.thr!=null?opt.thr:Math.max(floor+4,Math.min(med-10,floor+(med-floor)*0.35));
+    // gaps of pure digital silence (no tape hiss): the quiet level hardly differs from the music, so set the line well below the music
+    if(opt.thr==null&&med-floor<8)thr=med-30;
     // smooth over 0.3 s so a single quiet moment inside a song is not a gap
     var k=Math.max(1,Math.round(0.3/win)),sm=new Float32Array(n),acc=0,q=[];
     for(var j=0;j<n;j++){var p=Math.pow(10,db[j]/10);q.push(p);acc+=p;if(q.length>k)acc-=q.shift();sm[j]=10*Math.log10(acc/q.length+1e-12)}
