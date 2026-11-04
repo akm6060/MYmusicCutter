@@ -93,6 +93,7 @@ class NativePlayer(
         PictureFx.panY = if (contentH > 1f) -panY * density / (contentH / 2f) else 0f
     }
     private var timeoutRetries = 0
+    private val retryReset = Runnable { if (player.playbackState == Player.STATE_READY) timeoutRetries = 0 }
     private var effectsOn = false
     private var effectsBroken = false
     private var pendingSeek = false
@@ -195,6 +196,7 @@ class NativePlayer(
             when (state) {
                 Player.STATE_BUFFERING -> send("waiting")
                 Player.STATE_READY -> {
+                    main.removeCallbacks(retryReset); main.postDelayed(retryReset, 4000)
                     sizeFromFormat()
                     if (!metaSent) { metaSent = true; sendMeta() }
                     if (pendingSeek) seekDone()
@@ -254,8 +256,13 @@ class NativePlayer(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            // Was it the picture pipeline (brightness / sharpness / zoom)?
+            var fromEffects = false
+            var c: Throwable? = error
+            while (c != null && !fromEffects) { if (c.stackTrace.any { it.className.startsWith("androidx.media3.effect") }) fromEffects = true; c = c.cause }
             if ((error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED ||
-                 error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED) && effectsOn) {
+                 error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
+                 (fromEffects && timeoutRetries >= 2)) && effectsOn) {
                 // Picture adjustments failed on this phone: play without them and use the simpler method.
                 effectsOn = false; effectsBroken = true
                 val pos = player.currentPosition
@@ -267,10 +274,14 @@ class NativePlayer(
                 main.post { val pf = PictureFx; if (!pf.isNeutral()) { val p = Paint(); p.colorFilter = ColorMatrixColorFilter(colourMatrix(pf.brightness, pf.contrast, pf.saturation, pf.hue, 0f)); textureView.setLayerPaint(p); applyOutput(true) } }
                 return
             }
-            if (error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT && timeoutRetries < 2) {
-                // The window was handed over too slowly (e.g. video -> audio): simply carry on.
+            val recoverable = error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT ||
+                error.errorCode == PlaybackException.ERROR_CODE_UNSPECIFIED ||
+                error.errorCode == PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK
+            if (recoverable && timeoutRetries < 3) {
+                // A slow window hand-over, or a rare internal hiccup of the picture pipeline during a
+                // seek: reload the same file at the same spot instead of showing an error.
                 timeoutRetries++
-                Log.i("MMP", "timeout: retry $timeoutRetries")
+                Log.i("MMP", "recover ${error.errorCodeName}: retry $timeoutRetries")
                 val pos = player.currentPosition
                 val play = player.playWhenReady
                 currentUri?.let { player.setMediaItem(MediaItem.fromUri(it), pos) }
