@@ -1400,6 +1400,8 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
 .lock-grip{position:absolute;left:50%;bottom:0;width:26px;height:26px;transform:translateX(-50%);border-radius:50%;background:#ffb21e;border:3px solid #fff;box-shadow:0 2px 7px #0009;pointer-events:auto;touch-action:none}
 .seeker-fixed .cutter-playhead{visibility:hidden!important}
 html.light .lock-grip{border-color:#1b1838}
+
+.seeker-fixed .strip-scroll,.seeker-fixed .strip-scroll *{touch-action:none!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -3094,9 +3096,20 @@ html.light .lock-grip{border-color:#1b1838}
   var sc0=el('stripScroll');
   function lockTouchStart(){if(!lockOn)return;lockDrag=true;clearTimeout(lockEndTimer)}
   function lockTouchEnd(){if(!lockOn||!lockDrag)return;lockDrag=false;lockDragUntil=performance.now()+350;clearTimeout(lockEndTimer);lockEndTimer=setTimeout(function(){if(!lockDrag)lockScrubEnd()},380)}
-  sc0.addEventListener('touchstart',lockTouchStart,{passive:true});sc0.addEventListener('pointerdown',lockTouchStart,{passive:true});
-  sc0.addEventListener('touchend',lockTouchEnd,{passive:true});sc0.addEventListener('touchcancel',lockTouchEnd,{passive:true});
-  document.addEventListener('pointerup',lockTouchEnd,{passive:true});
+  // the finger moves the strip directly (does not depend on the browser's own scrolling)
+  var lp=null;
+  sc0.addEventListener('pointerdown',function(e){
+    if(!lockOn||(e.target.closest&&e.target.closest('#cutterPlayhead,.cutter-handle,.lock-grip')))return;
+    lp={id:e.pointerId,x:e.clientX,sl:sc0.scrollLeft,moved:false};try{sc0.setPointerCapture(e.pointerId)}catch(_){}
+    lockTouchStart();
+  });
+  sc0.addEventListener('pointermove',function(e){
+    if(!lp||e.pointerId!==lp.id)return;var dx=e.clientX-lp.x;
+    if(!lp.moved&&Math.abs(dx)<4)return;lp.moved=true;e.preventDefault();
+    sc0.scrollLeft=lp.sl-dx;
+  },{passive:false});
+  function lpEnd(e){if(!lp||(e&&e.pointerId!==lp.id))return;lp=null;lockTouchEnd()}
+  sc0.addEventListener('pointerup',lpEnd);sc0.addEventListener('pointercancel',lpEnd);sc0.addEventListener('lostpointercapture',lpEnd);
   sc0.addEventListener('scroll',function(){
     if(!lockOn)return;var now=performance.now();
     if(!(lockDrag||now<lockDragUntil))return;            // moved by the playing loop, not by a finger
