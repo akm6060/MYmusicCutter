@@ -746,6 +746,7 @@ class MYmusicNativeCutter(
                 val names = jobMeta.optJSONArray("names")
                 forceExtractor = jobMeta.optBoolean("forceExtractor", false)
                 val skipped = ArrayList<Int>()
+                var firstError: String? = null
                 for ((i, ranges) in outputs.withIndex()) {
                     partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
                     val given = if (mode == "parts") names?.optString(i, "")?.trim().orEmpty() else ""
@@ -757,6 +758,7 @@ class MYmusicNativeCutter(
                             notifySaved(saved, kind)
                         } catch (e: Exception) {
                             skipped.add(i + 1)
+                            if (firstError == null) firstError = e.message ?: e.javaClass.simpleName
                         }
                     } else {
                         val saved = try { saveRanges(source, name, format, isAudio, ranges, durUs) } finally { outLabel = null }
@@ -766,7 +768,7 @@ class MYmusicNativeCutter(
                 partLabel = ""
                 if (outputs.size > 1) {
                     val ok = outputs.size - skipped.size
-                    require(ok > 0) { "None of the parts could be read from this file." }
+                    require(ok > 0) { firstError ?: "None of the parts could be read from this file." }
                     notifyPage(if (skipped.isEmpty()) "✓ Saved ${outputs.size} parts"
                                else "✓ Saved $ok of ${outputs.size} parts (part ${skipped.joinToString(", ")} could not be read and was skipped)")
                 }
@@ -1169,14 +1171,16 @@ class MYmusicNativeCutter(
 
     private fun detectFormat(source: Source, name: String): String {
         val ext = name.substringAfterLast('.', "").lowercase()
-        if (ext == "mp3") return "mp3"
-        if (ext == "wav" || ext == "wave") return "wav"
         val head = ByteArray(64)
         val n = try {
             openInput(source).use { readFully(it, head, 0, 64) }
         } catch (_: Exception) {
             0
         }
+        // The content decides, not the name: downloads called ".mp3" are often really M4A / AAC / WebM.
+        sniffFormat(source, head, n)?.let { return it }
+        if (ext == "mp3") return "mp3"
+        if (ext == "wav" || ext == "wave") return "wav"
         if (ext == "aac" || ext == "adts") {
             val isMp4 = n >= 8 && String(head, 4, 4, Charsets.ISO_8859_1) == "ftyp"
             if (!isMp4 && (n < 7 || AdtsTool.looksLikeAdts(head, n))) return "adts"
@@ -1188,6 +1192,34 @@ class MYmusicNativeCutter(
         if (n >= 3 && String(head, 0, 3, Charsets.ISO_8859_1) == "ID3") return "mp3"
         if (n >= 4 && Mp3Header.parse(head, 0) != null) return "mp3"
         return "container"
+    }
+
+    /** What the bytes say the file is, or null if they do not say clearly. */
+    private fun sniffFormat(source: Source, head: ByteArray, n: Int): String? {
+        if (n < 12) return null
+        fun s(o: Int, len: Int) = String(head, o, len, Charsets.ISO_8859_1)
+        if (s(4, 4) == "ftyp") return "container"                                      // MP4 / M4A
+        if ((head[0].toInt() and 0xFF) == 0x1A && (head[1].toInt() and 0xFF) == 0x45 &&
+            (head[2].toInt() and 0xFF) == 0xDF && (head[3].toInt() and 0xFF) == 0xA3) return "container"   // WebM / MKV
+        if (s(0, 4) == "OggS") return "container"
+        if (s(0, 4) == "RIFF" && s(8, 4) == "WAVE") return "wav"
+        // after an ID3 tag: look at what follows it
+        var b = head; var m = n
+        if (s(0, 3) == "ID3") {
+            val tag = id3Size(head)
+            if (tag <= 10) return null
+            val after = ByteArray(16)
+            m = try {
+                openInput(source).use { inp -> if (skipIn(inp, tag.toLong()) < tag) 0 else readFully(inp, after, 0, 16) }
+            } catch (_: Exception) { 0 }
+            if (m < 4) return "mp3"
+            b = after
+            if (String(b, 4, 4, Charsets.ISO_8859_1) == "ftyp") return "container"
+        }
+        val b0 = b[0].toInt() and 0xFF; val b1 = b[1].toInt() and 0xFF
+        if (b0 == 0xFF && (b1 and 0xF0) == 0xF0 && (b1 and 0x06) == 0) return "adts"   // AAC (ADTS): layer bits 00
+        if (Mp3Header.parse(b, 0) != null) return "mp3"
+        return null
     }
 
     // ---------------------------------------------------------------- MP4 / M4A / WebM

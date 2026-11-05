@@ -246,7 +246,10 @@ object Mp3Tool {
                             val th = ByteArray(10)
                             if (readFullyIn(input, th, 0, 10) == 10) {
                                 val ts = id3Size(th)
-                                if (ts in 11..(256 shl 20)) {
+                                // a real tag: version 2..4, revision 0, size bytes below 0x80, at most 32 MB
+                                val real = (th[3].toInt() in 2..4) && th[4].toInt() == 0 &&
+                                    (6..9).all { (th[it].toInt() and 0x80) == 0 }
+                                if (real && ts in 11..(32 shl 20)) {
                                     skipIn(input, (ts - 10).toLong()); consumed += ts
                                     continue
                                 }

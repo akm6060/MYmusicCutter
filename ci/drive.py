@@ -157,3 +157,24 @@ for k in range(30):
     if n and ("Saved" in n or "failed" in n): break
 say("fallback note", n)
 say("fallback files", adb("shell", "ls -l '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'*album*'/'"))
+
+# ---- downloads named ".mp3" that are really M4A (AAC) or WebM (Opus)
+for name in ["ytm4a.mp3", "ytwebm.mp3"]:
+    js("window.__mmForceExtractor=false;'ok'")
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///sdcard/Download/" + name, "-t", "audio/mpeg", "-n", "com.mymusic.cutter/.MainActivity")
+    time.sleep(8)
+    say(name, js(STATE))
+    js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'")
+    st = ""
+    for k in range(40):
+        time.sleep(2); st = js("document.getElementById('spStatus').textContent")
+        if st and ("Found" in st or "No songs" in st or "Could not" in st): break
+    say(name, "songs:", st)
+    js("document.getElementById('spClose').click();'ok'")
+    js("document.getElementById('saveParts').click();'ok'")
+    n = ""
+    for k in range(40):
+        time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
+        if n and ("Saved" in n or "failed" in n or "None" in n): break
+    say(name, "save:", n)
+say("saved files", adb("shell", "ls -lR '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'"))

@@ -32,6 +32,10 @@ jobs:
           ffmpeg -loglevel error -f lavfi -i "nullsrc=s=1600x1600,geq=random(1)*255:128:128" -frames:v 1 -q:v 1 /tmp/cover.jpg
           for i in 1 2 3; do ffmpeg -loglevel error -f lavfi -i "sine=frequency=$((330+i*110)):duration=130" -f lavfi -i "anullsrc=r=44100:cl=mono" -i /tmp/cover.jpg -filter_complex "[1]atrim=0:5[s];[0][s]concat=n=2:v=0:a=1[a]" -map "[a]" -map 2 -ar $((i==2 ? 48000 : 44100)) -c:a libmp3lame -b:a 128k -c:v copy -id3v2_version 3 -metadata title="Song $i" -disposition:v attached_pic /tmp/song$i.mp3; done
           cat /tmp/song1.mp3 /tmp/song2.mp3 /tmp/song3.mp3 > /tmp/album.mp3; ls -l /tmp/song*.mp3 /tmp/album.mp3
+          for i in 1 2 3; do ffmpeg -loglevel error -f lavfi -i "sine=frequency=$((300+i*120)):duration=125" -f lavfi -i "anullsrc=r=44100:cl=stereo" -filter_complex "[1]atrim=0:5[s];[0]aformat=channel_layouts=stereo[t];[t][s]concat=n=2:v=0:a=1" -ar 44100 -f wav /tmp/yt$i.wav; done
+          ffmpeg -loglevel error -i /tmp/yt1.wav -i /tmp/yt2.wav -i /tmp/yt3.wav -filter_complex "[0][1][2]concat=n=3:v=0:a=1" -c:a aac -b:a 128k -f mp4 /tmp/ytm4a.mp3
+          ffmpeg -loglevel error -i /tmp/yt1.wav -i /tmp/yt2.wav -i /tmp/yt3.wav -filter_complex "[0][1][2]concat=n=3:v=0:a=1" -ar 48000 -c:a libopus -b:a 128k -f webm /tmp/ytwebm.mp3
+          ls -l /tmp/ytm4a.mp3 /tmp/ytwebm.mp3; head -c 12 /tmp/ytm4a.mp3 | od -c | head -1
           pip install websocket-client
       - name: Enable KVM
         run: |
