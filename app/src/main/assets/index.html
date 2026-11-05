@@ -1558,17 +1558,13 @@ html.light .lock-grip{border-color:#1b1838}
         <label><span>50 Hz hum reduction <output id="eqHumOut">0%</output></span><input id="eqHum" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>Rumble reduction <output id="eqRumbleOut">0%</output></span><input id="eqRumble" type="range" min="0" max="100" value="0" step="5"></label>
       </div>
-      <h4 class="afx-h">Tube amplifier <small>valve warmth</small></h4>
-      <div class="audio-eq-adjustments">
-        <label><span>Tube drive <output id="eqTubeOut">0%</output></span><input id="eqTube" type="range" min="0" max="100" value="0" step="5"></label>
-        <label><span>Warmth (bright ↔ warm, 50 = neutral) <output id="eqWarmOut">50%</output></span><input id="eqWarm" type="range" min="0" max="100" value="50" step="5"></label>
-      </div>
-      <h4 class="afx-h">Studio effects <small>tape noise reduction · clarity · 3D</small></h4>
+      <h4 class="afx-h">Studio effects <small>tape noise · MP3 treble · clarity · bass</small></h4>
       <div class="audio-eq-adjustments">
         <label><span>Tape NR – smart hiss removal (keeps music treble) <output id="eqTapeNrOut">0%</output></span><input id="eqTapeNr" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>B-decode – for tapes recorded with Dolby B on <output id="eqBdecOut">0%</output></span><input id="eqBdec" type="range" min="0" max="100" value="0" step="5"></label>
-        <label><span>Clarity HD – BBE-style sharp, clear sound <output id="eqBbeOut">0%</output></span><input id="eqBbe" type="range" min="0" max="100" value="0" step="5"></label>
-        <label><span>Wide 3D – ViVA-style space and depth <output id="eqWide3dOut">0%</output></span><input id="eqWide3d" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>MP3 enhance – restores treble lost in 64 / 128 kbps files <output id="eqHfrOut">0%</output></span><input id="eqHfr" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>Clarity HD – BBE-style crisp treble (mids untouched) <output id="eqBbeOut">0%</output></span><input id="eqBbe" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>Mach3 bass – deep, tight bass <output id="eqMach3Out">0%</output></span><input id="eqMach3" type="range" min="0" max="100" value="0" step="5"></label>
       </div>
       <h4 class="afx-h">Cinema sound <small>Dolby-style</small></h4>
       <div class="afx-modes" id="cinemaModes" role="group" aria-label="Cinema sound mode"><button type="button" data-mode="off">Off</button><button type="button" data-mode="music">Music</button><button type="button" data-mode="movie">Movie</button><button type="button" data-mode="voice">Voice</button><button type="button" data-mode="night">Night</button></div>
@@ -2031,11 +2027,11 @@ html.light .lock-grip{border-color:#1b1838}
   // Bracketed stages are only connected while they are switched on.
   var eqPage=el('audioEqPage');
   var EQ_FREQS=[60,150,400,1000,2400,6000,10000,16000];
-  var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d'];
-  function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,mode:'off'}}
-  function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;return o}
+  var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3'];
+  function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,mode:'off'}}
+  function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;return o}
   var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
-  function stateNeutral(s){return s.bands.every(function(v){return v===0})&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level&&!s.tapenr&&!s.bdec&&!s.bbe&&!s.wide3d}
+  function stateNeutral(s){return s.bands.every(function(v){return v===0})&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level&&!s.tapenr&&!s.bdec&&!s.bbe&&!s.hfr&&!s.mach3}
   function eqIsNeutral(){return stateNeutral(eqState)}
   function eqStatus(t){var e=el('audioEqStatus');if(e)e.textContent=t}
   function setP(c,p,v){try{p.setTargetAtTime(v,c.currentTime,0.025)}catch(e){try{p.value=v}catch(e2){}}}
@@ -2277,7 +2273,7 @@ html.light .lock-grip{border-color:#1b1838}
     });
   }
 
-  var ADJ=[['eqTapeNr','tapenr','%'],['eqBdec','bdec','%'],['eqBbe','bbe','%'],['eqWide3d','wide3d','%'],['eqBass','bass',' dB'],['eqClarity','clarity',' dB'],['eqVirtual','virtual','%'],['eqHiss','hiss','%'],['eqClick','click','%'],['eqHum','hum','%'],['eqRumble','rumble','%'],['eqTube','tube','%'],['eqWarm','warmth','%'],['eqDialog','dialog','%'],['eqWidth','width','%'],['eqBassx','bassx','%'],['eqLevel','level','%']];
+  var ADJ=[['eqTapeNr','tapenr','%'],['eqBdec','bdec','%'],['eqHfr','hfr','%'],['eqBbe','bbe','%'],['eqMach3','mach3','%'],['eqBass','bass',' dB'],['eqClarity','clarity',' dB'],['eqVirtual','virtual','%'],['eqHiss','hiss','%'],['eqClick','click','%'],['eqHum','hum','%'],['eqRumble','rumble','%'],['eqTube','tube','%'],['eqWarm','warmth','%'],['eqDialog','dialog','%'],['eqWidth','width','%'],['eqBassx','bassx','%'],['eqLevel','level','%']];
   var CINEMA_KEYS=['dialog','width','bassx','level','virtual'];
   var CINEMA={off:{dialog:0,width:100,bassx:0,level:0,virtual:0},music:{dialog:0,width:130,bassx:30,level:20,virtual:25},movie:{dialog:35,width:140,bassx:40,level:35,virtual:55},voice:{dialog:70,width:90,bassx:0,level:45,virtual:0},night:{dialog:45,width:100,bassx:0,level:80,virtual:15}};
   function eqRefreshUi(){
@@ -2336,7 +2332,7 @@ html.light .lock-grip{border-color:#1b1838}
       var humRatio=10*Math.log10((humOn+1e-20)/(humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);
       s.rumble=10*Math.log10(sub/frames+1e-20)-db[0]>-4?35:10;
       var rmsDb=20*Math.log10(rmsAcc/frames+1e-9);s.level=rmsDb<-28?50:(rmsDb<-22?35:15);
-      s.hiss=dens[7]-ref-target[7]>4?25:8;s.click=8;s.tube=10;s.warmth=55;
+      s.hiss=dens[7]-ref-target[7]>4?25:8;s.click=8;s.tube=0;s.warmth=50;
       s.virtual=audioMode?15:30;s.width=audioMode?115:120;s.dialog=audioMode?0:30;s.bassx=db[0]<ref-12?30:10;s.mode='custom';
       eqState=s;eqAutoEnabled=true;if(A)A.topo='';eqRefreshUi();eqApply();
       eqStatus('Auto enhancer on: tone balanced, loudness '+Math.round(rmsDb)+' dB levelled'+(s.hum?', hum removed':'')+'. Tap again to restore your previous settings.');

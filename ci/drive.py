@@ -97,7 +97,7 @@ adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///s
 time.sleep(8)
 say("aac", js(STATE))
 # new studio effects on during playback: sound must keep running
-say("fx on", js("(()=>{[['eqTapeNr',80],['eqBdec',50],['eqBbe',60],['eqWide3d',70]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var b=document.getElementById('cxPlay');if(b.textContent.indexOf('▶')>=0)b.click();return b.textContent})()"))
+say("fx on", js("(()=>{[['eqTapeNr',80],['eqBdec',50],['eqHfr',80],['eqBbe',60],['eqMach3',70]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var b=document.getElementById('cxPlay');if(b.textContent.indexOf('▶')>=0)b.click();return b.textContent})()"))
 time.sleep(2); p1 = js("document.getElementById('cutterPos').textContent"); time.sleep(3); p2 = js("document.getElementById('cutterPos').textContent")
 say("fx playing", p1, "->", p2, js("document.getElementById('videoTitle').textContent"))
 say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
