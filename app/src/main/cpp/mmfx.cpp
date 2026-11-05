@@ -20,10 +20,11 @@
 
 namespace {
 
-constexpr int NPARAM = 30;
+constexpr int NPARAM = 32;
 // 0..7 bands, 8 bass, 9 clarity, 10 virtual, 11 hiss, 12 click, 13 hum, 14 rumble, 15 tube,
 // 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral,
-// 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D, 27 MP3 enhance, 28 Mach3 bass
+// 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D, 27 MP3 enhance, 28 Mach3 bass,
+// 29 equal-volume gain (dB), 30 headphone crossfeed, 31 exciter
 std::atomic<float> gParam[NPARAM];
 std::atomic<int> gAnalyse{0};
 
@@ -158,6 +159,10 @@ struct Engine {
     std::vector<float> hfBuf, hfRe, hfIm, hfWin; std::vector<double> hfAvg; int hfPos = 0, hfBlocks = 0;
     // Mach3 bass: low band split off, deep boost, gently compressed so it stays tight
     Biquad m3Lp1, m3Lp2, m3Hp1, m3Hp2, m3Sub; double m3Env = 0, m3G = 1, m3A = 0, m3R = 0;
+    // headphone crossfeed: low/mid part of each side, slightly later, into the other ear
+    Biquad xfLp; Delay xfD[2]; int xfDelay = 13;
+    // exciter: treble band gently saturated, only the new harmonics mixed back in
+    Biquad exHp, exHp2, exLp, exOut, exOut2;
     // wide 3D: side widening above the bass, a little space, bass lift
     Biquad wHpS, wAmbHp, wAmbLp, wBass; Delay wDel; int wAmbD = 600;
     // virtualizer
@@ -208,6 +213,9 @@ struct Engine {
         hfDc.highpass(sr, 400, -3.01);
         m3Lp1.lowpass(sr, 120, -3.01); m3Lp2 = m3Lp1; m3Hp1.highpass(sr, 120, -3.01); m3Hp2 = m3Hp1; m3Sub.highpass(sr, 28, -3.01);
         m3A = tc(0.01); m3R = tc(0.15);
+        xfLp.lowpass(sr, 700, -3.01); xfDelay = (int)std::lround(0.0003 * sr);
+        for (int c = 0; c < 2; c++) xfD[c].init(xfDelay + 4);
+        exHp.highpass(sr, 2500, -3.01); exHp2 = exHp; exLp.lowpass(sr, 7000, -3.01); exOut.highpass(sr, 5000, -3.01); exOut2 = exOut;
         wHpS.highpass(sr, 180, -3.01); wAmbHp.highpass(sr, 300, -3.01); wAmbLp.lowpass(sr, 7000, -3.01);
         wAmbD = (int)std::lround(0.013 * sr); wDel.init(wAmbD + 4);
         resetState();
@@ -216,7 +224,7 @@ struct Engine {
         Biquad *all[] = {&rumble, &hum, &bass, &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear,
                          &nrHp, &nrHp2, &nrLp, &nrLp2, &bdHp, &bdHp2, &bdLp, &bdLp2, &bbDet, &bbShelf, &bbLow, &wHpS, &wAmbHp, &wAmbLp, &wBass,
                          &hfSrcHp1, &hfSrcHp2, &hfSrcLp1, &hfSrcLp2, &hfGenHp1, &hfGenHp2, &hfGenLp, &hfDc,
-                         &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub};
+                         &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub, &xfLp, &exHp, &exHp2, &exLp, &exOut, &exOut2};
         for (auto *b : all) b->reset();
         for (auto &b : bands) b.reset();
         for (auto &d : dc) { std::fill(d.buf.begin(), d.buf.end(), 0.f); std::fill(d.bad.begin(), d.bad.end(), 0); d.x1 = d.x2 = 0; d.hold = 0; }
@@ -230,6 +238,7 @@ struct Engine {
         nrEnv = 0; nrFloor = 1e-3; nrG = 1; nrBlk = 0; nrN = 0; bdEnv = 0; bdG = 1; bbEnv = bbSlow = 0; bbG = 0; bbDesigned = -99;
         for (int c = 0; c < 2; c++) { if (!bbDL[c].b.empty()) bbDL[c].clear(); hfEnvS[c] = hfEnvG[c] = hfK[c] = 0; }
         m3Env = 0; m3G = 1;
+        for (int c = 0; c < 2; c++) if (!xfD[c].b.empty()) xfD[c].clear();
         if (!wDel.b.empty()) wDel.clear();
     }
 
@@ -602,6 +611,19 @@ struct Engine {
                 }
             }
         }
+        // exciter (classic aural exciter): overtones one octave above the 2.5-7 kHz presence band are made
+        // in proportion to the music (no squashing of the original notes) and mixed in quietly above 5 kHz
+        if (S[31] > 0.01f) {
+            const float mix = S[31] / 100.f * 0.25f;
+            for (int c = 0; c < 2; c++) {
+                float *x = ch[c];
+                for (int j = 0; j < n; j++) {
+                    float b = exLp.run(exHp2.run(exHp.run(x[j], c), c), c);
+                    float h = exOut2.run(exOut.run(std::fabs(b), c), c);            // overtones only
+                    x[j] += h * mix;
+                }
+            }
+        }
         // dialogue enhancer and stereo width (mid/side)
         if (S[17] > 0.01f || std::fabs(S[18] - 100) > 0.01f) {
             const float t = S[17] / 100.f, sg = (S[18] / 100.f) * (1 - t * 0.35f);
@@ -624,6 +646,18 @@ struct Engine {
                 Lb[j] = (mb + sw) * trim; Rb[j] = (mb - sw) * trim;
             }
         }
+        // headphone crossfeed: like listening to speakers - each ear also hears the other side's bass and
+        // mids a fraction of a millisecond later; centred (mono) sound stays as it was
+        if (S[30] > 0.01f) {
+            const float g = S[30] / 100.f * 0.45f;
+            for (int j = 0; j < n; j++) {
+                float ll = xfLp.run(Lb[j], 0), lr = xfLp.run(Rb[j], 1);
+                xfD[0].push(ll); xfD[1].push(lr);
+                float l = Lb[j] - g * ll + g * xfD[1].tap(xfDelay);
+                float r = Rb[j] - g * lr + g * xfD[0].tap(xfDelay);
+                Lb[j] = l; Rb[j] = r;
+            }
+        }
         // virtualizer: speakers at the front, delayed sides behind, a small room
         if (S[10] > 0.01f) {
             const float w = S[10] / 100.f, dry = 1 - w, wet = w * 0.7f;
@@ -641,6 +675,11 @@ struct Engine {
                 float wl = fl * 1.05f + rs * 1.5f + ol * 1.1f, wr = fr * 1.05f - rs * 1.5f + orr * 1.1f;
                 Lb[j] = l * dry + wl * wet; Rb[j] = r * dry + wr * wet;
             }
+        }
+        // equal volume: each song's measured loudness brought to the same level (the limiter catches peaks)
+        if (std::fabs(S[29]) > 0.01f) {
+            const float g = (float)dbToGain(S[29]);
+            for (int j = 0; j < n; j++) { Lb[j] *= g; Rb[j] *= g; }
         }
         // volume leveler
         if (S[20] > 0.01f) {

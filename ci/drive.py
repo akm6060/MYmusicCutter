@@ -97,9 +97,11 @@ adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///s
 time.sleep(8)
 say("aac", js(STATE))
 # new studio effects on during playback: sound must keep running
-say("fx on", js("(()=>{[['eqTapeNr',80],['eqBdec',50],['eqHfr',80],['eqBbe',60],['eqMach3',70]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var b=document.getElementById('cxPlay');if(b.textContent.indexOf('▶')>=0)b.click();return b.textContent})()"))
+say("fx on", js("(()=>{[['eqTapeNr',80],['eqBdec',50],['eqHfr',80],['eqBbe',60],['eqMach3',70],['eqExciter',50],['eqXfeed',60]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var b=document.getElementById('cxPlay');if(b.textContent.indexOf('▶')>=0)b.click();return b.textContent})()"))
 time.sleep(2); p1 = js("document.getElementById('cutterPos').textContent"); time.sleep(3); p2 = js("document.getElementById('cutterPos').textContent")
 say("fx playing", p1, "->", p2, js("document.getElementById('videoTitle').textContent"))
+say("equal volume", js("document.getElementById('audioEqVm').click();document.getElementById('audioEqVm').textContent"))
+time.sleep(12); say("eq status", js("document.getElementById('audioEqStatus').textContent"), js("document.getElementById('cutterPos').textContent"))
 say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
 for k in range(30):
     time.sleep(2); st = js("document.getElementById('spStatus').textContent"); say("status", st)
@@ -178,3 +180,19 @@ for name in ["ytm4a.mp3", "ytwebm.mp3"]:
         if n and ("parts" in n or "failed" in n or "None" in n): break
     say(name, "save:", n)
 say("saved files", adb("shell", "ls -lR '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'"))
+
+# ---- A-B repeat on the cassette: marks from the song finder, loop the first song
+adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///sdcard/Download/cassette.aac", "-t", "audio/aac", "-n", "com.mymusic.cutter/.MainActivity")
+time.sleep(8)
+js("window.__mmForceExtractor=false;document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'")
+for k in range(40):
+    time.sleep(2); st = js("document.getElementById('spStatus').textContent")
+    if st and ("Found" in st or "No songs" in st): break
+js("document.getElementById('spClose').click();'ok'")
+# jump close to the end of the first song, then A-B on
+say("ab on", js("(()=>{document.getElementById('abBtn').click();return document.getElementById('cutterNote').textContent})()"))
+poss = []
+for k in range(6):
+    time.sleep(2); poss.append(js("document.getElementById('cutterPos').textContent"))
+say("ab positions", poss)
+say("ab off", js("(()=>{document.getElementById('abBtn').click();return document.getElementById('cutterNote').textContent})()"))

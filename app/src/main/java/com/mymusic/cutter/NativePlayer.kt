@@ -644,7 +644,7 @@ class NativePlayer(
     @JavascriptInterface
     fun setSound(json: String) {
         val o = try { JSONObject(json) } catch (_: Exception) { return }
-        val p = FloatArray(30)
+        val p = FloatArray(32)
         val bands = o.optJSONArray("bands")
         for (i in 0 until 8) p[i] = (bands?.optDouble(i, 0.0) ?: 0.0).toFloat()
         val keys = arrayOf("bass", "clarity", "virtual", "hiss", "click", "hum", "rumble", "tube")
@@ -662,6 +662,9 @@ class NativePlayer(
         p[26] = 0f                                   // wide 3D: removed in 4.9
         p[27] = o.optDouble("hfr", 0.0).toFloat()    // MP3 enhance
         p[28] = o.optDouble("mach3", 0.0).toFloat()  // Mach3 bass
+        p[29] = o.optDouble("vmGain", 0.0).toFloat().coerceIn(-15f, 12f)   // equal volume (dB)
+        p[30] = o.optDouble("xfeed", 0.0).toFloat()  // headphone crossfeed
+        p[31] = o.optDouble("exciter", 0.0).toFloat() // exciter
         p[15] = 0f; p[16] = 50f                      // tube amplifier: removed in 4.9
         FxNative.setParams(p)
     }

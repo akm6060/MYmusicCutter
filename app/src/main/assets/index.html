@@ -1402,6 +1402,12 @@ html.light .fm-foot .fm-primary{background:#1a8748!important;border-color:#1a874
 html.light .lock-grip{border-color:#1b1838}
 
 .seeker-fixed .strip-scroll,.seeker-fixed .strip-scroll *{touch-action:none!important}
+
+/* 4.10: horizontal equalizer bands, A-B button */
+.eq-bands-h{margin-bottom:6px}
+.ab-btn{width:auto!important;padding:0 7px!important;font-size:11px!important;margin-left:4px}
+.ab-btn.on{background:#ffb21e!important;border-color:#ffb21e!important;color:#241400!important}
+.audio-eq-toggles{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1425,7 +1431,7 @@ html.light .lock-grip{border-color:#1b1838}
   </div>
   <div class="video-controls">
     <section class="video-cutter" id="videoCutter" aria-label="Video cutter">
-      <div class="cutter-title"><strong id="cutterPos" class="pos">00:00 / 00:00</strong><span class="zoom-bar"><button type="button" id="zoomOut" aria-label="Zoom timeline out">−</button><b id="zoomLabel">1×</b><button type="button" id="zoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="zoomReset" aria-label="Show the whole timeline">⟲</button></span><span id="cutterSelection">Select a section</span><span id="cutterStartOut" hidden></span><span id="cutterEndOut" hidden></span></div>
+      <div class="cutter-title"><strong id="cutterPos" class="pos">00:00 / 00:00</strong><span class="zoom-bar"><button type="button" id="zoomOut" aria-label="Zoom timeline out">−</button><b id="zoomLabel">1×</b><button type="button" id="zoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="zoomReset" aria-label="Show the whole timeline">⟲</button><button type="button" id="abBtn" class="ab-btn" aria-pressed="false" aria-label="A-B repeat: play the marked part again and again">A↔B</button></span><span id="cutterSelection" hidden></span><span id="cutterStartOut" hidden></span><span id="cutterEndOut" hidden></span></div>
       <div class="cutter-timeline-wrap">
         <div class="lock-head" id="lockHead" hidden><span class="lock-grip" id="lockGrip" aria-label="Fixed seeker: double-tap to release"></span></div>
         <div class="strip-scroll" id="stripScroll">
@@ -1535,18 +1541,18 @@ html.light .lock-grip{border-color:#1b1838}
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
     <header class="audio-eq-head"><button type="button" id="audioEqBack" aria-label="Back to cutter">‹</button><div><strong>Audio Equalizer</strong><small>Sound stays untouched until you change something</small></div><button type="button" id="audioEqReset">Reset</button></header>
     <div class="audio-eq-scroll">
-      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button></div>
+      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button><button type="button" class="audio-eq-auto" id="audioEqVm" aria-pressed="false">Equal volume: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqResume" aria-pressed="true">Resume: ON</button></div>
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
-      <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>±15 dB · drag a fader cap · double-tap it for 0</small></div>
-      <div class="audio-eq-bands" id="audioEqBands">
-        <label><span>60 Hz</span><input type="range" data-eq-band="0" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>150 Hz</span><input type="range" data-eq-band="1" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>400 Hz</span><input type="range" data-eq-band="2" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>1 kHz</span><input type="range" data-eq-band="3" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>2.4 kHz</span><input type="range" data-eq-band="4" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>6 kHz</span><input type="range" data-eq-band="5" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>10 kHz</span><input type="range" data-eq-band="6" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
-        <label><span>16 kHz</span><input type="range" data-eq-band="7" min="-15" max="15" value="0" step="1"><output>0 dB</output></label>
+      <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>±15 dB · slide the knob left or right</small></div>
+      <div class="audio-eq-adjustments eq-bands-h" id="audioEqBands">
+        <label><span>60 Hz <output>0 dB</output></span><input type="range" data-eq-band="0" min="-15" max="15" value="0" step="1"></label>
+        <label><span>150 Hz <output>0 dB</output></span><input type="range" data-eq-band="1" min="-15" max="15" value="0" step="1"></label>
+        <label><span>400 Hz <output>0 dB</output></span><input type="range" data-eq-band="2" min="-15" max="15" value="0" step="1"></label>
+        <label><span>1 kHz <output>0 dB</output></span><input type="range" data-eq-band="3" min="-15" max="15" value="0" step="1"></label>
+        <label><span>2.4 kHz <output>0 dB</output></span><input type="range" data-eq-band="4" min="-15" max="15" value="0" step="1"></label>
+        <label><span>6 kHz <output>0 dB</output></span><input type="range" data-eq-band="5" min="-15" max="15" value="0" step="1"></label>
+        <label><span>10 kHz <output>0 dB</output></span><input type="range" data-eq-band="6" min="-15" max="15" value="0" step="1"></label>
+        <label><span>16 kHz <output>0 dB</output></span><input type="range" data-eq-band="7" min="-15" max="15" value="0" step="1"></label>
       </div></div>
       <h4 class="afx-h">Tone &amp; repair</h4>
       <div class="audio-eq-adjustments">
@@ -1565,6 +1571,8 @@ html.light .lock-grip{border-color:#1b1838}
         <label><span>MP3 enhance – restores treble lost in 64 / 128 kbps files <output id="eqHfrOut">0%</output></span><input id="eqHfr" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>Clarity HD – BBE-style crisp treble (mids untouched) <output id="eqBbeOut">0%</output></span><input id="eqBbe" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>Mach3 bass – deep, tight bass <output id="eqMach3Out">0%</output></span><input id="eqMach3" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>Exciter – gentle overtones for dull recordings <output id="eqExciterOut">0%</output></span><input id="eqExciter" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>Headphone crossfeed – natural sound for old stereo songs <output id="eqXfeedOut">0%</output></span><input id="eqXfeed" type="range" min="0" max="100" value="0" step="5"></label>
       </div>
       <h4 class="afx-h">Cinema sound <small>Dolby-style</small></h4>
       <div class="afx-modes" id="cinemaModes" role="group" aria-label="Cinema sound mode"><button type="button" data-mode="off">Off</button><button type="button" data-mode="music">Music</button><button type="button" data-mode="movie">Movie</button><button type="button" data-mode="voice">Voice</button><button type="button" data-mode="night">Night</button></div>
@@ -1810,7 +1818,7 @@ html.light .lock-grip{border-color:#1b1838}
     audioMode=!!isAudio;activeMedia=audioMode?audioMedia:video;try{video.pause();audioMedia.pause()}catch(e){}
     if(audioMode){video.removeAttribute('src');video.load();setSource(audioMedia,urls[index]);audioMedia.load();video.style.display='none';empty.style.display='grid';empty.innerHTML='<b>Audio cutter</b>Audio playback and trimming timeline';stage.classList.add('audio-mode');el('videoLayer').classList.add('audio-only');}
     else{audioMedia.removeAttribute('src');audioMedia.load();setSource(video,urls[index]);video.load();video.style.display='block';empty.style.display='none';stage.classList.remove('audio-mode');el('videoLayer').classList.remove('audio-only');}
-    el('videoTitle').textContent=f.name||((audioMode?'Audio ':'Video ')+(index+1));el('videoPlay').textContent='▶';el('videoCurrent').textContent='00:00';el('videoDuration').textContent='00:00';el('videoSeek').value=0;resetCutter();el('videoSpeed').value=1;el('videoSpeedOut').textContent='1.00×';activeMedia.playbackRate=1;el('videoPrev').disabled=files.length<2;el('videoNext').disabled=files.length<2;applyPicture();applyVolume();attachAudio();if(autoplay){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){el('videoPlay').textContent='▶';});}showControls();
+    el('videoTitle').textContent=f.name||((audioMode?'Audio ':'Video ')+(index+1));el('videoPlay').textContent='▶';el('videoCurrent').textContent='00:00';el('videoDuration').textContent='00:00';el('videoSeek').value=0;resetCutter();el('videoSpeed').value=1;el('videoSpeedOut').textContent='1.00×';activeMedia.playbackRate=1;el('videoPrev').disabled=files.length<2;el('videoNext').disabled=files.length<2;applyPicture();applyVolume();attachAudio();if(autoplay&&!(typeof resumeHold!=='undefined'&&resumeHold&&(resumeHold=false,true))){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){el('videoPlay').textContent='▶';});}showControls();
   }
   function openFiles(list){
     if(!list||!list.length)return;urls.forEach(function(u){if(/^blob:/.test(u||''))try{URL.revokeObjectURL(u)}catch(e){}});
@@ -2027,11 +2035,11 @@ html.light .lock-grip{border-color:#1b1838}
   // Bracketed stages are only connected while they are switched on.
   var eqPage=el('audioEqPage');
   var EQ_FREQS=[60,150,400,1000,2400,6000,10000,16000];
-  var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3'];
-  function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,mode:'off'}}
+  var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3','exciter','xfeed'];
+  function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,exciter:0,xfeed:0,mode:'off'}}
   function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;return o}
   var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
-  function stateNeutral(s){return s.bands.every(function(v){return v===0})&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level&&!s.tapenr&&!s.bdec&&!s.bbe&&!s.hfr&&!s.mach3}
+  function stateNeutral(s){return s.bands.every(function(v){return v===0})&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level&&!s.tapenr&&!s.bdec&&!s.bbe&&!s.hfr&&!s.mach3&&!s.exciter&&!s.xfeed}
   function eqIsNeutral(){return stateNeutral(eqState)}
   function eqStatus(t){var e=el('audioEqStatus');if(e)e.textContent=t}
   function setP(c,p,v){try{p.setTargetAtTime(v,c.currentTime,0.025)}catch(e){try{p.value=v}catch(e2){}}}
@@ -2216,7 +2224,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(n.declick){try{n.declick.parameters.get('amount').setValueAtTime(s.click,c.currentTime)}catch(e){}}
     eqRewireNode(n,s,lim,analysing);
   }
-  function eqApply(){if(NATIVE){try{NP.setSound(JSON.stringify(Object.assign({},eqState,{limiter:eqLimiter,neutral:eqIsNeutral()})))}catch(e){}eqSave();return}if(A)eqApplyTo(A,eqState,eqLimiter,eqAnalysing);eqSave()}
+  function eqApply(){if(NATIVE){var vg=(typeof vmOn!=='undefined'&&vmOn)?vmGain:0;try{NP.setSound(JSON.stringify(Object.assign({},eqState,{limiter:eqLimiter,vmGain:vg,neutral:eqIsNeutral()&&!vg})))}catch(e){}eqSave();return}if(A)eqApplyTo(A,eqState,eqLimiter,eqAnalysing);eqSave()}
   function eqEngine(){
     if(A)return A;
     var AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Web Audio unavailable');
@@ -2273,7 +2281,7 @@ html.light .lock-grip{border-color:#1b1838}
     });
   }
 
-  var ADJ=[['eqTapeNr','tapenr','%'],['eqBdec','bdec','%'],['eqHfr','hfr','%'],['eqBbe','bbe','%'],['eqMach3','mach3','%'],['eqBass','bass',' dB'],['eqClarity','clarity',' dB'],['eqVirtual','virtual','%'],['eqHiss','hiss','%'],['eqClick','click','%'],['eqHum','hum','%'],['eqRumble','rumble','%'],['eqTube','tube','%'],['eqWarm','warmth','%'],['eqDialog','dialog','%'],['eqWidth','width','%'],['eqBassx','bassx','%'],['eqLevel','level','%']];
+  var ADJ=[['eqTapeNr','tapenr','%'],['eqBdec','bdec','%'],['eqHfr','hfr','%'],['eqBbe','bbe','%'],['eqMach3','mach3','%'],['eqExciter','exciter','%'],['eqXfeed','xfeed','%'],['eqBass','bass',' dB'],['eqClarity','clarity',' dB'],['eqVirtual','virtual','%'],['eqHiss','hiss','%'],['eqClick','click','%'],['eqHum','hum','%'],['eqRumble','rumble','%'],['eqTube','tube','%'],['eqWarm','warmth','%'],['eqDialog','dialog','%'],['eqWidth','width','%'],['eqBassx','bassx','%'],['eqLevel','level','%']];
   var CINEMA_KEYS=['dialog','width','bassx','level','virtual'];
   var CINEMA={off:{dialog:0,width:100,bassx:0,level:0,virtual:0},music:{dialog:0,width:130,bassx:30,level:20,virtual:25},movie:{dialog:35,width:140,bassx:40,level:35,virtual:55},voice:{dialog:70,width:90,bassx:0,level:45,virtual:0},night:{dialog:45,width:100,bassx:0,level:80,virtual:15}};
   function eqRefreshUi(){
@@ -2366,7 +2374,7 @@ html.light .lock-grip{border-color:#1b1838}
   });
   // Saved settings come back on the next start; they are applied once playback begins.
   [video,audioMedia].forEach(function(m){m.addEventListener('play',function(){if(A){eqResume();if(m===activeMedia)eqRouteMedia(m)}else if(!eqIsNeutral()&&m===activeMedia){if(eqEngage())eqApply()}})});
-  eqLoad();buildFaders();eqRefreshUi();if(NATIVE)eqApply();
+  eqLoad();eqRefreshUi();if(NATIVE)eqApply();
   if(!eqIsNeutral())eqStatus(NATIVE?'Your saved sound settings are on.':'Your saved sound settings are applied when playback starts.');
   try{window.__mmFxTest={build:eqBuildChain,loadWorklet:eqLoadWorklet,apply:eqApplyTo,neutral:eqNeutral,copy:eqCopy,cinema:CINEMA,freqs:EQ_FREQS}}catch(e){}
 
@@ -2959,7 +2967,7 @@ html.light .lock-grip{border-color:#1b1838}
     }).catch(function(){levelsFailed(job,'')});
   }
   function levelsDone(job,k,L){
-    if(job!==levelsJob)return;levelsCache[k]=L;drawWave();
+    if(job!==levelsJob)return;levelsCache[k]=L;drawWave();if(window.__vmOnLevels)window.__vmOnLevels(k,L);
     if(songPending&&urls[index]===k){songPending=false;applySongs(L)}
   }
   function levelsFailed(job,msg){if(job!==levelsJob)return;var k=levelsKey;delete levelsCache[k];songPending=false;el('spStatus').textContent='Could not read the sound'+(msg?': '+msg:'.');drawWave(msg||'Waveform unavailable')}
@@ -3125,6 +3133,104 @@ html.light .lock-grip{border-color:#1b1838}
   },{passive:true});
   window.addEventListener('resize',function(){if(lockOn){lockPads();lockPlaceHead();lockScrollTo(lockEstimate(),true)}});
   [video,audioMedia].forEach(function(m){m.addEventListener('loadedmetadata',function(){if(m===activeMedia&&lockOn){lockT=0;lockTAt=performance.now();setTimeout(function(){lockPads();lockPlaceHead();lockScrollTo(0,true)},50)}})});
+
+  // ---- A-B repeat: the part marked with Start / End plays again and again
+  var abOn=false,abPart=null,abT=0,abAt=0,abJumpUntil=0,abRaf=0;
+  function abChoose(t){var ss=segs();if(!ss.length)return null;for(var i=0;i<ss.length;i++)if(t>=ss[i][0]-0.05&&t<ss[i][1])return ss[i];
+    for(var j=0;j<ss.length;j++)if(ss[j][0]>t)return ss[j];return ss[0]}
+  function abUi(){var b=el('abBtn');b.classList.toggle('on',abOn);b.setAttribute('aria-pressed',abOn?'true':'false')}
+  function abJump(){if(!abPart)return;abJumpUntil=performance.now()+400;abT=abPart[0];abAt=performance.now();try{activeMedia.currentTime=abPart[0]}catch(e){}}
+  function abSet(on){
+    if(on){if(!duration()){note('Choose a file first.');return}
+      var t=activeMedia.currentTime||0;abPart=abChoose(t);if(!abPart){note('A-B repeat: mark a part first (Start, then End).');return}
+      abOn=true;abT=t;abAt=performance.now();
+      if(t<abPart[0]-0.05||t>=abPart[1])abJump();
+      if(activeMedia.paused){try{var p=activeMedia.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}
+      note('A-B repeat on: '+fmt(abPart[0])+' – '+fmt(abPart[1])+' plays again and again. Tap A↔B to stop.');
+      if(!abRaf)abRaf=requestAnimationFrame(abLoop);
+    }else{abOn=false;abPart=null;note('A-B repeat off.')}
+    abUi();
+  }
+  function abLoop(){abRaf=0;if(!abOn)return;
+    var now=performance.now();
+    if(now>abJumpUntil&&abPart&&!activeMedia.paused){
+      var t=abT+(now-abAt)/1000*(activeMedia.playbackRate||1);   // between position updates, count on
+      if(t>=abPart[1]-0.02)abJump();
+    }
+    abRaf=requestAnimationFrame(abLoop);
+  }
+  el('abBtn').addEventListener('click',function(){abSet(!abOn)});
+  [video,audioMedia].forEach(function(m){
+    m.addEventListener('timeupdate',function(){if(m!==activeMedia||!abOn)return;abT=m.currentTime||0;abAt=performance.now();
+      if(performance.now()>abJumpUntil&&abPart&&abT>=abPart[1]-0.02)abJump()});
+    m.addEventListener('seeked',function(){if(m!==activeMedia||!abOn||performance.now()<abJumpUntil)return;
+      var t=m.currentTime||0,np=abChoose(t);if(np)abPart=np;abT=t;abAt=performance.now()});   // moved by hand: follow that part
+    m.addEventListener('loadedmetadata',function(){if(m===activeMedia&&abOn){abOn=false;abPart=null;abUi()}});
+  });
+  // keep the loop in step when marks change
+  setInterval(function(){if(!abOn)return;var ss=segs();if(!ss.length){abSet(false);return}
+    var still=abPart&&ss.some(function(x){return Math.abs(x[0]-abPart[0])<0.01&&Math.abs(x[1]-abPart[1])<0.01});
+    if(!still)abPart=abChoose(activeMedia.currentTime||0)},500);
+
+  // ---- which file is playing (key used for resume and equal volume)
+  function curKey(){if(current>=0&&list[current])return list[current].key;var f=files[index];return f?(f.__uri||f.name||''):''}
+
+  // ---- equal volume: every song measured once (like ReplayGain), then played at the same loudness
+  var vmOn=false,vmGain=0,VM_KEY='mmVmGain_v1',vmMap={};
+  try{vmOn=localStorage.getItem('mmVmOn')==='1';vmMap=JSON.parse(localStorage.getItem(VM_KEY)||'{}')||{}}catch(e){}
+  function vmLoudness(L){
+    var db=L.db,win=L.win||0.01,n=Math.max(1,Math.round(0.4/win)),blocks=[];
+    for(var i=0;i+n<=db.length;i+=n){var s2=0;for(var j=i;j<i+n;j++)s2+=Math.pow(10,db[j]/10);blocks.push(s2/n)}
+    var g1=blocks.filter(function(p){return p>1e-7});if(!g1.length)return null;           // ignore silence (below -70 dB)
+    var m=g1.reduce(function(a,b){return a+b},0)/g1.length,g2=g1.filter(function(p){return p>m*0.1});   // and quiet bits 10 dB below the average
+    if(!g2.length)return null;return 10*Math.log10(g2.reduce(function(a,b){return a+b},0)/g2.length);
+  }
+  function vmUi(){var b=el('audioEqVm');if(!b)return;b.textContent='Equal volume: '+(vmOn?'ON':'OFF');b.classList.toggle('enabled',vmOn);b.setAttribute('aria-pressed',vmOn?'true':'false')}
+  function vmForCurrent(){
+    var k=curKey();if(!vmOn||!k){vmGain=0;eqApply();return}
+    if(vmMap[k]!=null){vmGain=vmMap[k];eqApply();return}
+    vmGain=0;eqApply();
+    var u=urls[index];if(u){if(levelsReady(u))window.__vmOnLevels(u,levelsCache[u]);else requestLevels(u)}
+  }
+  window.__vmOnLevels=function(u,L){
+    if(u!==urls[index])return;var lu=vmLoudness(L);if(lu==null)return;
+    var g=Math.max(-12,Math.min(10,-18-lu));g=Math.round(g*10)/10;var k=curKey();
+    if(k){vmMap[k]=g;var ks=Object.keys(vmMap);if(ks.length>800)delete vmMap[ks[0]];try{localStorage.setItem(VM_KEY,JSON.stringify(vmMap))}catch(e){}}
+    if(vmOn){vmGain=g;eqApply()}
+  };
+  el('audioEqVm').addEventListener('click',function(){vmOn=!vmOn;try{localStorage.setItem('mmVmOn',vmOn?'1':'0')}catch(e){}vmUi();vmForCurrent();
+    eqStatus(vmOn?'Equal volume on: each song is measured once and played at the same loudness.':'Equal volume off.')});
+  [video,audioMedia].forEach(function(m){m.addEventListener('loadedmetadata',function(){if(m===activeMedia)setTimeout(vmForCurrent,200)})});
+  vmUi();
+
+  // ---- resume: long files (3 min and more) continue where they were left; the last file opens again at start
+  var resumeOn=true,POS_KEY='mmPos_v1',posMap={},posSaveAt=0,resumeHold=false;
+  try{resumeOn=localStorage.getItem('mmResumeOn')!=='0';posMap=JSON.parse(localStorage.getItem(POS_KEY)||'{}')||{}}catch(e){}
+  function resumeUi(){var b=el('audioEqResume');if(!b)return;b.textContent='Resume: '+(resumeOn?'ON':'OFF');b.classList.toggle('enabled',resumeOn);b.setAttribute('aria-pressed',resumeOn?'true':'false')}
+  function posSave(force){
+    var k=curKey(),d=duration(),t=activeMedia.currentTime||0;if(!k||!d||d<180)return;
+    var now=Date.now();if(!force&&now-posSaveAt<3000)return;posSaveAt=now;
+    if(t>d-15||t<5)delete posMap[k];else posMap[k]={t:Math.round(t*10)/10,at:now};
+    var ks=Object.keys(posMap);if(ks.length>300){ks.sort(function(a,b){return posMap[a].at-posMap[b].at});delete posMap[ks[0]]}
+    try{localStorage.setItem(POS_KEY,JSON.stringify(posMap));localStorage.setItem('mmLastKey',k)}catch(e){}
+  }
+  [video,audioMedia].forEach(function(m){
+    m.addEventListener('timeupdate',function(){if(m===activeMedia)posSave(false)});
+    m.addEventListener('pause',function(){if(m===activeMedia)posSave(true)});
+    m.addEventListener('loadedmetadata',function(){if(m!==activeMedia)return;var k=curKey();try{localStorage.setItem('mmLastKey',k)}catch(e){}
+      if(!resumeOn)return;var r=posMap[k],d=duration();
+      if(r&&d>=180&&r.t>5&&r.t<d-15)setTimeout(function(){if(curKey()!==k)return;try{activeMedia.currentTime=r.t}catch(e){}note('Resumed at '+fmt(r.t)+' (where you left off).')},300);
+    });
+  });
+  document.addEventListener('visibilitychange',function(){if(document.hidden)posSave(true)});
+  el('audioEqResume').addEventListener('click',function(){resumeOn=!resumeOn;try{localStorage.setItem('mmResumeOn',resumeOn?'1':'0')}catch(e){}resumeUi();eqStatus(resumeOn?'Resume on: long files continue where you left off; the last file opens again.':'Resume off.')});
+  resumeUi();
+  // at start: open the last file again (paused) if nothing else was opened
+  setTimeout(function(){
+    if(!resumeOn||files.length)return;var k='';try{k=localStorage.getItem('mmLastKey')||''}catch(e){}
+    var i=list.findIndex(function(x){return x.key===k});if(i<0)return;
+    resumeHold=true;playItem(i);setTimeout(function(){resumeHold=false},15000);
+  },1200);
 
   // ---- light / dark theme (player and file manager; the equalizer keeps its analog look)
   function applyTheme(light){document.documentElement.classList.toggle('light',!!light);try{localStorage.setItem('mmTheme',light?'light':'dark')}catch(e){}
