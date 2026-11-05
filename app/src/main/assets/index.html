@@ -2684,7 +2684,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(!files[index]||!duration()){note('Choose a file first.');return}
     if(!ss.length){note('Mark a part first: tap Start, move on, then tap End.');return}
     var f=files[index],payload={fileName:f.name||(audioMode?'audio':'video'),mediaType:audioMode?'audio':'video',durationSeconds:duration(),mode:mode,
-      ranges:ss.map(function(s){return [s[0],s[1]]}),uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
+      ranges:ss.map(function(s){return [s[0],s[1]]}),forceExtractor:!!window.__mmForceExtractor,uri:f.__uri||'',fileSizeBytes:f.size||0,requiresStreamCopy:true};
     if(!NC||typeof NC.cutPickedFile!=='function'){note('Saving works in the Android app (this preview cannot save files).');return}
     var ok=false;try{ok=NC.cutPickedFile(JSON.stringify(payload))===true}catch(e){}
     if(ok){note('Saving…');return}

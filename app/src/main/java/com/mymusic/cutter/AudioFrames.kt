@@ -143,6 +143,7 @@ object Mp3Tool {
         var tagOffset = 0
         var audioBytes = 0L
         var offsets = LongArray(4096)
+        var keptUs = 0.0
     }
 
     /**
@@ -303,6 +304,7 @@ object Mp3Tool {
                         out.write(frame, 0, h.frameLength)
                         written += h.frameLength
                         res.audioBytes += h.frameLength
+                        res.keptUs += durUs
                         res.kept++
                     }
                 }

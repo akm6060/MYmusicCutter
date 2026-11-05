@@ -149,3 +149,11 @@ for k in range(30):
     time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
     if n and ("Saved" in n or "failed" in n or "None" in n): break
 say("album note", n)
+# ---- the Android-reader fallback for MP3 cutting (forced, on the first song of the album)
+js("window.__mmForceExtractor=true;'ok'")
+say("save fallback", js("document.getElementById('saveParts').click();'ok'"))
+for k in range(30):
+    time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
+    if n and ("Saved" in n or "failed" in n): break
+say("fallback note", n)
+say("fallback files", adb("shell", "ls -l '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'*album*'/'"))

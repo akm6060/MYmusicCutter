@@ -744,6 +744,7 @@ class MYmusicNativeCutter(
                 val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
                 beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), shortStem(name))
                 val names = jobMeta.optJSONArray("names")
+                forceExtractor = jobMeta.optBoolean("forceExtractor", false)
                 val skipped = ArrayList<Int>()
                 for ((i, ranges) in outputs.withIndex()) {
                     partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
@@ -1372,12 +1373,65 @@ class MYmusicNativeCutter(
 
     // ---------------------------------------------------------------- MP3
 
+    @Volatile private var forceExtractor = false   // test switch only (emulator test)
+
     private fun cutMp3(source: Source, t: OutputTarget, ranges: List<LongArray>, totalBytes: Long) {
-        val raw = FileOutputStream(t.pfd.fileDescriptor)
-        val out = java.io.BufferedOutputStream(raw, 1 shl 16)
-        val r = Mp3Tool.copy(listOf({ openInput(source) }), out, ranges, totalBytes) { progress(it) }
-        out.flush()
-        writeXing(t, r)
+        var wantUs = 0L
+        for (r0 in ranges) if (r0[1] != Long.MAX_VALUE) wantUs += r0[1] - r0[0]
+        val r: Mp3Tool.Result? = try {
+            val raw = FileOutputStream(t.pfd.fileDescriptor)
+            val out = java.io.BufferedOutputStream(raw, 1 shl 16)
+            val res = Mp3Tool.copy(listOf({ openInput(source) }), out, ranges, totalBytes) { progress(it) }
+            out.flush()
+            res
+        } catch (_: Exception) { null }
+        if (r != null && !forceExtractor && (wantUs <= 0 || r.keptUs >= wantUs * 0.5)) { writeXing(t, r); return }
+        // The frame-by-frame reader lost its way in this file (joined albums, damaged stretches...).
+        // Read it the way Android's own player and the song finder do, copying the original frames.
+        val ch = FileOutputStream(t.pfd.fileDescriptor).channel
+        ch.truncate(0); ch.position(0)
+        cutMp3ByExtractor(source, t, ranges)
+    }
+
+    /** MP3 frames copied unchanged, located by Android's media reader (same timeline as the song finder). */
+    private fun cutMp3ByExtractor(source: Source, t: OutputTarget, ranges: List<LongArray>) {
+        val ex = newExtractor(source)
+        try {
+            var track = -1
+            for (i in 0 until ex.trackCount) {
+                if ((ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/")) { track = i; break }
+            }
+            require(track >= 0) { "This file has no sound." }
+            ex.selectTrack(track)
+            val fmt = ex.getTrackFormat(track)
+            val lastEnd = Ranges.lastEnd(ranges)
+            val durUs = if (fmt.containsKey(MediaFormat.KEY_DURATION)) fmt.getLong(MediaFormat.KEY_DURATION) else 0L
+            val total = maxOf(1L, if (lastEnd != Long.MAX_VALUE) lastEnd else durUs)
+            val buf = ByteBuffer.allocate(1 shl 16)
+            val arr = ByteArray(1 shl 16)
+            val out = java.io.BufferedOutputStream(FileOutputStream(t.pfd.fileDescriptor), 1 shl 16)
+            var wrote = 0
+            while (true) {
+                val ts = ex.sampleTime
+                if (ts < 0) break
+                if (lastEnd != Long.MAX_VALUE && ts >= lastEnd) break
+                if (Ranges.keeps(ranges, ts.toDouble(), ts + 1.0)) {
+                    buf.clear()
+                    val n = try { ex.readSampleData(buf, 0) } catch (_: Exception) { -1 }   // damaged: skip
+                    if (n > 4) {
+                        buf.position(0); buf.get(arr, 0, n)
+                        // only whole MP3 frames (they start with the frame sync)
+                        if ((arr[0].toInt() and 0xFF) == 0xFF && (arr[1].toInt() and 0xE0) == 0xE0) { out.write(arr, 0, n); wrote++ }
+                    }
+                }
+                progress(ts.toDouble() / total)
+                if (!ex.advance()) break
+            }
+            out.flush()
+            require(wrote > 0) { "The selected range contained no audio to save." }
+        } finally {
+            ex.release()
+        }
     }
 
     private fun writeXing(t: OutputTarget, r: Mp3Tool.Result) {
