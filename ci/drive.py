@@ -132,3 +132,20 @@ if isinstance(r, list):
         adb("shell", "input", "swipe", str(x1), str(y2), str(x2), str(y2), "900"); time.sleep(2)
         say("pos after drag", js("document.getElementById('cutterPos').textContent"), js("JSON.stringify(window.__mmLockStats)"), js("document.getElementById('stripScroll').scrollLeft"))
         shot("l2_dragged")
+
+# ---- joined MP3 album: songs with cover pictures, different sample rates, silence between songs
+say("open album")
+adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///sdcard/Download/album.mp3", "-t", "audio/mpeg", "-n", "com.mymusic.cutter/.MainActivity")
+time.sleep(8)
+say("album", js(STATE))
+say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
+for k in range(40):
+    time.sleep(2); st = js("document.getElementById('spStatus').textContent")
+    if st and ("Found" in st or "No songs" in st or "Could not" in st): break
+say("album status", st)
+js("document.getElementById('spClose').click();'ok'")
+say("save", js("document.getElementById('saveParts').click();'ok'"))
+for k in range(30):
+    time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
+    if n and ("Saved" in n or "failed" in n or "None" in n): break
+say("album note", n)

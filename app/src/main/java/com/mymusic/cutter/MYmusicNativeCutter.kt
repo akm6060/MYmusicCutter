@@ -744,15 +744,31 @@ class MYmusicNativeCutter(
                 val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
                 beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), shortStem(name))
                 val names = jobMeta.optJSONArray("names")
+                val skipped = ArrayList<Int>()
                 for ((i, ranges) in outputs.withIndex()) {
                     partLabel = if (outputs.size > 1) "part ${i + 1} of ${outputs.size}" else ""
                     val given = if (mode == "parts") names?.optString(i, "")?.trim().orEmpty() else ""
                     outLabel = if (given.isNotEmpty()) "${i + 1} " + given else null
-                    val saved = try { saveRanges(source, name, format, isAudio, ranges, durUs) } finally { outLabel = null }
-                    notifySaved(saved, kind)
+                    if (outputs.size > 1) {
+                        // several parts: a part that cannot be read is skipped, the others are still saved
+                        try {
+                            val saved = try { saveRanges(source, name, format, isAudio, ranges, durUs) } finally { outLabel = null }
+                            notifySaved(saved, kind)
+                        } catch (e: Exception) {
+                            skipped.add(i + 1)
+                        }
+                    } else {
+                        val saved = try { saveRanges(source, name, format, isAudio, ranges, durUs) } finally { outLabel = null }
+                        notifySaved(saved, kind)
+                    }
                 }
                 partLabel = ""
-                if (outputs.size > 1) notifyPage("✓ Saved ${outputs.size} parts")
+                if (outputs.size > 1) {
+                    val ok = outputs.size - skipped.size
+                    require(ok > 0) { "None of the parts could be read from this file." }
+                    notifyPage(if (skipped.isEmpty()) "✓ Saved ${outputs.size} parts"
+                               else "✓ Saved $ok of ${outputs.size} parts (part ${skipped.joinToString(", ")} could not be read and was skipped)")
+                }
             } catch (e: Exception) {
                 notifyPage("Cut failed: " + (e.message ?: e.javaClass.simpleName))
             } finally {

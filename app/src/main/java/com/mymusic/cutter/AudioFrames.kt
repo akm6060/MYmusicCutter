@@ -155,6 +155,14 @@ object Mp3Tool {
      * The stream is positioned just after the 4 header bytes of [h]. Reads ahead to the header of the
      * frame that follows, to confirm [h] is real audio and not stray bytes. The caller resets the stream.
      */
+    private fun isInfoFrame(frame: ByteArray, h: Mp3Header): Boolean {
+        val side = if (h.version == 1) (if (h.mono) 17 else 32) else (if (h.mono) 9 else 17)
+        val o = 4 + side
+        fun at(p: Int, t: String) = p + 4 <= h.frameLength && frame[p] == t[0].code.toByte() && frame[p + 1] == t[1].code.toByte() &&
+            frame[p + 2] == t[2].code.toByte() && frame[p + 3] == t[3].code.toByte()
+        return at(o, "Xing") || at(o, "Info") || at(36, "VBRI")
+    }
+
     private fun nextHeaderMatches(input: java.io.BufferedInputStream, h: Mp3Header): Boolean {
         var left = (h.frameLength - 4).toLong()
         while (left > 0) { val k = input.skip(left); if (k <= 0) break; left -= k }
@@ -231,11 +239,25 @@ object Mp3Tool {
                     }
                     if (h == null || !ok) {
                         input.reset()
+                        // a tag block in the middle (joined albums: every song keeps its own tag,
+                        // often with a cover picture of several MB): jump over it in one go
+                        if (hdr[0] == 'I'.code.toByte() && hdr[1] == 'D'.code.toByte() && hdr[2] == '3'.code.toByte()) {
+                            val th = ByteArray(10)
+                            if (readFullyIn(input, th, 0, 10) == 10) {
+                                val ts = id3Size(th)
+                                if (ts in 11..(256 shl 20)) {
+                                    skipIn(input, (ts - 10).toLong()); consumed += ts
+                                    continue
+                                }
+                            }
+                            input.reset()
+                        }
                         if (input.skip(1) < 1) break
                         junk++
                         consumed++
-                        if (framesThisFile > 0 && junk > 1_000_000) break
-                        if (framesThisFile == 0 && junk > 4_000_000) break
+                        // when cutting, damaged stretches are skipped and the search goes on to the end
+                        if (ranges == null && framesThisFile > 0 && junk > 1_000_000) break
+                        if (framesThisFile == 0 && junk > 16_000_000) break
                         continue
                     }
                     junk = 0
@@ -258,6 +280,7 @@ object Mp3Tool {
                         }
                         if (h.frameLength >= 40 && String(frame, 36, 4, Charsets.ISO_8859_1) == "VBRI") continue
                     }
+                    if (isInfoFrame(frame, h)) continue   // header frame of a later song: not audio
                     res.frames++
                     framesThisFile++
                     val durUs = h.samples * 1_000_000.0 / h.sampleRate
