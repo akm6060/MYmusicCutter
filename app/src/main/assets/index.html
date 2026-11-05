@@ -1408,6 +1408,13 @@ html.light .lock-grip{border-color:#1b1838}
 .ab-btn{width:auto!important;padding:0 7px!important;font-size:11px!important;margin-left:4px}
 .ab-btn.on{background:#ffb21e!important;border-color:#ffb21e!important;color:#241400!important}
 .audio-eq-toggles{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+
+/* equalizer bands: compact rows, orange from 0 dB (centre) to the knob */
+.audio-eq-page .eq-bands-h{gap:3px}
+.audio-eq-page .eq-bands-h label{padding:3px 10px 0;gap:0 10px}
+.audio-eq-page .eq-bands-h label span{line-height:1.2}
+.audio-eq-page .eq-bands-h input[type=range]{height:26px}
+.audio-eq-page .eq-bands-h input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(90deg,#060606 var(--a,50%),#ffb341 var(--a,50%),#ffb341 var(--b,50%),#060606 var(--b,50%))}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1545,14 +1552,14 @@ html.light .lock-grip{border-color:#1b1838}
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
       <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>±15 dB · slide the knob left or right</small></div>
       <div class="audio-eq-adjustments eq-bands-h" id="audioEqBands">
-        <label><span>60 Hz <output>0 dB</output></span><input type="range" data-eq-band="0" min="-15" max="15" value="0" step="1"></label>
+        <label><span>70 Hz <output>0 dB</output></span><input type="range" data-eq-band="0" min="-15" max="15" value="0" step="1"></label>
         <label><span>150 Hz <output>0 dB</output></span><input type="range" data-eq-band="1" min="-15" max="15" value="0" step="1"></label>
         <label><span>400 Hz <output>0 dB</output></span><input type="range" data-eq-band="2" min="-15" max="15" value="0" step="1"></label>
         <label><span>1 kHz <output>0 dB</output></span><input type="range" data-eq-band="3" min="-15" max="15" value="0" step="1"></label>
         <label><span>2.4 kHz <output>0 dB</output></span><input type="range" data-eq-band="4" min="-15" max="15" value="0" step="1"></label>
-        <label><span>6 kHz <output>0 dB</output></span><input type="range" data-eq-band="5" min="-15" max="15" value="0" step="1"></label>
-        <label><span>10 kHz <output>0 dB</output></span><input type="range" data-eq-band="6" min="-15" max="15" value="0" step="1"></label>
-        <label><span>16 kHz <output>0 dB</output></span><input type="range" data-eq-band="7" min="-15" max="15" value="0" step="1"></label>
+        <label><span>5 kHz <output>0 dB</output></span><input type="range" data-eq-band="5" min="-15" max="15" value="0" step="1"></label>
+        <label><span>7 kHz <output>0 dB</output></span><input type="range" data-eq-band="6" min="-15" max="15" value="0" step="1"></label>
+        <label><span>10 kHz <output>0 dB</output></span><input type="range" data-eq-band="7" min="-15" max="15" value="0" step="1"></label>
       </div></div>
       <h4 class="afx-h">Tone &amp; repair</h4>
       <div class="audio-eq-adjustments">
@@ -2034,7 +2041,7 @@ html.light .lock-grip{border-color:#1b1838}
   //   > [dialogue + stereo width] > [virtualizer] > [volume leveler] > [limiter]
   // Bracketed stages are only connected while they are switched on.
   var eqPage=el('audioEqPage');
-  var EQ_FREQS=[60,150,400,1000,2400,6000,10000,16000];
+  var EQ_FREQS=[70,150,400,1000,2400,5000,7000,10000];
   var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3','exciter','xfeed'];
   function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,exciter:0,xfeed:0,mode:'off'}}
   function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;return o}
@@ -2285,7 +2292,7 @@ html.light .lock-grip{border-color:#1b1838}
   var CINEMA_KEYS=['dialog','width','bassx','level','virtual'];
   var CINEMA={off:{dialog:0,width:100,bassx:0,level:0,virtual:0},music:{dialog:0,width:130,bassx:30,level:20,virtual:25},movie:{dialog:35,width:140,bassx:40,level:35,virtual:55},voice:{dialog:70,width:90,bassx:0,level:45,virtual:0},night:{dialog:45,width:100,bassx:0,level:80,virtual:15}};
   function eqRefreshUi(){
-    document.querySelectorAll('[data-eq-band]').forEach(function(input){var i=+input.getAttribute('data-eq-band'),out=input.parentNode.querySelector('output');input.value=eqState.bands[i];if(out)out.textContent=(eqState.bands[i]>0?'+':'')+eqState.bands[i]+' dB';syncFader(input)});
+    document.querySelectorAll('[data-eq-band]').forEach(function(input){var i=+input.getAttribute('data-eq-band'),out=input.parentNode.querySelector('output');input.value=eqState.bands[i];var pc=(eqState.bands[i]+15)/30*100;input.style.setProperty('--a',Math.min(50,pc).toFixed(1)+'%');input.style.setProperty('--b',Math.max(50,pc).toFixed(1)+'%');if(out)out.textContent=(eqState.bands[i]>0?'+':'')+eqState.bands[i]+' dB';syncFader(input)});
     ADJ.forEach(function(p){var node=el(p[0]),out=el(p[0]+'Out');if(node){node.value=eqState[p[1]];var mn=+node.min,mx=+node.max;node.style.setProperty('--p',((eqState[p[1]]-mn)/(mx-mn)*100).toFixed(1)+'%')}if(out)out.textContent=eqState[p[1]]+p[2]});
     document.querySelectorAll('#cinemaModes [data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-mode')===eqState.mode?'true':'false')});
     var sb=el('audioEqLite');if(sb){sb.textContent='Smooth: '+(eqLite?'ON':'OFF');sb.classList.toggle('enabled',eqLite);sb.setAttribute('aria-pressed',eqLite?'true':'false')}
@@ -2325,7 +2332,7 @@ html.light .lock-grip{border-color:#1b1838}
     var btn=el('audioEqAuto');
     eqBeforeAuto=eqCopy(eqState);eqAnalysing=true;if(A)A.topo='';eqApply();btn.disabled=true;eqStatus('Listening to the sound… keep playback running (3 s).');
     var an=A?A.analyser:null,bins=an?an.frequencyBinCount:0,fd=new Float32Array(Math.max(1,bins)),td=new Float32Array(an?an.fftSize:1),hz=an?A.c.sampleRate/an.fftSize:1;
-    var edges=[[35,95],[95,250],[250,650],[650,1600],[1600,3800],[3800,8000],[8000,13000],[13000,19000]];
+    var edges=[[45,105],[105,250],[250,650],[650,1600],[1600,3600],[3600,6000],[6000,8500],[8500,13000]];
     var acc=edges.map(function(){return 0}),humOn=0,humOff=0,sub=0,rmsAcc=0,frames=0,start=performance.now();
     function pw(i){i=Math.max(1,Math.min(bins-1,i));var d=fd[i];return isFinite(d)?Math.pow(10,d/10):0}
     function finish(){

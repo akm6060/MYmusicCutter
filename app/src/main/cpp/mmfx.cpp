@@ -246,7 +246,7 @@ struct Engine {
         rumble.highpass(sr, 20 + S[14] * 1.25, 0.707);
         hum.peaking(sr, 50, 5, -0.24 * S[13]);
         bass.lowshelf(sr, 100, S[8]);
-        static const double F[8] = {60, 150, 400, 1000, 2400, 6000, 10000, 16000};
+        static const double F[8] = {70, 150, 400, 1000, 2400, 5000, 7000, 10000};
         for (int i = 0; i < 8; i++) bands[i].peaking(sr, F[i], 0.9, S[i]);
         clarity.peaking(sr, 8000, 1, S[9]);
         hiss.highshelf(sr, 8000, -0.15 * S[11]);
@@ -320,7 +320,7 @@ struct Engine {
         const int bins = FFTN / 2;
         double hz = sr / FFTN, nn = (double)FFTN * FFTN;
         auto pw = [&](int i) { i = std::max(1, std::min(bins - 1, i)); return ((double)re[i] * re[i] + (double)im[i] * im[i]) / nn; };
-        static const double E[8][2] = {{35, 95}, {95, 250}, {250, 650}, {650, 1600}, {1600, 3800}, {3800, 8000}, {8000, 13000}, {13000, 19000}};
+        static const double E[8][2] = {{45, 105}, {105, 250}, {250, 650}, {650, 1600}, {1600, 3600}, {3600, 6000}, {6000, 8500}, {8500, 13000}};
         double acc[8];
         for (int b = 0; b < 8; b++) {
             double s = 0;
