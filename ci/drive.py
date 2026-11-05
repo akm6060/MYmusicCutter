@@ -175,6 +175,6 @@ for name in ["ytm4a.mp3", "ytwebm.mp3"]:
     n = ""
     for k in range(40):
         time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
-        if n and ("Saved" in n or "failed" in n or "None" in n): break
+        if n and ("parts" in n or "failed" in n or "None" in n): break
     say(name, "save:", n)
 say("saved files", adb("shell", "ls -lR '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'"))
