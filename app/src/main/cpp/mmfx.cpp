@@ -20,11 +20,13 @@
 
 namespace {
 
-constexpr int NPARAM = 32;
+constexpr int NPARAM = 56;
 // 0..7 bands, 8 bass, 9 clarity, 10 virtual, 11 hiss, 12 click, 13 hum, 14 rumble, 15 tube,
 // 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral,
 // 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D, 27 MP3 enhance, 28 Mach3 bass,
-// 29 equal-volume gain (dB), 30 headphone crossfeed, 31 exciter
+// 29 equal-volume gain (dB), 30 headphone crossfeed, 31 exciter,
+// 32 preamp (dB), 33 equalizer layout (8 / 10 / 20 bands), 34 bass-boost frequency (Hz, 0 = 100),
+// 35..54 band gains of the 10- and 20-band layouts
 std::atomic<float> gParam[NPARAM];
 std::atomic<int> gAnalyse{0};
 
@@ -135,6 +137,7 @@ struct Engine {
     bool fresh = true;
 
     Biquad rumble, hum, bass, bands[8], clarity, hiss;
+    Biquad eqx[20]; int eqMode = 8, eqN = 0;   // 10- or 20-band layout (the 8-band one uses bands[])
     // click repair (port of the web worklet)
     struct DC { std::vector<float> buf; std::vector<uint8_t> bad; float m = 1e-4f, x1 = 0, x2 = 0; int hold = 0; } dc[2];
     int64_t dcW = 0;
@@ -227,6 +230,7 @@ struct Engine {
                          &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub, &xfLp, &exHp, &exHp2, &exLp, &exOut, &exOut2};
         for (auto *b : all) b->reset();
         for (auto &b : bands) b.reset();
+        for (auto &b : eqx) b.reset();
         for (auto &d : dc) { std::fill(d.buf.begin(), d.buf.end(), 0.f); std::fill(d.bad.begin(), d.bad.end(), 0); d.x1 = d.x2 = 0; d.hold = 0; }
         vxL.clear(); vxR.clear(); vxSide.clear();
         for (auto &c : cbL) { std::fill(c.b.begin(), c.b.end(), 0.f); c.store = 0; }
@@ -245,9 +249,27 @@ struct Engine {
     void design() {
         rumble.highpass(sr, 20 + S[14] * 1.25, 0.707);
         hum.peaking(sr, 50, 5, -0.24 * S[13]);
-        bass.lowshelf(sr, 100, S[8]);
+        bass.lowshelf(sr, S[34] > 1 ? S[34] : 100, S[8]);
         static const double F[8] = {70, 150, 400, 1000, 2400, 5000, 7000, 10000};
         for (int i = 0; i < 8; i++) bands[i].peaking(sr, F[i], 0.9, S[i]);
+        {
+            int m = (int)std::lround(S[33]);
+            eqMode = (m == 10 || m == 20) ? m : 8;
+            static const double F10[10] = {60, 100, 240, 500, 1000, 1800, 3400, 5700, 9000, 13000};
+            static const double F20[20] = {40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 300, 500,
+                                           1000, 2000, 3000, 4000, 6000, 8000, 10000, 13000};
+            if (eqMode == 10) {
+                eqN = 10;
+                for (int i = 0; i < 10; i++) eqx[i].peaking(sr, F10[i], 1.0, S[35 + i]);       // soft, wide
+            } else if (eqMode == 20) {
+                eqN = 20;
+                for (int i = 0; i < 20; i++) {                                                   // sharp: width set
+                    double lo = i > 0 ? F20[i - 1] : F20[0] * 0.67, hi = i < 19 ? F20[i + 1] : F20[19] * 1.4;   // by the
+                    double q = F20[i] / ((hi - lo) / 2);                                         // neighbours, so
+                    eqx[i].peaking(sr, F20[i], std::max(1.4, std::min(16.0, q * 2.0)), S[35 + i]);      // they barely overlap
+                }
+            } else eqN = 0;
+        }
         clarity.peaking(sr, 8000, 1, S[9]);
         hiss.highshelf(sr, 8000, -0.15 * S[11]);
         double w = (S[16] - 50) / 50.0, dr = S[15];
@@ -378,8 +400,9 @@ struct Engine {
             }
             if (!neutral) {
                 bool changed = false;
+                if (S[33] != P[33]) { S[33] = P[33]; changed = true; }
                 for (int i = 0; i < NPARAM; i++) {
-                    if (i == 21 || i == 22) continue;
+                    if (i == 21 || i == 22 || i == 33) continue;
                     S[i] += (P[i] - S[i]) * smoothK;
                     if (std::fabs(S[i] - P[i]) < 1e-3f) S[i] = P[i];
                     if (std::fabs(S[i] - C[i]) > 1e-3f) changed = true;
@@ -456,10 +479,14 @@ struct Engine {
         // tone filters
         for (int c = 0; c < 2; c++) {
             float *x = ch[c];
+            const bool pre = std::fabs(S[32]) > 0.01f;
+            const float preG = pre ? (float)dbToGain(S[32]) : 1.f;
             for (int j = 0; j < n; j++) {
-                float v = rumble.run(x[j], c);
+                float v = pre ? x[j] * preG : x[j];
+                v = rumble.run(v, c);
                 v = hum.run(v, c); v = bass.run(v, c);
-                for (auto &b : bands) v = b.run(v, c);
+                if (eqN == 0) { for (auto &b : bands) v = b.run(v, c); }
+                else { for (int b = 0; b < eqN; b++) v = eqx[b].run(v, c); }
                 v = clarity.run(v, c); v = hiss.run(v, c);
                 x[j] = v;
             }

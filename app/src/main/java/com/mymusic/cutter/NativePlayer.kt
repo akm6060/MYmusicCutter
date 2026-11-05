@@ -644,7 +644,7 @@ class NativePlayer(
     @JavascriptInterface
     fun setSound(json: String) {
         val o = try { JSONObject(json) } catch (_: Exception) { return }
-        val p = FloatArray(32)
+        val p = FloatArray(56)
         val bands = o.optJSONArray("bands")
         for (i in 0 until 8) p[i] = (bands?.optDouble(i, 0.0) ?: 0.0).toFloat()
         val keys = arrayOf("bass", "clarity", "virtual", "hiss", "click", "hum", "rumble", "tube")
@@ -665,6 +665,12 @@ class NativePlayer(
         p[29] = o.optDouble("vmGain", 0.0).toFloat().coerceIn(-15f, 12f)   // equal volume (dB)
         p[30] = o.optDouble("xfeed", 0.0).toFloat()  // headphone crossfeed
         p[31] = o.optDouble("exciter", 0.0).toFloat() // exciter
+        p[32] = o.optDouble("preamp", 0.0).toFloat().coerceIn(-20f, 20f)
+        val mode = o.optInt("eqMode", 8)
+        p[33] = (if (mode == 10 || mode == 20) mode else 8).toFloat()
+        p[34] = o.optDouble("bassHz", 100.0).toFloat()
+        val xb = if (mode == 10) o.optJSONArray("b10") else if (mode == 20) o.optJSONArray("b20") else null
+        if (xb != null) for (i in 0 until minOf(20, xb.length())) p[35 + i] = xb.optDouble(i, 0.0).toFloat().coerceIn(-20f, 20f)
         p[15] = 0f; p[16] = 50f                      // tube amplifier: removed in 4.9
         FxNative.setParams(p)
     }
