@@ -151,6 +151,22 @@ object Mp3Tool {
      * Without ranges: keeps everything (joining); every input must have the same MPEG version,
      * layer and sample rate. The ID3 tag and the Xing/Info header of the first input are kept.
      */
+    /**
+     * The stream is positioned just after the 4 header bytes of [h]. Reads ahead to the header of the
+     * frame that follows, to confirm [h] is real audio and not stray bytes. The caller resets the stream.
+     */
+    private fun nextHeaderMatches(input: java.io.BufferedInputStream, h: Mp3Header): Boolean {
+        var left = (h.frameLength - 4).toLong()
+        while (left > 0) { val k = input.skip(left); if (k <= 0) break; left -= k }
+        val nh = ByteArray(4)
+        var got = 0
+        while (got < 4) { val r = input.read(nh, got, 4 - got); if (r < 0) break; got += r }
+        if (left > 0) return false
+        if (got < 4) return true   // last frame of the file
+        val n = Mp3Header.parse(nh, 0) ?: return false
+        return n.version == h.version && n.layer == h.layer && n.sampleRate == h.sampleRate
+    }
+
     fun copy(
         inputs: List<() -> InputStream>, out: OutputStream, ranges: List<LongArray>?,
         totalBytes: Long, progress: (Double) -> Unit
@@ -164,6 +180,9 @@ object Mp3Tool {
         val stopAt = Ranges.lastEnd(ranges)
         val hdr = ByteArray(4)
         val frame = ByteArray(8192)
+        var pendingXing: ByteArray? = null
+        var pendingOff = 0
+        var pendingHdr: Mp3Header? = null
         for ((fileIndex, open) in inputs.withIndex()) {
             var framesThisFile = 0
             open().use { raw ->
@@ -195,11 +214,21 @@ object Mp3Tool {
                 var junk = 0L
                 var firstFrame = true
                 while (true) {
-                    input.mark(8)
+                    input.mark(16384)   // room to look one frame ahead (frames are at most ~2.9 KB)
                     if (readFullyIn(input, hdr, 0, 4) < 4) break
                     val h = Mp3Header.parse(hdr, 0)
-                    val ok = h != null && (lockVersion < 0 ||
+                    var ok = h != null && (lockVersion < 0 ||
                         (h.version == lockVersion && h.layer == lockLayer && h.sampleRate == lockRate))
+                    if (h != null && !ok && ranges != null) {
+                        // Albums are often several MP3s joined end to end with different sample rates.
+                        // When cutting, follow the new format if the frame after this one confirms it.
+                        val good = nextHeaderMatches(input, h)   // reads ahead
+                        input.reset()                              // back to this frame's header
+                        if (good && readFullyIn(input, hdr, 0, 4) == 4) {
+                            lockVersion = h.version; lockLayer = h.layer; lockRate = h.sampleRate
+                            ok = true
+                        }
+                    }
                     if (h == null || !ok) {
                         input.reset()
                         if (input.skip(1) < 1) break
@@ -221,11 +250,9 @@ object Mp3Tool {
                         val tagName = if (4 + side + 8 <= h.frameLength) String(frame, 4 + side, 4, Charsets.ISO_8859_1) else ""
                         if (tagName == "Xing" || tagName == "Info") {
                             if (fileIndex == 0) {
-                                res.xing = frame.copyOf(h.frameLength)
-                                res.tagOffset = 4 + side
-                                res.xingPos = written
-                                out.write(frame, 0, h.frameLength)
-                                written += h.frameLength
+                                // written just before the first kept frame, and only if that frame has
+                                // the same format (a part from a later song of a joined album may not)
+                                pendingXing = frame.copyOf(h.frameLength); pendingOff = 4 + side; pendingHdr = h
                             }
                             continue
                         }
@@ -239,6 +266,15 @@ object Mp3Tool {
                     timeUs = end
                     if (ranges != null && start >= stopAt) break
                     if (Ranges.keeps(ranges, start, end)) {
+                        val px = pendingXing
+                        if (px != null) {
+                            val ph = pendingHdr!!
+                            if (ph.version == h.version && ph.layer == h.layer && ph.sampleRate == h.sampleRate) {
+                                res.xing = px; res.tagOffset = pendingOff; res.xingPos = written
+                                out.write(px, 0, px.size); written += px.size
+                            }
+                            pendingXing = null
+                        }
                         if (res.kept == res.offsets.size) res.offsets = res.offsets.copyOf(res.offsets.size * 2)
                         res.offsets[res.kept] = res.audioBytes
                         out.write(frame, 0, h.frameLength)
