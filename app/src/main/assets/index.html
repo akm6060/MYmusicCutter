@@ -2329,7 +2329,7 @@ html.light .lock-grip{border-color:#1b1838}
   }
   function eqChanged(){
     if(!eqEngage())return;eqApply();
-    eqStatus(eqIsNeutral()?'All settings neutral: sound is untouched.':(eqState.click>0&&A.workletFailed?'Click repair is not supported on this device; other settings are active.':'Settings applied.'));
+    eqStatus(eqIsNeutral()?'All settings neutral: sound is untouched.':(eqState.click>0&&A&&A.workletFailed?'Click repair is not supported on this device; other settings are active.':'Settings applied.'));
   }
 
   // ---- analog faders for the 8 bands (the real slider stays underneath for the settings code)
@@ -2493,15 +2493,15 @@ html.light .lock-grip{border-color:#1b1838}
     var floorDb=d.minBlk>0&&d.pow>0?20*Math.log10(d.minBlk)-10*Math.log10(d.pow/n):-30;
     var lowDev=meanDev(45,90),hfEx=cutoff>9000?meanDev(8000,Math.min(13000,cutoff)):0,pres=meanDev(2800,6000),dull=meanDev(6000,Math.min(10000,cutoff));
     // ---- graphic EQ (both levels): half of the deviation, no boost where the file has nothing (above the cut-off)
-    var F=s.eqMode===20?EQ_F20:EQ_F10,key=s.eqMode===20?'b20':'b10';
-    s[key]=F.map(function(f){var dv=devAt(f);if(f<40||dv<-18)return 0;var g=-dv*0.5;if(s.eqMode===20&&f<=220)g*=0.8;
-      g=Math.max(-6,Math.min(f>=5000?4:6,g));if(f>cutoff*0.9)g=Math.min(g,0);return Math.round(g)});
-    if(s.eqMode===20)s.b10=s.b10.map(function(){return 0});else s.b20=s.b20.map(function(){return 0});
+    // both layouts are filled, so switching between 10 and 20 bands keeps the enhanced sound
+    function eqFor(F,twenty){return F.map(function(f){var dv=devAt(f);if(f<40||dv<-18)return 0;var g=-dv*0.5;if(twenty&&f<=220)g*=0.8;
+      g=Math.max(-6,Math.min(f>=5000?4:6,g));if(f>cutoff*0.9)g=Math.min(g,0);return Math.round(g)})}
+    s.b10=eqFor(EQ_F10,false);s.b20=eqFor(EQ_F20,true);
     s.bands=[0,0,0,0,0,0,0,0];
     // ---- tone & repair
     s.bass=0;s.bassHz=100;
     if(lowDev<-4&&meanDev(45,90)>-18){s.bass=Math.max(2,Math.min(6,Math.round(-lowDev*0.4)));s.bassHz=meanDev(40,60)<meanDev(80,120)-2?60:100;
-      s[key]=s[key].map(function(g,i){return F[i]<=110&&g>0?0:g});notes.push('thin bass lifted')}
+      s.b10=s.b10.map(function(g,i){return EQ_F10[i]<=110&&g>0?0:g});s.b20=s.b20.map(function(g,i){return EQ_F20[i]<=110&&g>0?0:g});notes.push('thin bass lifted')}
     s.clarity=0;
     s.virtual=mono?0:(audioMode?15:30);
     var humRatio=10*Math.log10((d.humOn+1e-20)/(d.humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);if(s.hum)notes.push('hum removed');
