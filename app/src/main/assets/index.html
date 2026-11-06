@@ -1560,6 +1560,7 @@ html.light .lock-grip{border-color:#1b1838}
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
       <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>slide the knob left or right</small></div>
       <div class="eq-mode" id="eqModeBtns"><span>Bands</span><button type="button" data-eqm="10">10 · soft</button><button type="button" data-eqm="20">20 · sharp</button></div>
+      <div class="eq-mode" id="eqTieBtns"><span>Sliders</span><button type="button" data-tie="0">Free</button><button type="button" data-tie="1">Rope · tied</button></div>
       <div class="audio-eq-adjustments eq-bands-h"><label class="eq-pre"><span>Preamp <output id="eqPreampOut">0 dB</output></span><input id="eqPreamp" type="range" min="-20" max="20" value="0" step="1"></label></div>
       <div class="audio-eq-adjustments eq-bands-h" id="audioEqBands10">
         <label><span>60 Hz <output>0 dB</output></span><input type="range" data-eq-b10="0" min="-20" max="20" value="0" step="1"></label>
@@ -2083,7 +2084,7 @@ html.light .lock-grip{border-color:#1b1838}
   var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
   var EQ_F10=[60,100,240,500,1000,1800,3400,5700,9000,13000],EQ_F20=[40,60,80,100,120,140,160,180,200,220,300,500,1000,2000,3000,4000,6000,8000,10000,13000];
   // old 8-band gains (or the auto enhancer's 8 analysis bands) spread onto the 10 bands by log-frequency
-  function eqMap8to10(b8){var F=EQ_FREQS;return EQ_F10.map(function(f){if(f<=F[0])return b8[0];if(f>=F[7])return b8[7];for(var i=0;i<7;i++)if(f<=F[i+1]){var t=Math.log(f/F[i])/Math.log(F[i+1]/F[i]);return Math.round(b8[i]+(b8[i+1]-b8[i])*t)}return 0})}
+  function eqMap8to10(b8,FT){var F=EQ_FREQS;return (FT||EQ_F10).map(function(f){if(f<=F[0])return b8[0];if(f>=F[7])return b8[7];for(var i=0;i<7;i++)if(f<=F[i+1]){var t=Math.log(f/F[i])/Math.log(F[i+1]/F[i]);return Math.round(b8[i]+(b8[i+1]-b8[i])*t)}return 0})}
   function eqActiveBands(s){return s.eqMode===20?s.b20:s.b10}
   function stateNeutral(s){return eqActiveBands(s).every(function(v){return v===0})&&!s.preamp&&!s.bass&&!s.clarity&&!s.virtual&&!s.hiss&&!s.click&&!s.hum&&!s.rumble&&!s.tube&&!s.dialog&&s.width===100&&!s.bassx&&!s.level&&!s.tapenr&&!s.bdec&&!s.bbe&&!s.hfr&&!s.mach3&&!s.exciter&&!s.xfeed}
   function eqIsNeutral(){return stateNeutral(eqState)}
@@ -2364,7 +2365,20 @@ html.light .lock-grip{border-color:#1b1838}
     glitch.t=now;glitch.c=ct;
   },1000);
   el('audioEqLimiter').addEventListener('click',function(){eqLimiter=!eqLimiter;eqRefreshUi();eqApply();eqStatus(eqLimiter?'Limiter on: loud peaks cannot distort.':'Limiter off.')});
-  [['data-eq-b10','b10'],['data-eq-b20','b20']].forEach(function(q){document.querySelectorAll('['+q[0]+']').forEach(function(input){input.addEventListener('input',function(){eqState[q[1]][+input.getAttribute(q[0])]=+input.value;eqRefreshUi();eqChanged()})})});
+  var eqTie=false;try{eqTie=localStorage.getItem('mmEqTie')==='1'}catch(e){}
+  var ropeSnap=null;
+  function tieUi(){document.querySelectorAll('#eqTieBtns [data-tie]').forEach(function(b){b.setAttribute('aria-pressed',(b.getAttribute('data-tie')==='1')===eqTie?'true':'false')})}
+  document.querySelectorAll('#eqTieBtns [data-tie]').forEach(function(b){b.addEventListener('click',function(){eqTie=b.getAttribute('data-tie')==='1';try{localStorage.setItem('mmEqTie',eqTie?'1':'0')}catch(e){}tieUi();eqStatus(eqTie?'Rope: moving a band also moves its neighbours, less and less the farther they are.':'Free: each band moves on its own.')})});
+  tieUi();
+  [['data-eq-b10','b10',0.5],['data-eq-b20','b20',0.6]].forEach(function(q){document.querySelectorAll('['+q[0]+']').forEach(function(input){
+    function endDrag(){ropeSnap=null}
+    input.addEventListener('pointerdown',endDrag);input.addEventListener('change',endDrag);
+    input.addEventListener('input',function(){var i=+input.getAttribute(q[0]),v=+input.value,arr=eqState[q[1]];
+      if(!eqTie){arr[i]=v}
+      else{if(!ropeSnap||ropeSnap.k!==q[1]||ropeSnap.i!==i)ropeSnap={k:q[1],i:i,base:arr.slice()};
+        var d=v-ropeSnap.base[i];
+        for(var j=0;j<arr.length;j++){var w=Math.pow(q[2],Math.abs(j-i));arr[j]=j===i?v:Math.max(-20,Math.min(20,Math.round(ropeSnap.base[j]+d*w)))}}
+      eqRefreshUi();eqChanged()})})});
   el('eqPreamp').addEventListener('input',function(){eqState.preamp=+el('eqPreamp').value;eqRefreshUi();eqChanged()});
   document.querySelectorAll('#eqModeBtns [data-eqm]').forEach(function(b){b.addEventListener('click',function(){eqState.eqMode=+b.getAttribute('data-eqm');eqRefreshUi();eqChanged()})});
   document.querySelectorAll('#bassHzBtns [data-bhz]').forEach(function(b){b.addEventListener('click',function(){eqState.bassHz=+b.getAttribute('data-bhz');eqRefreshUi();eqChanged()})});
@@ -2393,7 +2407,8 @@ html.light .lock-grip{border-color:#1b1838}
       var ref=(dens[2]+dens[3]+dens[4])/3,target=[2,1,0,0,-1,-3,-6,-10];
       var s=eqCopy(eqBeforeAuto);
       var a8=dens.map(function(d,i){var dev=d-ref-target[i];if(dev<-18)return 0;var cmax=i>=6?4:6;return Math.max(-6,Math.min(cmax,Math.round(-dev*0.5)))});
-      s.b10=eqMap8to10(a8);s.bands=[0,0,0,0,0,0,0,0];s.bass=0;s.clarity=0;s.eqMode=10;
+      if(s.eqMode===20)s.b20=eqMap8to10(a8,EQ_F20).map(function(v,i){return EQ_F20[i]<=220?Math.round(v*0.7):v});else{s.eqMode=10;s.b10=eqMap8to10(a8)}
+      s.bands=[0,0,0,0,0,0,0,0];s.bass=0;s.clarity=0;
       var humRatio=10*Math.log10((humOn+1e-20)/(humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);
       s.rumble=10*Math.log10(sub/frames+1e-20)-db[0]>-4?35:10;
       var rmsDb=20*Math.log10(rmsAcc/frames+1e-9);s.level=rmsDb<-28?50:(rmsDb<-22?35:15);
