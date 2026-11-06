@@ -1448,26 +1448,20 @@ html.light .lock-grip{border-color:#1b1838}
 .eq-auto-pre input{opacity:.55}
 .audio-eq-auto.full{background:#ffb341!important;color:#241400!important;border-color:#ffb341!important}
 
-/* compact equalizer: one row per slider (name and value on the left, slider on the right) */
-.audio-eq-page .audio-eq-adjustments{gap:3px}
-.audio-eq-page .audio-eq-adjustments label{grid-template-columns:122px minmax(0,1fr);align-items:center;gap:0 8px;padding:1px 8px 1px 9px;border-radius:7px}
-.audio-eq-page .audio-eq-adjustments label span{flex-direction:column;justify-content:center;gap:0;font-size:11.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.audio-eq-page .audio-eq-adjustments label span output{font-size:11px}
-.audio-eq-page .audio-eq-adjustments label input{grid-column:auto;height:28px;margin:0}
-.audio-eq-page .eq-bands-h label{padding:1px 8px 1px 9px}
+/* equalizer head: one row of four buttons */
 .eq-head4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:6px 2px}
-.eq-head4 button{min-height:32px;border-radius:7px;border:1px solid #4a3d30;background:#1d1915;color:#efe0bd;font:700 11.5px/1 system-ui,sans-serif;padding:0 2px}
+.eq-head4 button{min-height:34px;border-radius:7px;border:1px solid #4a3d30;background:#1d1915;color:#efe0bd;font:700 12px/1 system-ui,sans-serif;padding:0 2px}
 .eq-head4 button[aria-pressed="true"]{background:#ffb341;border-color:#ffb341;color:#241400}
 .eq-save-box{display:flex;gap:5px;margin:0 2px 6px}
 .eq-save-box[hidden],.eq-preset-list[hidden]{display:none}
-.eq-save-box input{flex:1;min-width:0;height:34px;border-radius:7px;border:1px solid #ffb341;background:#120f0c;color:#fff;padding:0 9px;font:600 14px system-ui,sans-serif}
-.eq-save-box button{min-width:52px;border-radius:7px;border:1px solid #4a3d30;background:#ffb341;color:#241400;font:800 12px system-ui,sans-serif}
-.eq-save-box #eqSaveNo{background:#1d1915;color:#efe0bd;min-width:38px}
+.eq-save-box input{flex:1;min-width:0;height:36px;border-radius:7px;border:1px solid #ffb341;background:#120f0c;color:#fff;padding:0 9px;font:600 14px system-ui,sans-serif}
+.eq-save-box button{min-width:56px;border-radius:7px;border:1px solid #4a3d30;background:#ffb341;color:#241400;font:800 12.5px system-ui,sans-serif}
+.eq-save-box #eqSaveNo{background:#1d1915;color:#efe0bd;min-width:40px}
 .eq-preset-list{margin:0 2px 6px;max-height:46vh;overflow:auto;border:1px solid #ffb341;border-radius:8px;background:#120f0c}
 .eq-preset-row{display:flex;border-bottom:1px solid #2c251e}
-.eq-preset-go{flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;background:none;border:0;color:#efe0bd;padding:9px 10px;font:600 13px system-ui,sans-serif}
+.eq-preset-go{flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;background:none;border:0;color:#efe0bd;padding:10px;font:600 13.5px system-ui,sans-serif}
 .eq-preset-go small{color:#9a8b74;font-size:10.5px;white-space:nowrap}
-.eq-preset-del{background:none;border:0;border-left:1px solid #2c251e;color:#ff8a6a;min-width:52px;font:700 12px system-ui,sans-serif}
+.eq-preset-del{background:none;border:0;border-left:1px solid #2c251e;color:#ff8a6a;min-width:54px;font:700 12px system-ui,sans-serif}
 .eq-preset-empty{margin:0;padding:12px;color:#cdbb9a;font-size:12.5px}
 </style>
 
@@ -1646,8 +1640,8 @@ html.light .lock-grip{border-color:#1b1838}
       </div></div>
       <h4 class="afx-h">Tone &amp; repair</h4>
       <div class="audio-eq-adjustments">
-        <label><span>Bass boost <output id="eqBassOut">0 dB</output></span><input id="eqBass" type="range" min="0" max="15" value="0" step="1"></label>
-        <div class="bass-hz" id="bassHzBtns"><span>Bass boost below</span><button type="button" data-bhz="40">40</button><button type="button" data-bhz="60">60</button><button type="button" data-bhz="80">80</button><button type="button" data-bhz="100">100</button><button type="button" data-bhz="150">150</button><span>Hz</span></div>
+        <label><span>Bass boost <output id="eqBassOut">0 dB</output></span><input id="eqBass" type="range" min="0" max="20" value="0" step="1"></label>
+        <div class="bass-hz" id="bassHzBtns"><span>Bass Hz</span><button type="button" data-bhz="80">80</button><button type="button" data-bhz="100">100</button><button type="button" data-bhz="130">130</button><button type="button" data-bhz="160">160</button><button type="button" data-bhz="190">190</button><button type="button" data-bhz="220">220</button></div>
         <label><span>Clarity (8 kHz) <output id="eqClarityOut">0 dB</output></span><input id="eqClarity" type="range" min="-15" max="15" value="0" step="1"></label>
         <label><span>Virtualizer – surround <output id="eqVirtualOut">0%</output></span><input id="eqVirtual" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>Click &amp; pop repair <output id="eqClickOut">0%</output></span><input id="eqClick" type="range" min="0" max="100" value="0" step="5"></label>
@@ -2128,7 +2122,7 @@ html.light .lock-grip{border-color:#1b1838}
   var EQ_FREQS=[70,150,400,1000,2400,5000,7000,10000];
   var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3','exciter','xfeed','preamp','bassHz','eqMode'];
   function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,exciter:0,xfeed:0,preamp:0,bassHz:100,eqMode:10,b10:[0,0,0,0,0,0,0,0,0,0],b20:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],mode:'off'}}
-  function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;['b10','b20'].forEach(function(k){if(Array.isArray(s[k])&&s[k].length===o[k].length)o[k]=s[k].map(function(v){v=+v;return isFinite(v)?Math.max(-20,Math.min(20,Math.round(v))):0})});if(s.eqMode!==10&&s.eqMode!==20){if(o.bands.some(function(v){return v!==0}))o.b10=eqMap8to10(o.bands);o.eqMode=10}o.bands=[0,0,0,0,0,0,0,0];o.preamp=Math.max(-20,Math.min(20,o.preamp||0));if([40,60,80,100,150].indexOf(o.bassHz)<0)o.bassHz=100;return o}
+  function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;['b10','b20'].forEach(function(k){if(Array.isArray(s[k])&&s[k].length===o[k].length)o[k]=s[k].map(function(v){v=+v;return isFinite(v)?Math.max(-20,Math.min(20,Math.round(v))):0})});if(s.eqMode!==10&&s.eqMode!==20){if(o.bands.some(function(v){return v!==0}))o.b10=eqMap8to10(o.bands);o.eqMode=10}o.bands=[0,0,0,0,0,0,0,0];o.preamp=Math.max(-20,Math.min(20,o.preamp||0));if(o.bassHz===40||o.bassHz===60)o.bassHz=80;else if(o.bassHz===150)o.bassHz=160;if([80,100,130,160,190,220].indexOf(o.bassHz)<0)o.bassHz=100;o.bass=Math.max(0,Math.min(20,o.bass||0));return o}
   var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqHeadroom=true,eqAutoLevel=0,eqBeforeAuto=null,eqAnalysing=false,A=null;
   var EQ_F10=[60,100,240,500,1000,1800,3400,5700,9000,13000],EQ_F20=[40,60,80,100,120,140,160,180,200,220,300,500,1000,2000,3000,4000,6000,8000,10000,13000];
   // old 8-band gains (or the auto enhancer's 8 analysis bands) spread onto the 10 bands by log-frequency
@@ -2413,7 +2407,7 @@ html.light .lock-grip{border-color:#1b1838}
       if(glitch.n>=2){eqLite=true;glitch.n=0;eqRefreshUi();A.topo='';eqApply();eqStatus('Sound was breaking up, so Smooth mode was switched on (lighter processing). You can switch it off above.')}}
     glitch.t=now;glitch.c=ct;
   },1000);
-  el('audioEqHeadroom').addEventListener('click',function(){eqHeadroom=!eqHeadroom;eqRefreshUi();eqApply();eqStatus(eqHeadroom?'Auto headroom on: the Preamp slider now lowers itself by as much as your settings raise the peaks, so the limiter does not pump. Turn the phone volume up a little if needed.':'Auto headroom off: Preamp stays at '+eqState.preamp+' dB (no sudden jump) and is yours to set again.')});
+  el('audioEqHeadroom').addEventListener('click',function(){eqHeadroom=!eqHeadroom;eqRefreshUi();eqApply();eqStatus(eqHeadroom?'Auto headroom on: the Preamp slider now lowers itself by as much as your settings raise the peaks, so the limiter does not pump. Turn the phone volume up a little if needed.':'Auto headroom off: Preamp stays where it is, and is yours to set again.')});
   // level bar: loudness reaching the limiter (green / yellow near full scale / red over it), the limiter's cut
   // as a blue strip from the top end, and the headroom left. Auto headroom also moves the Preamp slider.
   var LV_LO=-40,LV_HI=6,lvShow=-90,lvHold=-90,lvHoldAt=0,lvGr=0,lvLast=0,lvSlow=0;
@@ -2443,7 +2437,8 @@ html.light .lock-grip{border-color:#1b1838}
   function tieUi(){var b=el('eqTieBtn');b.textContent=eqTie?'Tied':'Free';b.setAttribute('aria-pressed',eqTie?'true':'false')}
   el('eqTieBtn').addEventListener('click',function(){eqTie=!eqTie;try{localStorage.setItem('mmEqTie',eqTie?'1':'0')}catch(e){}tieUi();eqStatus(eqTie?'Tied: moving a band also moves its neighbours, less and less the farther they are.':'Free: each band moves on its own.')});
   tieUi();
-  [['data-eq-b10','b10',0.5],['data-eq-b20','b20',0.6]].forEach(function(q){document.querySelectorAll('['+q[0]+']').forEach(function(input){
+  [['data-eq-b10','b10',0.5],['data-eq-b20','b20',0.6]].forEach(function(q){
+    /* sliders moved by hand: the memo check above compares values, so nothing else is needed */document.querySelectorAll('['+q[0]+']').forEach(function(input){
     function endDrag(){ropeSnap=null}
     input.addEventListener('pointerdown',endDrag);input.addEventListener('change',endDrag);
     input.addEventListener('input',function(){var i=+input.getAttribute(q[0]),v=+input.value,arr=eqState[q[1]];
@@ -2453,7 +2448,37 @@ html.light .lock-grip{border-color:#1b1838}
         for(var j=0;j<arr.length;j++){var w=Math.pow(q[2],Math.abs(j-i));arr[j]=j===i?v:Math.max(-20,Math.min(20,Math.round(ropeSnap.base[j]+d*w)))}}
       eqRefreshUi();eqChanged()})})});
   el('eqPreamp').addEventListener('input',function(){eqState.preamp=+el('eqPreamp').value;eqRefreshUi();eqChanged()});
-  el('eqLayoutBtn').addEventListener('click',function(){eqState.eqMode=eqState.eqMode===20?10:20;eqRefreshUi();eqChanged()});
+  // 10 <-> 20 bands: the other layout's sliders are set to give the same sound (fitted to the engine's own filters)
+  function pkDb(f,fc,q,g){if(!g)return 0;var sr=48000,A=Math.pow(10,g/40),w0=2*Math.PI*fc/sr,al=Math.sin(w0)/(2*q),cs=Math.cos(w0);
+    var b0=1+al*A,b1=-2*cs,b2=1-al*A,a0=1+al/A,a1=-2*cs,a2=1-al/A,w=2*Math.PI*f/sr,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w);
+    var nr=b0+b1*c1+b2*c2,ni=-(b1*s1+b2*s2),dr=a0+a1*c1+a2*c2,di=-(a1*s1+a2*s2);return 10*Math.log10((nr*nr+ni*ni)/(dr*dr+di*di))}
+  function eqQs(twenty){return (twenty?EQ_F20:EQ_F10).map(function(f,i){if(!twenty)return 1.0;var F=EQ_F20,lo=i>0?F[i-1]:F[0]*0.67,hi=i<19?F[i+1]:F[19]*1.4;return Math.max(1.4,Math.min(16,f/((hi-lo)/2)*2))})}
+  var EQ_GRID=[];for(var gi=0;gi<72;gi++)EQ_GRID.push(32*Math.pow(16000/32,gi/71));
+  function eqCurve(g,twenty){var F=twenty?EQ_F20:EQ_F10,Q=eqQs(twenty);return EQ_GRID.map(function(f){var t=0;for(var i=0;i<F.length;i++)t+=pkDb(f,F[i],Q[i],g[i]);return t})}
+  function eqConvert(src,toTwenty){
+    var F=toTwenty?EQ_F20:EQ_F10,Q=eqQs(toTwenty),n=F.length,target=eqCurve(src,!toTwenty);
+    if(target.every(function(v){return Math.abs(v)<0.05}))return F.map(function(){return 0});
+    var SM=toTwenty?0.5:0;   // light smoothing keeps the 20 sliders tidy
+    var g=F.map(function(f){var k=0,best=1e9;EQ_GRID.forEach(function(x,j){var d=Math.abs(Math.log(x/f));if(d<best){best=d;k=j}});return target[k]});
+    var J=EQ_GRID.map(function(f){return F.map(function(fc,i){return pkDb(f,fc,Q[i],6)/6})});
+    for(var it=0;it<12;it++){
+      var cur=eqCurve(g,toTwenty),r=target.map(function(t,j){return t-cur[j]});
+      var M=[],v=[];for(var i=0;i<n;i++){M.push([]);var sv=0;for(var j=0;j<n;j++){var sm=0;for(var k=0;k<EQ_GRID.length;k++)sm+=J[k][i]*J[k][j];M[i].push(sm+(i===j?0.02:0)+SM*((i===j?(i>0)+(i<n-1):0)-(Math.abs(i-j)===1?1:0)))}for(var k2=0;k2<EQ_GRID.length;k2++)sv+=J[k2][i]*r[k2];v.push(sv-SM*((i>0?g[i]-g[i-1]:0)+(i<n-1?g[i]-g[i+1]:0)))}
+      for(var c=0;c<n;c++){var piv=c;for(var r2=c+1;r2<n;r2++)if(Math.abs(M[r2][c])>Math.abs(M[piv][c]))piv=r2;var tm=M[c];M[c]=M[piv];M[piv]=tm;var tv=v[c];v[c]=v[piv];v[piv]=tv;
+        for(var r3=c+1;r3<n;r3++){var fct=M[r3][c]/M[c][c];for(var c2=c;c2<n;c2++)M[r3][c2]-=fct*M[c][c2];v[r3]-=fct*v[c]}}
+      var d=new Array(n);for(var r4=n-1;r4>=0;r4--){var sm2=v[r4];for(var c3=r4+1;c3<n;c3++)sm2-=M[r4][c3]*d[c3];d[r4]=sm2/M[r4][r4]}
+      g=g.map(function(x,i){return Math.max(-20,Math.min(20,x+d[i]))});
+    }
+    return g.map(function(x){return Math.round(x)});
+  }
+  var eqConvMemo=null;
+  el('eqLayoutBtn').addEventListener('click',function(){
+    var toTwenty=eqState.eqMode!==20,src=toTwenty?eqState.b10:eqState.b20,dstKey=toTwenty?'b20':'b10';
+    // going straight back without touching the sliders returns the exact original positions
+    if(eqConvMemo&&eqConvMemo.toTwenty!==toTwenty&&JSON.stringify(eqConvMemo.dst)===JSON.stringify(src))eqState[dstKey]=eqConvMemo.src.slice();
+    else{eqState[dstKey]=eqConvert(src,toTwenty);eqConvMemo={toTwenty:toTwenty,src:src.slice(),dst:eqState[dstKey].slice()}}
+    eqState.eqMode=toTwenty?20:10;eqRefreshUi();eqChanged();
+    eqStatus((toTwenty?'20 bands':'10 bands')+': sliders set to give the same sound as before.')});
   // ---- presets: everything that shapes the sound, saved under a name; newest first
   var PRESET_KEY='mmSoundPresets_v1';
   function presetsGet(){try{var a=JSON.parse(localStorage.getItem(PRESET_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
@@ -2464,14 +2489,14 @@ html.light .lock-grip{border-color:#1b1838}
   el('eqSaveNo').addEventListener('click',closePresetUi);
   function doSave(){var name=el('eqSaveName').value.trim();if(!name){el('eqSaveName').focus();return}
     var a=presetsGet().filter(function(p){return p.name.toLowerCase()!==name.toLowerCase()});
-    a.unshift({name:name,at:Date.now(),eq:eqCopy(eqState),lim:eqLimiter,hr:eqHeadroom,lite:eqLite,vm:typeof vmOn!=='undefined'&&vmOn,auto:eqAutoLevel});
+    a.unshift({name:name,at:Date.now(),eq:eqCopy(eqState),lim:eqLimiter,hr:eqHeadroom,lite:eqLite,vm:typeof vmOn!=='undefined'&&vmOn,auto:eqAutoLevel,before:eqBeforeAuto?eqCopy(eqBeforeAuto):null});
     presetsPut(a);closePresetUi();try{el('eqSaveName').blur()}catch(e){}eqStatus('Saved preset “'+name+'”.')}
   el('eqSaveOk').addEventListener('click',doSave);
   el('eqSaveName').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSave()}});
   el('eqPresetBtn').addEventListener('click',function(){var box=el('eqPresetList'),open=box.hidden;closePresetUi();if(!open)return;
     var a=presetsGet();box.innerHTML='';
     if(!a.length){box.innerHTML='<p class="eq-preset-empty">No presets yet. Set the sound, then tap 💾 Save.</p>'}
-    a.forEach(function(p,i){var row=document.createElement('div');row.className='eq-preset-row';
+    a.forEach(function(p){var row=document.createElement('div');row.className='eq-preset-row';
       var go=document.createElement('button');go.type='button';go.className='eq-preset-go';
       var d=new Date(p.at);go.innerHTML='<b></b><small></small>';go.firstChild.textContent=p.name;go.lastChild.textContent=d.toLocaleDateString()+' '+d.toTimeString().slice(0,5);
       go.addEventListener('click',function(){applyPreset(p)});
@@ -2481,7 +2506,7 @@ html.light .lock-grip{border-color:#1b1838}
       row.appendChild(go);row.appendChild(del);box.appendChild(row)});
     box.hidden=false;el('eqPresetBtn').setAttribute('aria-pressed','true')});
   function applyPreset(p){
-    eqState=eqCopy(p.eq||{});eqLimiter=p.lim!==false;eqHeadroom=p.hr!==false;eqLite=!!p.lite;eqAutoLevel=[0,1,2].indexOf(p.auto)>=0?p.auto:0;eqBeforeAuto=null;
+    eqState=eqCopy(p.eq||{});eqLimiter=p.lim!==false;eqHeadroom=p.hr!==false;eqLite=!!p.lite;eqAutoLevel=[0,1,2].indexOf(p.auto)>=0?p.auto:0;eqBeforeAuto=eqAutoLevel&&p.before?eqCopy(p.before):null;eqConvMemo=null;
     if(window.__vmSet)window.__vmSet(!!p.vm);
     closePresetUi();if(A)A.topo='';eqRefreshUi();eqChanged();eqStatus('Preset “'+p.name+'” applied.')}
   document.querySelectorAll('#bassHzBtns [data-bhz]').forEach(function(b){b.addEventListener('click',function(){eqState.bassHz=+b.getAttribute('data-bhz');eqRefreshUi();eqChanged()})});
@@ -2546,15 +2571,15 @@ html.light .lock-grip{border-color:#1b1838}
     var floorDb=d.minBlk>0&&d.pow>0?20*Math.log10(d.minBlk)-10*Math.log10(d.pow/n):-30;
     var lowDev=meanDev(45,90),hfEx=cutoff>9000?meanDev(8000,Math.min(13000,cutoff)):0,pres=meanDev(2800,6000),dull=meanDev(6000,Math.min(10000,cutoff));
     // ---- graphic EQ (both levels): half of the deviation, no boost where the file has nothing (above the cut-off)
-    // both layouts are filled, so switching between 10 and 20 bands keeps the enhanced sound
-    function eqFor(F,twenty){return F.map(function(f){var dv=devAt(f);if(f<40||dv<-18)return 0;var g=-dv*0.5;if(twenty&&f<=220)g*=0.8;
-      g=Math.max(-6,Math.min(f>=5000?4:6,g));if(f>cutoff*0.9)g=Math.min(g,0);return Math.round(g)})}
-    s.b10=eqFor(EQ_F10,false);s.b20=eqFor(EQ_F20,true);
+    var F=s.eqMode===20?EQ_F20:EQ_F10,key=s.eqMode===20?'b20':'b10';
+    s[key]=F.map(function(f){var dv=devAt(f);if(f<40||dv<-18)return 0;var g=-dv*0.5;if(s.eqMode===20&&f<=220)g*=0.8;
+      g=Math.max(-6,Math.min(f>=5000?4:6,g));if(f>cutoff*0.9)g=Math.min(g,0);return Math.round(g)});
+    if(s.eqMode===20)s.b10=s.b10.map(function(){return 0});else s.b20=s.b20.map(function(){return 0});
     s.bands=[0,0,0,0,0,0,0,0];
     // ---- tone & repair
     s.bass=0;s.bassHz=100;
-    if(lowDev<-4&&meanDev(45,90)>-18){s.bass=Math.max(2,Math.min(6,Math.round(-lowDev*0.4)));s.bassHz=meanDev(40,60)<meanDev(80,120)-2?60:100;
-      s.b10=s.b10.map(function(g,i){return EQ_F10[i]<=110&&g>0?0:g});s.b20=s.b20.map(function(g,i){return EQ_F20[i]<=110&&g>0?0:g});notes.push('thin bass lifted')}
+    if(lowDev<-4&&meanDev(45,90)>-18){s.bass=Math.max(2,Math.min(6,Math.round(-lowDev*0.4)));s.bassHz=meanDev(40,60)<meanDev(80,120)-2?80:100;
+      s[key]=s[key].map(function(g,i){return F[i]<=110&&g>0?0:g});notes.push('thin bass lifted')}
     s.clarity=0;
     s.virtual=mono?0:(audioMode?15:30);
     var humRatio=10*Math.log10((d.humOn+1e-20)/(d.humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);if(s.hum)notes.push('hum removed');
@@ -2582,7 +2607,7 @@ html.light .lock-grip{border-color:#1b1838}
   }
   el('audioEqAuto').addEventListener('click',function(){
     if(eqAnalysing)return;
-    if(eqAutoLevel===2){eqAutoLevel=0;eqBeforeAuto=null;eqRefreshUi();eqApply();eqStatus('Auto enhancer off: its settings stay, and you can change any of them by hand.');return}
+    if(eqAutoLevel===2){eqAutoLevel=0;if(eqBeforeAuto){eqState=eqBeforeAuto;eqBeforeAuto=null}eqRefreshUi();eqApply();eqStatus('Auto enhancer off: your previous settings are back.');return}
     if(!activeMedia||!activeMedia.src){eqStatus('Choose a music or video file first.');return}
     var next=eqAutoLevel+1,k=autoKey();
     function use(d){
@@ -2591,7 +2616,7 @@ html.light .lock-grip{border-color:#1b1838}
       var r=autoDesign(d,next,eqBeforeAuto);eqState=r.s;eqAutoLevel=next;if(A)A.topo='';eqRefreshUi();eqApply();
       eqStatus('Auto enhancer '+(next===2?'FULL (EQ, tone, studio effects and cinema)':'ON (EQ and tone & repair)')+': '+r.text+'. Tap again for '+(next===1?'FULL':'OFF')+'.');
     }
-    eqBeforeAuto=eqCopy(eqState);
+    if(eqAutoLevel===0)eqBeforeAuto=eqCopy(eqState);
     if(autoCache&&autoCache.k===k&&Date.now()-autoCache.at<15*60000){use(autoCache.d);return}
     if(activeMedia.paused){eqStatus('Start playback first, then tap Auto enhancer.');return}
     if(!eqEngage())return;
@@ -3424,7 +3449,6 @@ html.light .lock-grip{border-color:#1b1838}
     if(!g2.length)return null;return 10*Math.log10(g2.reduce(function(a,b){return a+b},0)/g2.length);
   }
   function vmUi(){var b=el('audioEqVm');if(!b)return;b.textContent='Equal volume: '+(vmOn?'ON':'OFF');b.classList.toggle('enabled',vmOn);b.setAttribute('aria-pressed',vmOn?'true':'false')}
-  window.__vmSet=function(on){vmOn=!!on;try{localStorage.setItem('mmVmOn',vmOn?'1':'0')}catch(e){}vmUi();vmForCurrent()};
   function vmForCurrent(){
     var k=curKey();if(!vmOn||!k){vmGain=0;eqApply();return}
     if(vmMap[k]!=null){vmGain=vmMap[k];eqApply();return}
@@ -3437,6 +3461,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(k){vmMap[k]=g;var ks=Object.keys(vmMap);if(ks.length>800)delete vmMap[ks[0]];try{localStorage.setItem(VM_KEY,JSON.stringify(vmMap))}catch(e){}}
     if(vmOn){vmGain=g;eqApply()}
   };
+  window.__vmSet=function(on){vmOn=!!on;try{localStorage.setItem('mmVmOn',vmOn?'1':'0')}catch(e){}vmUi();vmForCurrent()};
   el('audioEqVm').addEventListener('click',function(){vmOn=!vmOn;try{localStorage.setItem('mmVmOn',vmOn?'1':'0')}catch(e){}vmUi();vmForCurrent();
     eqStatus(vmOn?'Equal volume on: each song is measured once and played at the same loudness.':'Equal volume off.')});
   [video,audioMedia].forEach(function(m){m.addEventListener('loadedmetadata',function(){if(m===activeMedia)setTimeout(vmForCurrent,200)})});
