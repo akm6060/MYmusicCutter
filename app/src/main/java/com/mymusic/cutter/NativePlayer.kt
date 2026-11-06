@@ -257,12 +257,12 @@ class NativePlayer(
 
         override fun onPlayerError(error: PlaybackException) {
             // Was it the picture pipeline (brightness / sharpness / zoom)?
-            var fromEffects = false
-            var c: Throwable? = error
-            while (c != null && !fromEffects) { if (c.stackTrace.any { it.className.startsWith("androidx.media3.effect") }) fromEffects = true; c = c.cause }
+            val trace = try { Log.getStackTraceString(error) } catch (_: Throwable) { "" }
+            val fromEffects = trace.contains("androidx.media3.effect") || trace.contains("VideoFrameProcessing")
+            Log.i("MMP", "player error ${error.errorCodeName} effects=$effectsOn fromEffects=$fromEffects retries=$timeoutRetries")
             if ((error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED ||
                  error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
-                 (fromEffects && timeoutRetries >= 2)) && effectsOn) {
+                 (fromEffects && timeoutRetries >= 1)) && !effectsBroken) {
                 // Picture adjustments failed on this phone: play without them and use the simpler method.
                 effectsOn = false; effectsBroken = true
                 val pos = player.currentPosition
