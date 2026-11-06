@@ -1431,6 +1431,22 @@ html.light .lock-grip{border-color:#1b1838}
 .lim-meter.busy b{background:#ff7a3d}
 .lim-meter output{min-width:52px;text-align:right;color:#ffb341;font-family:ui-monospace,monospace}
 .lim-meter #hrOut{color:#9fb7c9;min-width:0}
+
+/* level bar */
+.lvl-meter{margin:4px 2px 8px}
+.lvl-meter[hidden]{display:none}
+.lvl-bar{position:relative;height:28px;border-radius:6px;background:#1c1813;border:1px solid #3d332a;overflow:hidden}
+.lvl-bar b{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#2f8f45,#5fd36f);transition:width .06s linear}
+.lvl-bar b.yellow{background:linear-gradient(90deg,#9a8a1f,#ffd84a)}
+.lvl-bar b.red{background:linear-gradient(90deg,#a3261d,#ff4a3a)}
+.lvl-bar s{position:absolute;right:0;top:0;bottom:0;width:0;background:linear-gradient(270deg,rgba(70,150,255,.75),rgba(70,150,255,.35));transition:width .08s linear}
+.lvl-bar em{position:absolute;top:0;bottom:0;left:86.96%;width:2px;background:#ffffffaa}
+.lvl-bar i{position:absolute;left:calc(86.96% - 30px);top:2px;font:700 9px/1 system-ui,sans-serif;color:#ffffffcc;font-style:normal}
+.lvl-txt{display:flex;justify-content:space-between;margin-top:4px;font:700 11.5px/1.2 system-ui,sans-serif;color:#9fd8a8}
+.lvl-txt .yellow{color:#ffd84a}.lvl-txt .red{color:#ff5a4a}
+.lvl-txt #lvlLimTxt{color:#7fb4ff}
+.eq-auto-pre input{opacity:.55}
+.audio-eq-auto.full{background:#ffb341!important;color:#241400!important;border-color:#ffb341!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1511,7 +1527,7 @@ html.light .lock-grip{border-color:#1b1838}
       <div class="cutter-note" id="cutterNote"></div>
     </section>
     <section class="media-list" id="mediaList" aria-label="Files">
-      <div class="ml-head ml-one"><label class="ml-all"><input type="checkbox" id="mlAll" aria-label="Select all"></label><b class="ml-ttl">List<span id="mlCount"></span></b><button type="button" id="mlAdd" aria-label="Add files and folders to the playlist">＋ Add</button><select id="mlSort" aria-label="Sort the playlist"><option value="">⇅ Sort</option><option value="added-asc">Added: oldest first</option><option value="added-desc">Added: newest first</option><option value="name-asc">Name A → Z</option><option value="name-desc">Name Z → A</option><optgroup label="Repeat"><option value="rep-off">No repeat</option><option value="rep-one">Repeat one</option><option value="rep-all">Repeat all</option></optgroup></select><button type="button" id="mlJoin">Join</button><button type="button" id="mlRemove">Remove</button><button type="button" id="mlEmpty">Empty</button></div>
+      <div class="ml-head ml-one"><label class="ml-all"><input type="checkbox" id="mlAll" aria-label="Select all"></label><b class="ml-ttl">List<span id="mlCount"></span></b><button type="button" id="mlAdd" aria-label="Add files and folders to the playlist">＋ Add</button><select id="mlSort" aria-label="Sort the playlist"><option value="">⇅ Sort</option><option value="added-asc">Added: oldest first</option><option value="added-desc">Added: newest first</option><option value="name-asc">Name A → Z</option><option value="name-desc">Name Z → A</option><optgroup label="Repeat"><option value="rep-off">No repeat</option><option value="rep-one">Repeat one</option><option value="rep-all">Repeat all</option></optgroup><optgroup label="Start"><option value="opt-resume">Resume last file &amp; position</option></optgroup></select><button type="button" id="mlJoin">Join</button><button type="button" id="mlRemove">Remove</button><button type="button" id="mlEmpty">Empty</button></div>
       <div class="ml-items" id="mlItems"></div>
     </section>
     <div class="video-seek"><span id="videoCurrent">00:00</span><input id="videoSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="Video position"><span id="videoDuration">00:00</span></div>
@@ -1564,8 +1580,8 @@ html.light .lock-grip{border-color:#1b1838}
   <section class="audio-eq-page" id="audioEqPage" aria-label="Audio Equalizer" aria-hidden="true">
     <header class="audio-eq-head"><button type="button" id="audioEqBack" aria-label="Back to cutter">‹</button><div><strong>Audio Equalizer</strong><small>Sound stays untouched until you change something</small></div><button type="button" id="audioEqReset">Reset</button></header>
     <div class="audio-eq-scroll">
-      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto enabled" id="audioEqHeadroom" aria-pressed="true">Auto headroom: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button><button type="button" class="audio-eq-auto" id="audioEqVm" aria-pressed="false">Equal volume: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqResume" aria-pressed="true">Resume: ON</button></div>
-      <div class="lim-meter" id="limMeter" hidden><span>Limiter cut</span><i><b id="limBar"></b></i><output id="limOut">0.0 dB</output><span id="hrOut"></span></div>
+      <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto enabled" id="audioEqHeadroom" aria-pressed="true">Auto headroom: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button><button type="button" class="audio-eq-auto" id="audioEqVm" aria-pressed="false">Equal volume: OFF</button></div>
+      <div class="lvl-meter" id="lvlMeter" hidden><div class="lvl-bar"><b id="lvlFill"></b><s id="lvlLim"></s><em></em><i>0 dB</i></div><div class="lvl-txt"><span id="lvlHead">Headroom —</span><span id="lvlLimTxt"></span></div></div>
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
       <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>slide the knob left or right</small></div>
       <div class="eq-mode" id="eqModeBtns"><span>Bands</span><button type="button" data-eqm="10">10 · soft</button><button type="button" data-eqm="20">20 · sharp</button></div>
@@ -1632,7 +1648,7 @@ html.light .lock-grip{border-color:#1b1838}
         <label><span>Dialogue enhancer <output id="eqDialogOut">0%</output></span><input id="eqDialog" type="range" min="0" max="100" value="0" step="5"></label>
         <label><span>Stereo width (100 = original) <output id="eqWidthOut">100%</output></span><input id="eqWidth" type="range" min="0" max="200" value="100" step="5"></label>
         <label><span>Bass enhancer (small speakers) <output id="eqBassxOut">0%</output></span><input id="eqBassx" type="range" min="0" max="100" value="0" step="5"></label>
-        <label><span>Volume leveler (night mode) <output id="eqLevelOut">0%</output></span><input id="eqLevel" type="range" min="0" max="100" value="0" step="5"></label>
+        <label><span>Audio compressor <output id="eqLevelOut">0%</output></span><input id="eqLevel" type="range" min="0" max="100" value="0" step="5"></label>
       </div>
       <p class="audio-eq-note">Virtualizer and cinema surround work best with headphones. Your settings are remembered for the next video or song.</p>
     </div>
@@ -2090,7 +2106,7 @@ html.light .lock-grip{border-color:#1b1838}
   var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3','exciter','xfeed','preamp','bassHz','eqMode'];
   function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,exciter:0,xfeed:0,preamp:0,bassHz:100,eqMode:10,b10:[0,0,0,0,0,0,0,0,0,0],b20:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],mode:'off'}}
   function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;['b10','b20'].forEach(function(k){if(Array.isArray(s[k])&&s[k].length===o[k].length)o[k]=s[k].map(function(v){v=+v;return isFinite(v)?Math.max(-20,Math.min(20,Math.round(v))):0})});if(s.eqMode!==10&&s.eqMode!==20){if(o.bands.some(function(v){return v!==0}))o.b10=eqMap8to10(o.bands);o.eqMode=10}o.bands=[0,0,0,0,0,0,0,0];o.preamp=Math.max(-20,Math.min(20,o.preamp||0));if([40,60,80,100,150].indexOf(o.bassHz)<0)o.bassHz=100;return o}
-  var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqHeadroom=true,eqAutoEnabled=false,eqBeforeAuto=null,eqAnalysing=false,A=null;
+  var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqHeadroom=true,eqAutoLevel=0,eqBeforeAuto=null,eqAnalysing=false,A=null;
   var EQ_F10=[60,100,240,500,1000,1800,3400,5700,9000,13000],EQ_F20=[40,60,80,100,120,140,160,180,200,220,300,500,1000,2000,3000,4000,6000,8000,10000,13000];
   // old 8-band gains (or the auto enhancer's 8 analysis bands) spread onto the 10 bands by log-frequency
   function eqMap8to10(b8,FT){var F=EQ_FREQS;return (FT||EQ_F10).map(function(f){if(f<=F[0])return b8[0];if(f>=F[7])return b8[7];for(var i=0;i<7;i++)if(f<=F[i+1]){var t=Math.log(f/F[i])/Math.log(F[i+1]/F[i]);return Math.round(b8[i]+(b8[i+1]-b8[i])*t)}return 0})}
@@ -2103,8 +2119,8 @@ html.light .lock-grip{border-color:#1b1838}
   function stereoIn(c){var g=c.createGain();g.channelCount=2;g.channelCountMode='explicit';g.channelInterpretation='speakers';return g}
   // Settings are remembered between sessions.
   var EQ_STORE='mmCutterSound_v2',eqSaveTimer=0;
-  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lite:eqLite,lim:eqLimiter,hr:eqHeadroom,auto:eqAutoEnabled,before:eqBeforeAuto}))}catch(e){}},250)}
-  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqHeadroom=o.hr!==false;eqLite=!!o.lite;eqAutoEnabled=!!o.auto;eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
+  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lite:eqLite,lim:eqLimiter,hr:eqHeadroom,auto:eqAutoLevel,before:eqBeforeAuto}))}catch(e){}},250)}
+  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqHeadroom=o.hr!==false;eqLite=!!o.lite;eqAutoLevel=o.auto===true?1:([0,1,2].indexOf(o.auto)>=0?o.auto:0);eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
 
   var EQ_WORKLET=[
   "class MMDeclick extends AudioWorkletProcessor{",
@@ -2346,7 +2362,7 @@ html.light .lock-grip{border-color:#1b1838}
   function eqRefreshUi(){
     function cfill(input,v){var mn=+input.min,mx=+input.max,pc=(v-mn)/(mx-mn)*100,z=(0-mn)/(mx-mn)*100;input.style.setProperty('--a',Math.min(z,pc).toFixed(1)+'%');input.style.setProperty('--b',Math.max(z,pc).toFixed(1)+'%')}
     [['data-eq-b10','b10'],['data-eq-b20','b20']].forEach(function(q){document.querySelectorAll('['+q[0]+']').forEach(function(input){var i=+input.getAttribute(q[0]),v=eqState[q[1]][i];input.value=v;cfill(input,v);var o=input.parentNode.querySelector('output');if(o)o.textContent=(v>0?'+':'')+v+' dB'})});
-    var pr=el('eqPreamp');if(pr){pr.value=eqState.preamp;cfill(pr,eqState.preamp);el('eqPreampOut').textContent=(eqState.preamp>0?'+':'')+eqState.preamp+' dB'}
+    var pr=el('eqPreamp');if(pr){pr.value=eqState.preamp;cfill(pr,eqState.preamp);el('eqPreampOut').textContent=(eqState.preamp>0?'+':'')+eqState.preamp+' dB'+(eqHeadroom&&NATIVE?' · auto':'');pr.disabled=!!(eqHeadroom&&NATIVE);pr.parentNode.classList.toggle('eq-auto-pre',!!(eqHeadroom&&NATIVE))}
     el('audioEqBands10').hidden=eqState.eqMode!==10;el('audioEqBands20').hidden=eqState.eqMode!==20;
     document.querySelectorAll('#eqModeBtns [data-eqm]').forEach(function(b){b.setAttribute('aria-pressed',+b.getAttribute('data-eqm')===eqState.eqMode?'true':'false')});
     document.querySelectorAll('#bassHzBtns [data-bhz]').forEach(function(b){b.setAttribute('aria-pressed',+b.getAttribute('data-bhz')===eqState.bassHz?'true':'false')});
@@ -2355,14 +2371,14 @@ html.light .lock-grip{border-color:#1b1838}
     var sb=el('audioEqLite');if(sb){sb.textContent='Smooth: '+(eqLite?'ON':'OFF');sb.classList.toggle('enabled',eqLite);sb.setAttribute('aria-pressed',eqLite?'true':'false')}
     var hb=el('audioEqHeadroom');if(hb){hb.textContent='Auto headroom: '+(eqHeadroom?'ON':'OFF');hb.classList.toggle('enabled',eqHeadroom);hb.setAttribute('aria-pressed',eqHeadroom?'true':'false')}
     var lb=el('audioEqLimiter');if(lb){lb.textContent='Limiter: '+(eqLimiter?'ON':'OFF');lb.classList.toggle('enabled',eqLimiter);lb.setAttribute('aria-pressed',eqLimiter?'true':'false')}
-    var ab=el('audioEqAuto');if(ab){ab.textContent=eqAutoEnabled?'✦ Auto enhancer: ON':'✦ Auto enhancer: OFF';ab.classList.toggle('enabled',eqAutoEnabled);ab.setAttribute('aria-pressed',eqAutoEnabled?'true':'false')}
+    var ab=el('audioEqAuto');if(ab){ab.textContent='✦ Auto enhancer: '+['OFF','ON','FULL'][eqAutoLevel];ab.classList.toggle('enabled',eqAutoLevel>0);ab.classList.toggle('full',eqAutoLevel===2);ab.setAttribute('aria-pressed',eqAutoLevel?'true':'false')}
   }
   function eqOpen(){eqPage.classList.add('open');eqPage.setAttribute('aria-hidden','false');layer.classList.add('eq-page-open');eqRefreshUi();showControls()}
   function eqClose(){eqPage.classList.remove('open');eqPage.setAttribute('aria-hidden','true');layer.classList.remove('eq-page-open');showControls()}
   function eqIsOpen(){return eqPage.classList.contains('open')}
   el('videoEqOpen').addEventListener('click',function(e){e.stopPropagation();eqOpen()});
   el('audioEqBack').addEventListener('click',eqClose);
-  el('audioEqReset').addEventListener('click',function(){eqState=eqNeutral();eqAutoEnabled=false;eqBeforeAuto=null;eqRefreshUi();eqApply();eqStatus('Reset to neutral: sound is untouched.')});
+  el('audioEqReset').addEventListener('click',function(){eqState=eqNeutral();eqAutoLevel=0;eqBeforeAuto=null;eqRefreshUi();eqApply();eqStatus('Reset to neutral: sound is untouched.')});
   el('audioEqLite').addEventListener('click',function(){eqLite=!eqLite;eqRefreshUi();if(A)A.topo='';eqApply();eqStatus(eqLite?'Smooth mode on: lighter processing for phones or Bluetooth headphones where the sound breaks up.':'Smooth mode off: full-quality processing.')});
   // If the sound engine falls behind real time (heard as jumps and short pauses, e.g. some
   // phones with Bluetooth), Smooth mode is switched on by itself.
@@ -2374,13 +2390,30 @@ html.light .lock-grip{border-color:#1b1838}
       if(glitch.n>=2){eqLite=true;glitch.n=0;eqRefreshUi();A.topo='';eqApply();eqStatus('Sound was breaking up, so Smooth mode was switched on (lighter processing). You can switch it off above.')}}
     glitch.t=now;glitch.c=ct;
   },1000);
-  el('audioEqHeadroom').addEventListener('click',function(){eqHeadroom=!eqHeadroom;eqRefreshUi();eqApply();eqStatus(eqHeadroom?'Auto headroom on: when your settings raise the peaks, the whole sound is lowered by the same amount so the limiter does not pump. Turn the phone volume up a little if needed.':'Auto headroom off.')});
-  // limiter meter: shown while the equalizer page is open (native player only)
-  setInterval(function(){var m=el('limMeter');if(!m)return;var pg=document.querySelector('.audio-eq-page');var open=NATIVE&&NP&&NP.limiterMeter&&pg&&pg.offsetParent!==null;m.hidden=!open;if(!open)return;
-    var r;try{r=JSON.parse(NP.limiterMeter())}catch(e){return}var gr=Math.max(0,-r.gr),hr=-r.hr;
-    el('limOut').textContent=(gr<0.05?'0.0':'−'+gr.toFixed(1))+' dB';el('limBar').style.width=Math.min(100,gr/8*100)+'%';
-    m.classList.toggle('busy',gr>=3);el('hrOut').textContent=eqHeadroom&&hr>=0.1?'headroom −'+hr.toFixed(1)+' dB':'';
-    if(gr>=3&&!m.__warned){m.__warned=true;eqStatus(eqHeadroom?'The limiter is cutting a lot: lower the preamp or the biggest boosts.':'The limiter is cutting a lot: switch Auto headroom on, or lower the preamp or the biggest boosts.')}if(gr<1)m.__warned=false},300);
+  el('audioEqHeadroom').addEventListener('click',function(){eqHeadroom=!eqHeadroom;if(!eqHeadroom)eqState.preamp=0;eqRefreshUi();eqApply();eqStatus(eqHeadroom?'Auto headroom on: the Preamp slider now lowers itself by as much as your settings raise the peaks, so the limiter does not pump. Turn the phone volume up a little if needed.':'Auto headroom off: Preamp is yours to set again.')});
+  // level bar: loudness reaching the limiter (green / yellow near full scale / red over it), the limiter's cut
+  // as a blue strip from the top end, and the headroom left. Auto headroom also moves the Preamp slider.
+  var LV_LO=-40,LV_HI=6,lvShow=-90,lvHold=-90,lvHoldAt=0,lvGr=0,lvLast=0,lvSlow=0;
+  function lvPos(db){return Math.max(0,Math.min(100,(db-LV_LO)/(LV_HI-LV_LO)*100))}
+  function lvTick(){
+    var pg=document.querySelector('.audio-eq-page'),open=!!(pg&&pg.offsetParent!==null),now=performance.now();
+    var can=NATIVE&&NP&&NP.limiterMeter,m=el('lvlMeter');if(m)m.hidden=!(can&&open);
+    if(!can)return;if(!open&&now-lvSlow<500)return;lvSlow=now;
+    var r;try{r=JSON.parse(NP.limiterMeter())}catch(e){return}
+    // auto headroom -> Preamp slider (the engine measures without the preamp, so this never chases itself)
+    if(eqHeadroom&&isFinite(r.hr)){var want=Math.max(-20,Math.min(0,r.hr));if(Math.abs(want-eqState.preamp)>0.75){eqState.preamp=Math.round(want);eqRefreshUi();eqApply()}}
+    if(!open||!m)return;
+    var pk=isFinite(r.pk)?r.pk:-90,dt=Math.min(0.5,(now-(lvLast||now))/1000);lvLast=now;
+    lvShow=pk>lvShow?pk:Math.max(pk,lvShow-24*dt);
+    if(pk>=lvHold||now-lvHoldAt>1500){lvHold=pk;lvHoldAt=now}
+    var gr=Math.max(0,-(r.gr||0));lvGr=gr>lvGr?gr:Math.max(gr,lvGr-12*dt);
+    var f=el('lvlFill');f.style.width=lvPos(lvShow)+'%';f.className=lvShow>=0?'red':lvShow>=-1.94?'yellow':'';
+    el('lvlLim').style.width=(eqLimiter?Math.min(100,lvGr/(LV_HI-LV_LO)*100):0)+'%';
+    el('lvlHead').textContent=lvHold<-80?'Headroom —':lvHold>=0?'Over full scale by '+lvHold.toFixed(1)+' dB':'Headroom '+(-lvHold).toFixed(1)+' dB';
+    el('lvlHead').className=lvHold>=0?'red':lvHold>=-1.94?'yellow':'';
+    el('lvlLimTxt').textContent=eqLimiter&&lvGr>=0.1?'limiter −'+lvGr.toFixed(1)+' dB':'';
+  }
+  setInterval(lvTick,60);
   el('audioEqLimiter').addEventListener('click',function(){eqLimiter=!eqLimiter;eqRefreshUi();eqApply();eqStatus(eqLimiter?'Limiter on: loud peaks cannot distort.':'Limiter off.')});
   var eqTie=false;try{eqTie=localStorage.getItem('mmEqTie')==='1'}catch(e){}
   var ropeSnap=null;
@@ -2402,64 +2435,114 @@ html.light .lock-grip{border-color:#1b1838}
   ADJ.forEach(function(p){var node=el(p[0]);if(node)node.addEventListener('input',function(){eqState[p[1]]=+node.value;if(CINEMA_KEYS.indexOf(p[1])>=0)eqState.mode='custom';eqRefreshUi();eqChanged()})});
   document.querySelectorAll('#cinemaModes [data-mode]').forEach(function(b){b.addEventListener('click',function(){var m=b.getAttribute('data-mode'),p=CINEMA[m];if(!p)return;CINEMA_KEYS.forEach(function(k){eqState[k]=p[k]});eqState.mode=m;eqRefreshUi();eqChanged();if(m!=='off')eqStatus('Cinema sound: '+b.textContent+'. Best with headphones; the sliders below show what it set.')})});
 
-  // ---- Auto enhancer: listens for about 3 seconds, measures the tonal balance against
-  // a well-balanced reference, the loudness, mains hum and rumble, then sets everything.
-  el('audioEqAuto').addEventListener('click',function(){
-    if(eqAnalysing)return;
-    if(eqAutoEnabled){eqAutoEnabled=false;if(eqBeforeAuto){eqState=eqBeforeAuto;eqBeforeAuto=null}eqRefreshUi();eqApply();eqStatus('Auto enhancer off: your previous settings are back.');return}
-    if(!activeMedia||!activeMedia.src){eqStatus('Choose a music or video file first.');return}
-    if(activeMedia.paused){eqStatus('Start playback first, then tap Auto enhancer.');return}
-    if(!eqEngage())return;
-    var btn=el('audioEqAuto');
-    eqBeforeAuto=eqCopy(eqState);eqAnalysing=true;if(A)A.topo='';eqApply();btn.disabled=true;eqStatus('Listening to the sound… keep playback running (3 s).');
-    var an=A?A.analyser:null,bins=an?an.frequencyBinCount:0,fd=new Float32Array(Math.max(1,bins)),td=new Float32Array(an?an.fftSize:1),hz=an?A.c.sampleRate/an.fftSize:1;
-    var edges=[[45,105],[105,250],[250,650],[650,1600],[1600,3600],[3600,6000],[6000,8500],[8500,13000]];
-    var acc=edges.map(function(){return 0}),humOn=0,humOff=0,sub=0,rmsAcc=0,frames=0,start=performance.now();
-    function pw(i){i=Math.max(1,Math.min(bins-1,i));var d=fd[i];return isFinite(d)?Math.pow(10,d/10):0}
-    function finish(){
-      eqAnalysing=false;btn.disabled=false;
-      if(frames<10){eqState=eqBeforeAuto||eqState;eqBeforeAuto=null;if(A)A.topo='';eqRefreshUi();eqApply();eqStatus('No sound was heard (silent part or paused). Try again while music or speech is playing.');return}
-      var db=acc.map(function(v){return 10*Math.log10(v/frames+1e-20)});
-      var dens=db.map(function(d,i){return d-10*Math.log10(Math.log(edges[i][1]/edges[i][0])/Math.LN2)});
-      var ref=(dens[2]+dens[3]+dens[4])/3,target=[2,1,0,0,-1,-3,-6,-10];
-      var s=eqCopy(eqBeforeAuto);
-      var a8=dens.map(function(d,i){var dev=d-ref-target[i];if(dev<-18)return 0;var cmax=i>=6?4:6;return Math.max(-6,Math.min(cmax,Math.round(-dev*0.5)))});
-      if(s.eqMode===20)s.b20=eqMap8to10(a8,EQ_F20).map(function(v,i){return EQ_F20[i]<=220?Math.round(v*0.7):v});else{s.eqMode=10;s.b10=eqMap8to10(a8)}
-      s.bands=[0,0,0,0,0,0,0,0];s.bass=0;s.clarity=0;
-      var humRatio=10*Math.log10((humOn+1e-20)/(humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);
-      s.rumble=10*Math.log10(sub/frames+1e-20)-db[0]>-4?35:10;
-      var rmsDb=20*Math.log10(rmsAcc/frames+1e-9);s.level=rmsDb<-28?50:(rmsDb<-22?35:15);
-      s.hiss=dens[7]-ref-target[7]>4?25:8;s.click=8;s.tube=0;s.warmth=50;
-      s.virtual=audioMode?15:30;s.width=audioMode?115:120;s.dialog=audioMode?0:30;s.bassx=db[0]<ref-12?30:10;s.mode='custom';
-      eqState=s;eqAutoEnabled=true;if(A)A.topo='';eqRefreshUi();eqApply();
-      eqStatus('Auto enhancer on: tone balanced, loudness '+Math.round(rmsDb)+' dB levelled'+(s.hum?', hum removed':'')+'. Tap again to restore your previous settings.');
-    }
-    function sample(now){
-      if(!eqAnalysing)return;
-      an.getFloatFrequencyData(fd);an.getFloatTimeDomainData(td);
-      if(!activeMedia.paused&&isFinite(fd[20])&&fd[20]>-190){
-        var r=0;for(var i=0;i<td.length;i++)r+=td[i]*td[i];r=Math.sqrt(r/td.length);
-        if(r>2e-4){frames++;rmsAcc+=r;
-          edges.forEach(function(e,b){var sum=0,i0=Math.max(1,Math.floor(e[0]/hz)),i1=Math.min(bins-1,Math.ceil(e[1]/hz));for(var k=i0;k<=i1;k++)sum+=pw(k);acc[b]+=sum});
-          humOn+=pw(Math.round(50/hz))+pw(Math.round(100/hz));humOff+=(pw(Math.round(38/hz))+pw(Math.round(70/hz))+pw(Math.round(85/hz))+pw(Math.round(125/hz)))/2;
-          var si=0;for(var q=1;q<=Math.round(30/hz);q++)si+=pw(q);sub+=si;
-        }
-      }
-      var t=now-start;if(t<3000||(frames<20&&t<7000)){requestAnimationFrame(sample);return}
-      finish();
-    }
+  // ---- Auto enhancer: OFF -> ON (graphic EQ + tone & repair) -> FULL (also studio effects and cinema) -> OFF.
+  // It listens for about 3 seconds and measures: a 32-band spectrum against a well-balanced reference curve,
+  // the treble cut-off of compressed files, stereo/mono, loudness and dynamic range, noise floor, hum and rumble.
+  var autoCache=null;
+  function autoKey(){var it=list[current]||{};return (it.key||'')+'|'+(activeMedia&&activeMedia.src||'')}
+  function autoListen(cb){
+    var btn=el('audioEqAuto');eqAnalysing=true;if(A)A.topo='';btn.disabled=true;eqStatus('Listening to the sound… keep playback running (3 s).');
+    var start=performance.now();
+    function done(d){eqAnalysing=false;btn.disabled=false;try{if(NATIVE)NP.analyse(false)}catch(e){}cb(d)}
     if(NATIVE){
-      // The C++ engine measures the same things inside the audio pipeline.
       try{NP.analyse(true)}catch(e){}
       var poll=function(){
         if(!eqAnalysing)return;var t=performance.now()-start,r={};try{r=JSON.parse(NP.analysisResult())}catch(e){}
         if(t<3000||((r.frames||0)<20&&t<7000)){setTimeout(poll,250);return}
-        frames=r.frames||0;rmsAcc=r.rmsAcc||0;humOn=r.humOn||0;humOff=r.humOff||0;sub=r.sub||0;acc=(r.acc||acc).slice(0,8);
-        try{NP.analyse(false)}catch(e){}
-        finish();
+        done(r);
       };setTimeout(poll,250);return;
     }
+    var an=A?A.analyser:null,bins=an?an.frequencyBinCount:0,fd=new Float32Array(Math.max(1,bins)),td=new Float32Array(an?an.fftSize:1),hz=an?A.c.sampleRate/an.fftSize:1;
+    var d={frames:0,rmsAcc:0,humOn:0,humOff:0,sub:0,b32:[],peak:0,minBlk:0,maxBlk:0,pow:0};for(var q=0;q<32;q++)d.b32.push(0);
+    function pw(i){i=Math.max(1,Math.min(bins-1,i));var x=fd[i];return isFinite(x)?Math.pow(10,x/10):0}
+    function sample(now){
+      if(!eqAnalysing)return;
+      an.getFloatFrequencyData(fd);an.getFloatTimeDomainData(td);
+      if(!activeMedia.paused&&isFinite(fd[20])&&fd[20]>-190){
+        var r=0,pk=0;for(var i=0;i<td.length;i++){r+=td[i]*td[i];pk=Math.max(pk,Math.abs(td[i]))}r=Math.sqrt(r/td.length);
+        if(r>2e-4){d.frames++;d.rmsAcc+=r;d.pow+=r*r;d.peak=Math.max(d.peak,pk);d.minBlk=d.minBlk?Math.min(d.minBlk,r):r;d.maxBlk=Math.max(d.maxBlk,r);
+          for(var b=0;b<32;b++){var f0=30*Math.pow(16000/30,b/32),f1=30*Math.pow(16000/30,(b+1)/32),sum=0,i0=Math.max(1,Math.floor(f0/hz)),i1=Math.min(bins-1,Math.max(i0,Math.ceil(f1/hz)-1));for(var k=i0;k<=i1;k++)sum+=pw(k);d.b32[b]+=sum}
+          d.humOn+=pw(Math.round(50/hz))+pw(Math.round(100/hz));d.humOff+=(pw(Math.round(38/hz))+pw(Math.round(70/hz))+pw(Math.round(85/hz))+pw(Math.round(125/hz)))/2;
+          var si=0;for(var q2=1;q2<=Math.round(30/hz);q2++)si+=pw(q2);d.sub+=si;
+        }
+      }
+      var t=now-start;if(t<3000||(d.frames<20&&t<7000)){requestAnimationFrame(sample);return}
+      done(d);
+    }
     requestAnimationFrame(sample);
+  }
+  function autoDesign(d,level,base){
+    var s=eqCopy(base),n=d.frames,notes=[];
+    var fc=[],dens=[];for(var b=0;b<32;b++){fc.push(30*Math.pow(16000/30,(b+0.5)/32));dens.push(10*Math.log10((d.b32[b]||0)/n+1e-20))}
+    var refB=[];for(b=0;b<32;b++)if(fc[b]>=250&&fc[b]<=2500)refB.push(dens[b]);var ref=refB.reduce(function(x,y){return x+y},0)/refB.length;
+    var TP=[[30,2],[80,2],[160,1],[400,0],[1000,0],[2400,-1],[4600,-3],[7100,-6],[10500,-10],[16000,-15]];
+    function lerp(P,f){if(f<=P[0][0])return P[0][1];for(var i=1;i<P.length;i++)if(f<=P[i][0]){var t=Math.log(f/P[i-1][0])/Math.log(P[i][0]/P[i-1][0]);return P[i-1][1]+(P[i][1]-P[i-1][1])*t}return P[P.length-1][1]}
+    var dev=dens.map(function(x,i){return x-ref-lerp(TP,fc[i])});
+    var sm=dev.map(function(x,i){var a=dev[Math.max(0,i-1)],c=dev[Math.min(31,i+1)];return (a+2*x+c)/4});
+    var devPts=fc.map(function(f,i){return [f,sm[i]]});
+    function devAt(f){return lerp(devPts,f)}
+    function meanDev(f0,f1){var t=0,c=0;fc.forEach(function(f,i){if(f>=f0&&f<=f1){t+=sm[i];c++}});return c?t/c:0}
+    // treble cut-off (compressed files): highest band still within 30 dB of the mid level
+    var cutoff=16000;for(b=31;b>=20;b--){if(dens[b]>ref-30&&dens[b-1]>ref-30){cutoff=Math.min(16000,30*Math.pow(16000/30,(b+1)/32));break}if(b===20)cutoff=fc[20]}
+    var it=list[current]||{},nm=String(it.name||(files[index]&&files[index].name)||'').toLowerCase(),ext=(nm.match(/\.([a-z0-9]+)$/)||['',''])[1];
+    var sz=+(it.size||(files[index]&&files[index].size)||0),du=duration&&duration()||0,kbps=sz&&du>10?Math.round(sz*8/du/1000):0;
+    var lossy=/^(mp3|m4a|aac|ogg|oga|opus|webm|wma|mp4|3gp)$/.test(ext);
+    var tape=/cassette|tape|\bcas\b|vinyl|\blp\b|record/.test(nm);
+    var corr=d.ll>0&&d.rr>0?d.lr/Math.sqrt(d.ll*d.rr):0.6,mono=corr>0.97;
+    var rmsDb=20*Math.log10((d.rmsAcc||0)/n+1e-9),dyn=d.minBlk>0?20*Math.log10(d.maxBlk/d.minBlk):10;
+    var floorDb=d.minBlk>0&&d.pow>0?20*Math.log10(d.minBlk)-10*Math.log10(d.pow/n):-30;
+    var lowDev=meanDev(45,90),hfEx=cutoff>9000?meanDev(8000,Math.min(13000,cutoff)):0,pres=meanDev(2800,6000),dull=meanDev(6000,Math.min(10000,cutoff));
+    // ---- graphic EQ (both levels): half of the deviation, no boost where the file has nothing (above the cut-off)
+    var F=s.eqMode===20?EQ_F20:EQ_F10,key=s.eqMode===20?'b20':'b10';
+    s[key]=F.map(function(f){var dv=devAt(f);if(f<40||dv<-18)return 0;var g=-dv*0.5;if(s.eqMode===20&&f<=220)g*=0.8;
+      g=Math.max(-6,Math.min(f>=5000?4:6,g));if(f>cutoff*0.9)g=Math.min(g,0);return Math.round(g)});
+    if(s.eqMode===20)s.b10=s.b10.map(function(){return 0});else s.b20=s.b20.map(function(){return 0});
+    s.bands=[0,0,0,0,0,0,0,0];
+    // ---- tone & repair
+    s.bass=0;s.bassHz=100;
+    if(lowDev<-4&&meanDev(45,90)>-18){s.bass=Math.max(2,Math.min(6,Math.round(-lowDev*0.4)));s.bassHz=meanDev(40,60)<meanDev(80,120)-2?60:100;
+      s[key]=s[key].map(function(g,i){return F[i]<=110&&g>0?0:g});notes.push('thin bass lifted')}
+    s.clarity=0;
+    s.virtual=mono?0:(audioMode?15:30);
+    var humRatio=10*Math.log10((d.humOn+1e-20)/(d.humOff+1e-20));s.hum=humRatio>9?60:(humRatio>5?30:0);if(s.hum)notes.push('hum removed');
+    s.rumble=10*Math.log10(d.sub/n+1e-20)-dens[2]>-4?35:10;
+    s.hiss=hfEx>4||(tape&&hfEx>1)?30:(floorDb>-14&&hfEx>2?20:8);
+    s.click=tape?20:8;s.tube=0;s.warmth=50;
+    if(level===2){
+      // ---- studio effects
+      s.tapenr=tape?(hfEx>3?55:35):(hfEx>6&&floorDb>-16?25:0);if(s.tapenr){s.hiss=8;notes.push('tape hiss cleaned')}
+      s.bdec=tape&&devAt(10000)>4?40:0;
+      s.hfr=lossy&&cutoff<15500?(cutoff<11000?85:cutoff<13500?70:50):(lossy&&kbps&&kbps<=160?40:0);if(s.hfr)notes.push(cutoff<15500?'treble restored above '+(cutoff/1000).toFixed(1)+' kHz':'treble restored for low bit rate');
+      s.bbe=pres<-3?35:15;
+      s.mach3=lowDev<-6?40:(lowDev<-2?20:0);if(s.mach3)s.bass=Math.round(s.bass/2);
+      s.exciter=dull<-5&&cutoff>=12000?25:(s.hfr?15:0);
+      s.xfeed=audioMode&&!mono?(corr<0.4?50:corr<0.7?25:0):0;if(s.xfeed)notes.push('wide stereo eased for headphones');
+      // ---- cinema
+      s.width=mono||corr<0.4?100:(audioMode?115:125);
+      s.dialog=audioMode?0:35;
+      s.bassx=s.mach3?0:10;
+      s.level=audioMode?(dyn>20?25:10):(dyn>18?40:25);if(rmsDb<-28)s.level+=10;
+      s.mode='custom';
+    }
+    var desc=(s.eqMode===20?'20':'10')+'-band EQ balanced'+(mono?', mono recording':'')+(lossy&&kbps?', '+kbps+' kbps '+ext.toUpperCase():'');
+    return {s:s,text:desc+(notes.length?' · '+notes.join(', '):'')};
+  }
+  el('audioEqAuto').addEventListener('click',function(){
+    if(eqAnalysing)return;
+    if(eqAutoLevel===2){eqAutoLevel=0;if(eqBeforeAuto){eqState=eqBeforeAuto;eqBeforeAuto=null}eqRefreshUi();eqApply();eqStatus('Auto enhancer off: your previous settings are back.');return}
+    if(!activeMedia||!activeMedia.src){eqStatus('Choose a music or video file first.');return}
+    var next=eqAutoLevel+1,k=autoKey();
+    function use(d){
+      if(!d||(d.frames||0)<10){if(eqAutoLevel===0){eqBeforeAuto=null}eqRefreshUi();eqApply();eqStatus('No sound was heard (silent part or paused). Try again while music or speech is playing.');return}
+      autoCache={k:k,d:d,at:Date.now()};
+      var r=autoDesign(d,next,eqBeforeAuto);eqState=r.s;eqAutoLevel=next;if(A)A.topo='';eqRefreshUi();eqApply();
+      eqStatus('Auto enhancer '+(next===2?'FULL (EQ, tone, studio effects and cinema)':'ON (EQ and tone & repair)')+': '+r.text+'. Tap again for '+(next===1?'FULL':'OFF')+'.');
+    }
+    if(eqAutoLevel===0)eqBeforeAuto=eqCopy(eqState);
+    if(autoCache&&autoCache.k===k&&Date.now()-autoCache.at<15*60000){use(autoCache.d);return}
+    if(activeMedia.paused){eqStatus('Start playback first, then tap Auto enhancer.');return}
+    if(!eqEngage())return;
+    autoListen(use);
   });
   // Saved settings come back on the next start; they are applied once playback begins.
   [video,audioMedia].forEach(function(m){m.addEventListener('play',function(){if(A){eqResume();if(m===activeMedia)eqRouteMedia(m)}else if(!eqIsNeutral()&&m===activeMedia){if(eqEngage())eqApply()}})});
@@ -2894,7 +2977,7 @@ html.light .lock-grip{border-color:#1b1838}
     [['rep-off','No repeat','off'],['rep-one','Repeat one','one'],['rep-all','Repeat all','all']].forEach(function(r){var o=sel.querySelector('option[value="'+r[0]+'"]');if(o)o.textContent=(repeatMode===r[2]?'✓ ':'')+r[1]})}
   repeatUi();
   el('mlSort').addEventListener('change',function(){
-    var v=el('mlSort').value;if(!v)return;
+    var v=el('mlSort').value;if(!v||v.indexOf('opt-')===0)return;
     if(v.indexOf('rep-')===0){repeatMode=v.slice(4);try{localStorage.setItem('mmRepeat',repeatMode)}catch(e){}repeatUi();el('mlSort').value='';
       note({off:'No repeat: the playlist plays to its end.',one:'Repeat one: the current file plays again and again.',all:'Repeat all: the playlist starts again after the last file.'}[repeatMode]);return}
     var cur=list[current];
@@ -3308,7 +3391,7 @@ html.light .lock-grip{border-color:#1b1838}
   // ---- resume: long files (3 min and more) continue where they were left; the last file opens again at start
   var resumeOn=true,POS_KEY='mmPos_v1',posMap={},posSaveAt=0,resumeHold=false;
   try{resumeOn=localStorage.getItem('mmResumeOn')!=='0';posMap=JSON.parse(localStorage.getItem(POS_KEY)||'{}')||{}}catch(e){}
-  function resumeUi(){var b=el('audioEqResume');if(!b)return;b.textContent='Resume: '+(resumeOn?'ON':'OFF');b.classList.toggle('enabled',resumeOn);b.setAttribute('aria-pressed',resumeOn?'true':'false')}
+  function resumeUi(){var o=document.querySelector('#mlSort option[value="opt-resume"]');if(o)o.textContent=(resumeOn?'✓ ':'')+'Resume last file & position'}
   function posSave(force){
     var k=curKey(),d=duration(),t=activeMedia.currentTime||0;if(!k||!d||d<180)return;
     var now=Date.now();if(!force&&now-posSaveAt<3000)return;posSaveAt=now;
@@ -3325,7 +3408,8 @@ html.light .lock-grip{border-color:#1b1838}
     });
   });
   document.addEventListener('visibilitychange',function(){if(document.hidden)posSave(true)});
-  el('audioEqResume').addEventListener('click',function(){resumeOn=!resumeOn;try{localStorage.setItem('mmResumeOn',resumeOn?'1':'0')}catch(e){}resumeUi();eqStatus(resumeOn?'Resume on: long files continue where you left off; the last file opens again.':'Resume off.')});
+  el('mlSort').addEventListener('change',function(){if(el('mlSort').value!=='opt-resume')return;el('mlSort').value='';resumeOn=!resumeOn;try{localStorage.setItem('mmResumeOn',resumeOn?'1':'0')}catch(e){}resumeUi();
+    note(resumeOn?'Resume on: long files continue where you left off, and the last file opens again when the app starts.':'Resume off: files start from the beginning.')});
   resumeUi();
   // at start: open the last file again (paused) if nothing else was opened
   setTimeout(function(){

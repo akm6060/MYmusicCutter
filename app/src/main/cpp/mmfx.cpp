@@ -29,7 +29,7 @@ constexpr int NPARAM = 56;
 // 35..54 band gains of the 10- and 20-band layouts
 std::atomic<float> gParam[NPARAM];
 std::atomic<int> gAnalyse{0};
-std::atomic<float> gGrMin{1.f}, gHrDb{0.f};   // limiter's deepest gain since last read, current auto headroom (dB)
+std::atomic<float> gGrMin{1.f}, gHrDb{0.f}, gPkPre{0.f};   // + loudest sample reaching the limiter since last read   // limiter's deepest gain since last read, current auto headroom (dB)
 
 inline float clampf(float v, float a, float b) { return v < a ? a : (v > b ? b : v); }
 inline double dbToGain(double db) { return std::pow(10.0, db / 20.0); }
@@ -189,7 +189,8 @@ struct Engine {
     double hrTarget = 1, hrG = 1, hrPre = 0, hrPost = 0, hrRel = 0, hrDn = 0, hrUp = 0; float P55 = 0;
     // analysis
     std::vector<float> an, win; int anPos = 0; std::vector<float> re, im;
-    std::mutex resM; float res[13];
+    std::mutex resM; float res[52] = {0};
+    double anLL = 0, anRR = 0, anLR = 0, anPk = 0;   // stereo and peak stats for the analysis window
 
     void configure(int rate, int ch) {
         sr = rate > 0 ? rate : 48000; inCh = ch > 0 ? ch : 2; fresh = true;
@@ -348,10 +349,11 @@ struct Engine {
         double r = 0;
         for (int i = 0; i < FFTN; i++) r += (double)an[i] * an[i];
         r = std::sqrt(r / FFTN);
-        if (r <= 2e-4) return;
+        if (r <= 2e-4) { anLL = anRR = anLR = anPk = 0; return; }
         for (int i = 0; i < FFTN; i++) { re[i] = an[i] * win[i]; im[i] = 0; }
         fft();
         const int bins = FFTN / 2;
+        struct Z { double *a[4]; ~Z() { for (auto p : a) *p = 0; } } zz{{&anLL, &anRR, &anLR, &anPk}};
         double hz = sr / FFTN, nn = (double)FFTN * FFTN;
         auto pw = [&](int i) { i = std::max(1, std::min(bins - 1, i)); return ((double)re[i] * re[i] + (double)im[i] * im[i]) / nn; };
         static const double E[8][2] = {{45, 105}, {105, 250}, {250, 650}, {650, 1600}, {1600, 3600}, {3600, 6000}, {6000, 8500}, {8500, 13000}};
@@ -366,9 +368,22 @@ struct Engine {
         double humOff = (pw((int)std::lround(38 / hz)) + pw((int)std::lround(70 / hz)) + pw((int)std::lround(85 / hz)) + pw((int)std::lround(125 / hz))) / 2;
         double sub = 0;
         for (int q = 1; q <= (int)std::lround(30 / hz); q++) sub += pw(q);
+        double b32[32];
+        for (int b = 0; b < 32; b++) {
+            double f0 = 30.0 * std::pow(16000.0 / 30.0, b / 32.0), f1 = 30.0 * std::pow(16000.0 / 30.0, (b + 1) / 32.0), s = 0;
+            int i0 = std::max(1, (int)std::floor(f0 / hz)), i1 = std::min(bins - 1, std::max(i0, (int)std::ceil(f1 / hz) - 1));
+            for (int k = i0; k <= i1; k++) s += pw(k);
+            b32[b] = s;
+        }
         if (resM.try_lock()) {
             res[0] += 1; res[1] += (float)r; res[2] += (float)humOn; res[3] += (float)humOff; res[4] += (float)sub;
             for (int b = 0; b < 8; b++) res[5 + b] += (float)acc[b];
+            for (int b = 0; b < 32; b++) res[13 + b] += (float)b32[b];
+            res[45] += (float)anLL; res[46] += (float)anRR; res[47] += (float)anLR;
+            res[48] = std::max(res[48], (float)anPk);
+            res[49] = res[49] == 0 ? (float)r : std::min(res[49], (float)r);
+            res[50] = std::max(res[50], (float)r);
+            res[51] += (float)(r * r);
             resM.unlock();
         }
     }
@@ -384,9 +399,12 @@ struct Engine {
         if (neutral) gHrDb.store(0.f);
         if (neutral && inCh == 2 && !isFloat) {
             std::memcpy(out, in, (size_t)frames * 4);   // untouched
+            { int pk = 0; for (int f = 0; f < frames * 2; f++) pk = std::max(pk, std::abs((int)i16[f]));
+              float pf = pk / 32768.f; if (pf > gPkPre.load(std::memory_order_relaxed)) gPkPre.store(pf, std::memory_order_relaxed); }
             if (analysing) {
                 for (int f = 0; f < frames; f++) {
-                    an[anPos++] = (i16[2 * f] + i16[2 * f + 1]) * (0.5f / 32768.f);
+                    const float l = i16[2 * f] * (1.f / 32768.f), r = i16[2 * f + 1] * (1.f / 32768.f);
+                    an[anPos++] = (l + r) * 0.5f; anLL += l * l; anRR += r * r; anLR += l * r; anPk = std::max(anPk, (double)std::max(std::fabs(l), std::fabs(r)));
                     if (anPos >= FFTN) { analyseBlock(); anPos = 0; }
                 }
             }
@@ -409,7 +427,7 @@ struct Engine {
                     l = (smp(0) + c + smp(4) * 0.7071f) * 0.6f; r = (smp(1) + c + smp(5) * 0.7071f) * 0.6f;
                 } else { float c = smp(2) * 0.7071f; l = (smp(0) + c) * 0.75f; r = (smp(1) + c) * 0.75f; }
                 Lb[j] = l; Rb[j] = r;
-                if (analysing) { an[anPos++] = (l + r) * 0.5f; if (anPos >= FFTN) { analyseBlock(); anPos = 0; } }
+                if (analysing) { an[anPos++] = (l + r) * 0.5f; anLL += l * l; anRR += r * r; anLR += l * r; anPk = std::max(anPk, (double)std::max(std::fabs(l), std::fabs(r))); if (anPos >= FFTN) { analyseBlock(); anPos = 0; } }
             }
             if (!neutral) {
                 bool changed = false;
@@ -496,7 +514,7 @@ struct Engine {
         // tone filters
         for (int c = 0; c < 2; c++) {
             float *x = ch[c];
-            const float hg = (float)(c == 0 ? (hrG += (hrTarget - hrG) * (1 - std::exp(-n / (0.05 * sr)))) : hrG);
+            const float hg = 1.f;   // headroom is applied through the Preamp slider by the page
             const bool pre = std::fabs(S[32]) > 0.01f || hg < 0.9999f;
             const float preG = (std::fabs(S[32]) > 0.01f ? (float)dbToGain(S[32]) : 1.f) * hg;
             for (int j = 0; j < n; j++) {
@@ -750,7 +768,9 @@ struct Engine {
                 Lb[j] *= g; Rb[j] *= g;
             }
         }
-        gHrDb.store((float)(20 * std::log10(hrG + 1e-9)), std::memory_order_relaxed);
+        gHrDb.store(P55 > 0.5f ? (float)(20 * std::log10(hrTarget + 1e-9)) : 0.f, std::memory_order_relaxed);
+        { float pk = 0; for (int j = 0; j < n; j++) pk = std::max(pk, std::max(std::fabs(Lb[j]), std::fabs(Rb[j])));
+          if (pk > gPkPre.load(std::memory_order_relaxed)) gPkPre.store(pk, std::memory_order_relaxed); }
         // look-ahead limiter at -1 dB
         if (limOn) {
             const uint64_t mask = LN - 1;
@@ -831,23 +851,23 @@ JNIEXPORT void JNICALL Java_com_mymusic_cutter_FxNative_process(JNIEnv *env, jcl
 JNIEXPORT void JNICALL Java_com_mymusic_cutter_FxNative_analyse(JNIEnv *, jclass, jboolean on) {
     if (on) {
         std::lock_guard<std::mutex> lk(gM);
-        if (gE) { std::lock_guard<std::mutex> r(gE->resM); std::fill(gE->res, gE->res + 13, 0.f); gE->anPos = 0; }
+        if (gE) { std::lock_guard<std::mutex> r(gE->resM); std::fill(gE->res, gE->res + 52, 0.f); gE->anPos = 0; gE->anLL = gE->anRR = gE->anLR = gE->anPk = 0; }
     }
     gAnalyse.store(on ? 1 : 0);
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_mymusic_cutter_FxNative_analysisResult(JNIEnv *env, jclass) {
-    float out[13] = {0};
+    float out[52] = {0};
     if (gE) { std::lock_guard<std::mutex> r(gE->resM); std::memcpy(out, gE->res, sizeof(out)); }
-    jfloatArray a = env->NewFloatArray(13);
-    env->SetFloatArrayRegion(a, 0, 13, out);
+    jfloatArray a = env->NewFloatArray(52);
+    env->SetFloatArrayRegion(a, 0, 52, out);
     return a;
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_mymusic_cutter_FxNative_meter(JNIEnv *env, jclass) {
-    float out[2] = {(float)(20 * std::log10(gGrMin.exchange(1.f) + 1e-9)), gHrDb.load()};
-    jfloatArray a = env->NewFloatArray(2);
-    env->SetFloatArrayRegion(a, 0, 2, out);
+    float out[3] = {(float)(20 * std::log10(gGrMin.exchange(1.f) + 1e-9)), gHrDb.load(), (float)(20 * std::log10(gPkPre.exchange(0.f) + 1e-9))};
+    jfloatArray a = env->NewFloatArray(3);
+    env->SetFloatArrayRegion(a, 0, 3, out);
     return a;
 }
 

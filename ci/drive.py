@@ -103,7 +103,12 @@ say("fx playing", p1, "->", p2, js("document.getElementById('videoTitle').textCo
 say("equal volume", js("document.getElementById('audioEqVm').click();document.getElementById('audioEqVm').textContent"))
 say("heavy bass", js("(()=>{[['eqBass',15],['eqPreamp',6]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var e=document.querySelector('[data-eq-b10=\"0\"]');e.value=12;e.dispatchEvent(new Event('input',{bubbles:true}));return 'ok'})()"))
 for k in range(3):
-    time.sleep(2); say("meter", js("MYmusicNativePlayer.limiterMeter()"), js("document.getElementById('limOut').textContent+' '+document.getElementById('hrOut').textContent"), js("document.getElementById('cutterPos').textContent"))
+    time.sleep(2); say("meter", js("MYmusicNativePlayer.limiterMeter()"), js("document.getElementById('lvlFill').style.width+' '+document.getElementById('lvlFill').className+' | '+document.getElementById('lvlHead').textContent+' | '+document.getElementById('lvlLimTxt').textContent+' | preamp '+document.getElementById('eqPreampOut').textContent"), js("document.getElementById('cutterPos').textContent"))
+say("auto on", js("document.getElementById('audioEqAuto').click();'ok'")); time.sleep(6)
+say("auto on status", js("document.getElementById('audioEqAuto').textContent+' | '+document.getElementById('audioEqStatus').textContent"))
+say("auto full", js("document.getElementById('audioEqAuto').click();document.getElementById('audioEqAuto').textContent+' | '+document.getElementById('audioEqStatus').textContent"))
+time.sleep(3); say("full playing", js("document.getElementById('cutterPos').textContent"))
+say("auto off", js("document.getElementById('audioEqAuto').click();document.getElementById('audioEqAuto').textContent"))
 time.sleep(12); say("eq status", js("document.getElementById('audioEqStatus').textContent"), js("document.getElementById('cutterPos').textContent"))
 say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
 for k in range(30):

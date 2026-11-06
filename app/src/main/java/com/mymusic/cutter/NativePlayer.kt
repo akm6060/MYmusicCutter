@@ -684,8 +684,8 @@ class NativePlayer(
     /** Limiter meter: deepest cut since the last call (dB, 0 = none) and auto headroom in use (dB). */
     @JavascriptInterface
     fun limiterMeter(): String {
-        val r = try { FxNative.meter() } catch (_: Throwable) { floatArrayOf(0f, 0f) }
-        return JSONObject().put("gr", r[0].toDouble()).put("hr", r[1].toDouble()).toString()
+        val r = try { FxNative.meter() } catch (_: Throwable) { floatArrayOf(0f, 0f, -90f) }
+        return JSONObject().put("gr", r[0].toDouble()).put("hr", r[1].toDouble()).put("pk", (if (r.size > 2) r[2] else -90f).toDouble()).toString()
     }
 
     @JavascriptInterface
@@ -693,10 +693,15 @@ class NativePlayer(
         val r = FxNative.analysisResult()
         val acc = org.json.JSONArray()
         for (i in 0 until 8) acc.put(r[5 + i].toDouble())
+        val b32 = org.json.JSONArray()
+        if (r.size >= 52) for (i in 0 until 32) b32.put(r[13 + i].toDouble())
         return JSONObject()
             .put("frames", r[0].toDouble()).put("rmsAcc", r[1].toDouble())
             .put("humOn", r[2].toDouble()).put("humOff", r[3].toDouble()).put("sub", r[4].toDouble())
-            .put("acc", acc).toString()
+            .put("acc", acc).put("b32", b32)
+            .put("ll", r[45].toDouble()).put("rr", r[46].toDouble()).put("lr", r[47].toDouble())
+            .put("peak", r[48].toDouble()).put("minBlk", r[49].toDouble()).put("maxBlk", r[50].toDouble()).put("pow", r[51].toDouble())
+            .toString()
     }
 
     /** Thumbnails at given times (seconds) for the zoomed timeline; exact frames when zoomed far in. */
