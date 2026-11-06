@@ -101,6 +101,9 @@ say("fx on", js("(()=>{[['eqTapeNr',80],['eqBdec',50],['eqHfr',80],['eqBbe',60],
 time.sleep(2); p1 = js("document.getElementById('cutterPos').textContent"); time.sleep(3); p2 = js("document.getElementById('cutterPos').textContent")
 say("fx playing", p1, "->", p2, js("document.getElementById('videoTitle').textContent"))
 say("equal volume", js("document.getElementById('audioEqVm').click();document.getElementById('audioEqVm').textContent"))
+say("heavy bass", js("(()=>{[['eqBass',15],['eqPreamp',6]].forEach(function(a){var e=document.getElementById(a[0]);e.value=a[1];e.dispatchEvent(new Event('input',{bubbles:true}))});var e=document.querySelector('[data-eq-b10=\"0\"]');e.value=12;e.dispatchEvent(new Event('input',{bubbles:true}));return 'ok'})()"))
+for k in range(3):
+    time.sleep(2); say("meter", js("MYmusicNativePlayer.limiterMeter()"), js("document.getElementById('limOut').textContent+' '+document.getElementById('hrOut').textContent"), js("document.getElementById('cutterPos').textContent"))
 time.sleep(12); say("eq status", js("document.getElementById('audioEqStatus').textContent"), js("document.getElementById('cutterPos').textContent"))
 say("songs", js("document.getElementById('findSongs').click();document.getElementById('spFind').click();'ok'"))
 for k in range(30):

@@ -29,6 +29,7 @@ constexpr int NPARAM = 56;
 // 35..54 band gains of the 10- and 20-band layouts
 std::atomic<float> gParam[NPARAM];
 std::atomic<int> gAnalyse{0};
+std::atomic<float> gGrMin{1.f}, gHrDb{0.f};   // limiter's deepest gain since last read, current auto headroom (dB)
 
 inline float clampf(float v, float a, float b) { return v < a ? a : (v > b ? b : v); }
 inline double dbToGain(double db) { return std::pow(10.0, db / 20.0); }
@@ -57,6 +58,13 @@ struct Biquad {
         return (float)y;
     }
     void reset() { z1[0] = z1[1] = z2[0] = z2[1] = 0; }
+    // |H| squared at normalised angular frequency w
+    double mag2(double w) const {
+        double c1 = std::cos(w), s1 = std::sin(w), c2 = std::cos(2 * w), s2 = std::sin(2 * w);
+        double nr = b0 + b1 * c1 + b2 * c2, ni = -(b1 * s1 + b2 * s2);
+        double dr = 1 + a1 * c1 + a2 * c2, di = -(a1 * s1 + a2 * s2);
+        return (nr * nr + ni * ni) / (dr * dr + di * di + 1e-30);
+    }
     void norm(double B0, double B1, double B2, double A0, double A1, double A2) {
         b0 = B0 / A0; b1 = B1 / A0; b2 = B2 / A0; a1 = A1 / A0; a2 = A2 / A0;
     }
@@ -176,6 +184,9 @@ struct Engine {
     // limiter (port of the web worklet)
     int L = 240; static constexpr int LN = 8192;
     std::vector<float> lb0, lb1, req; std::vector<double> dq; uint64_t lh = 0, lt = 0, lw = 0; double lg = 1, lRel = 0, lAtt = 0;
+    int lHold = 0, lHoldN = 1440; double lAct = 0, lActK = 0;   // hold after each peak; how busy the limiter is (1 s average)
+    // auto headroom: peak level of the music before and after the effects (preamp excluded), followed slowly
+    double hrTarget = 1, hrG = 1, hrPre = 0, hrPost = 0, hrRel = 0, hrDn = 0, hrUp = 0; float P55 = 0;
     // analysis
     std::vector<float> an, win; int anPos = 0; std::vector<float> re, im;
     std::mutex resM; float res[13];
@@ -194,7 +205,8 @@ struct Engine {
         levAtt = std::exp(-1.0 / (0.008 * sr)); levRel = std::exp(-1.0 / (0.3 * sr)); levEnv = 0;
         L = std::max(16, (int)std::lround(sr * 0.005));
         lb0.assign(LN, 0.f); lb1.assign(LN, 0.f); req.assign(LN, 1.f); dq.assign(LN, 0.0); lh = lt = lw = 0; lg = 1;
-        lRel = std::exp(-1.0 / (0.08 * sr)); lAtt = std::exp(-4.0 / L);
+        lRel = std::exp(-1.0 / (0.08 * sr)); lAtt = std::exp(-4.0 / L); lHoldN = (int)(0.03 * sr); lActK = std::exp(-1.0 / sr);
+        hrRel = std::exp(-64.0 / (3.0 * sr)); hrDn = 1 - std::exp(-64.0 / (1.5 * sr)); hrUp = 1 - std::exp(-64.0 / (20.0 * sr)); hrPre = hrPost = 0; hrTarget = hrG = 1;
         an.assign(FFTN, 0.f); anPos = 0; re.assign(FFTN, 0.f); im.assign(FFTN, 0.f);
         win.resize(FFTN);
         for (int i = 0; i < FFTN; i++) win[i] = 0.5f - 0.5f * std::cos(2 * M_PI * i / (FFTN - 1));
@@ -238,7 +250,7 @@ struct Engine {
         for (auto &a : apL) std::fill(a.b.begin(), a.b.end(), 0.f);
         for (auto &a : apR) std::fill(a.b.begin(), a.b.end(), 0.f);
         std::fill(lb0.begin(), lb0.end(), 0.f); std::fill(lb1.begin(), lb1.end(), 0.f); std::fill(req.begin(), req.end(), 1.f);
-        lh = lt = lw = 0; lg = 1; levEnv = 0; tPrev[0] = tPrev[1] = 0; anPos = 0;
+        lh = lt = lw = 0; lg = 1; lHold = 0; lAct = 0; levEnv = 0; tPrev[0] = tPrev[1] = 0; anPos = 0;
         nrEnv = 0; nrFloor = 1e-3; nrG = 1; nrBlk = 0; nrN = 0; bdEnv = 0; bdG = 1; bbEnv = bbSlow = 0; bbG = 0; bbDesigned = -99;
         for (int c = 0; c < 2; c++) { if (!bbDL[c].b.empty()) bbDL[c].clear(); hfEnvS[c] = hfEnvG[c] = hfK[c] = 0; }
         m3Env = 0; m3G = 1;
@@ -369,6 +381,7 @@ struct Engine {
         const int16_t *i16 = reinterpret_cast<const int16_t *>(in);
         const float *f32 = reinterpret_cast<const float *>(in);
 
+        if (neutral) gHrDb.store(0.f);
         if (neutral && inCh == 2 && !isFloat) {
             std::memcpy(out, in, (size_t)frames * 4);   // untouched
             if (analysing) {
@@ -379,7 +392,7 @@ struct Engine {
             }
             return;
         }
-        if (fresh) { std::memcpy(S, P, sizeof(S)); design(); fresh = false; }
+        if (fresh) { std::memcpy(S, P, sizeof(S)); P55 = P[55]; design(); fresh = false; }
         const float smoothK = (float)(1 - std::exp(-64.0 / (0.025 * sr)));
         float Lb[64], Rb[64];
         for (int f0 = 0; f0 < frames; f0 += 64) {
@@ -401,8 +414,9 @@ struct Engine {
             if (!neutral) {
                 bool changed = false;
                 if (S[33] != P[33]) { S[33] = P[33]; changed = true; }
+                if (P55 != P[55]) { P55 = P[55]; if (P55 < 0.5f) hrTarget = 1; }
                 for (int i = 0; i < NPARAM; i++) {
-                    if (i == 21 || i == 22 || i == 33) continue;
+                    if (i == 21 || i == 22 || i == 33 || i == 55) continue;
                     S[i] += (P[i] - S[i]) * smoothK;
                     if (std::fabs(S[i] - P[i]) < 1e-3f) S[i] = P[i];
                     if (std::fabs(S[i] - C[i]) > 1e-3f) changed = true;
@@ -476,11 +490,15 @@ struct Engine {
 
     void processBlock(float *Lb, float *Rb, int n, bool limOn) {
         float *ch[2] = {Lb, Rb};
+        double pkIn = 0;
+        for (int j = 0; j < n; j++) pkIn = std::max(pkIn, (double)std::max(std::fabs(Lb[j]), std::fabs(Rb[j])));
+        const double gainIn = (std::fabs(S[32]) > 0.01f ? dbToGain(S[32]) : 1.0) * hrG;
         // tone filters
         for (int c = 0; c < 2; c++) {
             float *x = ch[c];
-            const bool pre = std::fabs(S[32]) > 0.01f;
-            const float preG = pre ? (float)dbToGain(S[32]) : 1.f;
+            const float hg = (float)(c == 0 ? (hrG += (hrTarget - hrG) * (1 - std::exp(-n / (0.05 * sr)))) : hrG);
+            const bool pre = std::fabs(S[32]) > 0.01f || hg < 0.9999f;
+            const float preG = (std::fabs(S[32]) > 0.01f ? (float)dbToGain(S[32]) : 1.f) * hg;
             for (int j = 0; j < n; j++) {
                 float v = pre ? x[j] * preG : x[j];
                 v = rumble.run(v, c);
@@ -703,6 +721,17 @@ struct Engine {
                 Lb[j] = l * dry + wl * wet; Rb[j] = r * dry + wr * wet;
             }
         }
+        // auto headroom: how much the settings raised the peaks (preamp and headroom itself excluded)
+        if (P55 > 0.5f) {
+            double pkOut = 0;
+            for (int j = 0; j < n; j++) pkOut = std::max(pkOut, (double)std::max(std::fabs(Lb[j]), std::fabs(Rb[j])));
+            pkOut /= gainIn;
+            hrPre = std::max(pkIn, hrPre * hrRel); hrPost = std::max(pkOut, hrPost * hrRel);
+            if (hrPre > 3e-4) {   // ignore silence
+                double want = std::min(1.0, std::max(dbToGain(-24), hrPre / (hrPost + 1e-12)));
+                hrTarget += (want - hrTarget) * (want < hrTarget ? hrDn : hrUp);
+            }
+        }
         // equal volume: each song's measured loudness brought to the same level (the limiter catches peaks)
         if (std::fabs(S[29]) > 0.01f) {
             const float g = (float)dbToGain(S[29]);
@@ -721,10 +750,14 @@ struct Engine {
                 Lb[j] *= g; Rb[j] *= g;
             }
         }
+        gHrDb.store((float)(20 * std::log10(hrG + 1e-9)), std::memory_order_relaxed);
         // look-ahead limiter at -1 dB
         if (limOn) {
             const uint64_t mask = LN - 1;
             const double ceil = std::pow(10.0, -1.0 / 20);
+            // release 80 ms when the limiter acts now and then, up to 600 ms when it is busy all the time
+            const double relK = std::exp(-1.0 / ((0.08 + 0.52 * lAct) * sr));
+            double grMin = 1;
             for (int j = 0; j < n; j++) {
                 uint64_t w = lw;
                 double pk = std::max(std::fabs(Lb[j]), std::fabs(Rb[j])), need = pk > ceil ? ceil / pk : 1;
@@ -733,13 +766,19 @@ struct Engine {
                 dq[lt & mask] = (double)w; lt++;
                 while ((uint64_t)dq[lh & mask] + L < w) lh++;
                 double target = req[((uint64_t)dq[lh & mask]) & mask];
-                lg = target < lg ? target + (lg - target) * lAtt : target + (lg - target) * lRel;
+                if (target < lg) { lg = target + (lg - target) * lAtt; lHold = lHoldN; }
+                else if (lHold > 0) lHold--;
+                else lg = target + (lg - target) * relK;
+                lAct = lAct * lActK + (1 - lActK) * (lg < 0.995 ? 1.0 : 0.0);
+                if (lg < grMin) grMin = lg;
                 uint64_t ro = (w - L) & mask;
                 double yl = lb0[ro] * lg, yr = lb1[ro] * lg;
                 Lb[j] = (float)std::max(-ceil, std::min(ceil, yl));
                 Rb[j] = (float)std::max(-ceil, std::min(ceil, yr));
                 lw++;
             }
+            float g0 = gGrMin.load(std::memory_order_relaxed);
+            if (grMin < g0) gGrMin.store((float)grMin, std::memory_order_relaxed);
         }
     }
     static inline bool P12on(float click) { return click > 0.01f; }
@@ -802,6 +841,13 @@ JNIEXPORT jfloatArray JNICALL Java_com_mymusic_cutter_FxNative_analysisResult(JN
     if (gE) { std::lock_guard<std::mutex> r(gE->resM); std::memcpy(out, gE->res, sizeof(out)); }
     jfloatArray a = env->NewFloatArray(13);
     env->SetFloatArrayRegion(a, 0, 13, out);
+    return a;
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_mymusic_cutter_FxNative_meter(JNIEnv *env, jclass) {
+    float out[2] = {(float)(20 * std::log10(gGrMin.exchange(1.f) + 1e-9)), gHrDb.load()};
+    jfloatArray a = env->NewFloatArray(2);
+    env->SetFloatArrayRegion(a, 0, 2, out);
     return a;
 }
 

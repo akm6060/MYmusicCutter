@@ -669,6 +669,7 @@ class NativePlayer(
         val mode = o.optInt("eqMode", 8)
         p[33] = (if (mode == 10 || mode == 20) mode else 8).toFloat()
         p[34] = o.optDouble("bassHz", 100.0).toFloat()
+        p[55] = if (o.optBoolean("headroom", false)) 1f else 0f   // auto headroom
         val xb = if (mode == 10) o.optJSONArray("b10") else if (mode == 20) o.optJSONArray("b20") else null
         if (xb != null) for (i in 0 until minOf(20, xb.length())) p[35 + i] = xb.optDouble(i, 0.0).toFloat().coerceIn(-20f, 20f)
         p[15] = 0f; p[16] = 50f                      // tube amplifier: removed in 4.9
@@ -678,6 +679,13 @@ class NativePlayer(
     @JavascriptInterface
     fun analyse(on: Boolean) {
         FxNative.analyse(on)
+    }
+
+    /** Limiter meter: deepest cut since the last call (dB, 0 = none) and auto headroom in use (dB). */
+    @JavascriptInterface
+    fun limiterMeter(): String {
+        val r = try { FxNative.meter() } catch (_: Throwable) { floatArrayOf(0f, 0f) }
+        return JSONObject().put("gr", r[0].toDouble()).put("hr", r[1].toDouble()).toString()
     }
 
     @JavascriptInterface
