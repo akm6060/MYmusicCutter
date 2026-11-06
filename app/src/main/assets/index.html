@@ -2607,7 +2607,7 @@ html.light .lock-grip{border-color:#1b1838}
   }
   el('audioEqAuto').addEventListener('click',function(){
     if(eqAnalysing)return;
-    if(eqAutoLevel===2){eqAutoLevel=0;if(eqBeforeAuto){eqState=eqBeforeAuto;eqBeforeAuto=null}eqRefreshUi();eqApply();eqStatus('Auto enhancer off: your previous settings are back.');return}
+    if(eqAutoLevel===2){eqAutoLevel=0;eqBeforeAuto=null;eqRefreshUi();eqApply();eqStatus('Auto enhancer off: its settings stay, and you can change any of them by hand.');return}
     if(!activeMedia||!activeMedia.src){eqStatus('Choose a music or video file first.');return}
     var next=eqAutoLevel+1,k=autoKey();
     function use(d){
