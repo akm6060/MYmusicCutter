@@ -217,8 +217,13 @@ try:
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml"); return adb("shell", "cat", "/sdcard/ui.xml")
     x = shade(); shot("notif")
     say("notif nodes", {k: node_center(x, k) for k in ("nTitle", "nToggle", "nExit")})
-    seg = x[x.find("com.mymusic.cutter:id/nTitle") - 3000: x.find("com.mymusic.cutter:id/nExit") + 400] if "nTitle" in x else ""
-    say("notif expandable:", "expand_button" in seg and 'resource-id="android:id/expand_button"' in seg, "| app-name header line:", "MYmusic Cutter" in seg)
+    say("notif default view: our row", "com.mymusic.cutter:id/nExit" in x, "| system title-only view:", 'text="cassette"' in x and "nTitle" not in x)
+    if "nExit" not in x:   # try expanding / collapsing by tapping the chevron, see what each state shows
+        m = re.search(r'resource-id="android:id/expand_button"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', x)
+        if m:
+            a, b, c, d = map(int, m.groups()); adb("shell", "input", "tap", str((a + c) // 2), str((b + d) // 2)); time.sleep(1.5)
+            adb("shell", "uiautomator", "dump", "/sdcard/ui.xml"); x = adb("shell", "cat", "/sdcard/ui.xml"); shot("notif2")
+            say("after chevron tap: our row", "com.mymusic.cutter:id/nExit" in x)
     ch = adb("shell", "dumpsys", "notification")
     i = ch.find("playback_line"); say("channel", ch[i:i + 300].replace("\n", " ") if i >= 0 else "not found")
     # lock screen: turn the screen off and on, look for the banner on the keyguard
