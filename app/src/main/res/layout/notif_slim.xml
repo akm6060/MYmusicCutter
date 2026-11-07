@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- one slim line: song name, play/pause, exit -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+    <TextView
+        android:id="@+id/nTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="@android:style/TextAppearance.Material.Notification.Title" />
+    <ImageView
+        android:id="@+id/nToggle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
+        android:contentDescription="Play or pause"
+        android:src="@android:drawable/ic_media_pause"
+        android:tint="#FFB341" />
+    <ImageView
+        android:id="@+id/nExit"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
+        android:contentDescription="Exit"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="#FF6A5A" />
+</LinearLayout>

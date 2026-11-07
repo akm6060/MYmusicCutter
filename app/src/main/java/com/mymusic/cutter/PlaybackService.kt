@@ -11,10 +11,13 @@ import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
+import android.widget.RemoteViews
+import android.content.BroadcastReceiver
 
 /**
  * Keeps the music (or the sound of a video) playing while the app is in the background,
- * with a small notification: Play / Pause and Close.
+ * with a slim one-line notification: song name, Play / Pause and Exit.
+ * Plain custom layout (not the media style), so every phone shows working buttons.
  */
 class PlaybackService : Service() {
 
@@ -117,28 +120,44 @@ class PlaybackService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             flags
         )
-        val toggle = PendingIntent.getService(this, 1, Intent(this, PlaybackService::class.java).setAction(ACT_TOGGLE), flags)
-        val exit = PendingIntent.getService(this, 3, Intent(this, PlaybackService::class.java).setAction(ACT_EXIT), flags)
-        val playPause = Notification.Action.Builder(
-            Icon.createWithResource(this, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play),
-            if (playing) "Pause" else "Play", toggle
-        ).build()
-        val exitAct = Notification.Action.Builder(
-            Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel), "Exit", exit
-        ).build()
+        val toggle = PendingIntent.getBroadcast(this, 1, Intent(this, NotifReceiver::class.java).setAction(ACT_TOGGLE), flags)
+        val exit = PendingIntent.getBroadcast(this, 3, Intent(this, NotifReceiver::class.java).setAction(ACT_EXIT), flags)
+        val v = RemoteViews(packageName, R.layout.notif_slim)
+        v.setTextViewText(R.id.nTitle, title)
+        v.setImageViewResource(R.id.nToggle, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
+        v.setOnClickPendingIntent(R.id.nToggle, toggle)
+        v.setOnClickPendingIntent(R.id.nExit, exit)
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(title)
             .setContentIntent(open)
+            .setCustomContentView(v)
+            .setCustomBigContentView(v)
+            .setStyle(Notification.DecoratedCustomViewStyle())
             .setOngoing(playing)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .addAction(playPause)
-            .addAction(exitAct)
-            .setStyle(Notification.MediaStyle().setShowActionsInCompactView(0, 1))
             .build()
     }
+
+    /** Button taps from the notification (a receiver works on every phone, even when the app is in the background). */
+    class NotifReceiver : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+                ACT_TOGGLE -> control?.toggle()
+                ACT_EXIT -> {
+                    val c = control
+                    if (c != null) c.exit()
+                    instance?.let { it.instance0(); }
+                    stop(ctx)
+                    try { ctx.getSystemService(NotificationManager::class.java).cancel(NOTE_ID) } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    private fun instance0() { instance = null; stopForegroundCompat(); stopSelf() }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         // the app was swiped away: stop the sound too

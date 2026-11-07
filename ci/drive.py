@@ -205,23 +205,32 @@ for k in range(6):
 say("ab positions", poss)
 say("ab off", js("(()=>{document.getElementById('abBtn').click();return document.getElementById('cutterNote').textContent})()"))
 
-# notification: one line, Play/Pause + Exit; Exit closes the app
+# notification: one slim line with our own Play/Pause and Exit buttons; Exit closes the app
 try:
-    js("(()=>{var m=document.querySelector('video:not([hidden]),audio');return 1})()")
-    nd = adb("shell", "dumpsys", "notification", "--noredact")
-    blk = nd[nd.find("pkg=com.mymusic.cutter"):][:4000] if "pkg=com.mymusic.cutter" in nd else ""
-    say("notif actions", [l.strip() for l in blk.splitlines() if "actions=" in l or '"Exit"' in l or "Exit" in l][:4], "has text line:", "android.text=" in blk and "Playing" in blk)
-    adb("shell", "cmd", "statusbar", "expand-notifications"); time.sleep(2)
-    adb("shell", "uiautomator", "dump", "/sdcard/ui.xml"); x = adb("shell", "cat", "/sdcard/ui.xml")
     import re
-    m = re.search(r'(?:text|content-desc)="Exit"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', x) or re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*(?:text|content-desc)="Exit"', x)
-    shot("notif")
-    if m:
-        a, b, c, d = map(int, m.groups()); adb("shell", "input", "tap", str((a + c) // 2), str((b + d) // 2)); time.sleep(3)
-        say("after Exit", "activity:", "com.mymusic.cutter" in adb("shell", "dumpsys", "activity", "activities").split("mResumedActivity")[-1][:300],
+    def node_center(xml, rid):
+        m = re.search(r'resource-id="com.mymusic.cutter:id/' + rid + r'"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+        if not m: return None
+        a, b, c, d = map(int, m.groups()); return ((a + c) // 2, (b + d) // 2)
+    def shade():
+        adb("shell", "cmd", "statusbar", "expand-notifications"); time.sleep(2)
+        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml"); return adb("shell", "cat", "/sdcard/ui.xml")
+    x = shade(); shot("notif")
+    say("notif nodes", {k: node_center(x, k) for k in ("nTitle", "nToggle", "nExit")})
+    t = node_center(x, "nToggle")
+    if t:
+        before = js("(()=>{var b=document.getElementById('videoPlay');return b?b.textContent:''})()")
+        adb("shell", "input", "tap", str(t[0]), str(t[1])); time.sleep(2)
+        say("toggle via notification", before, "->", js("(()=>{var b=document.getElementById('videoPlay');return b?b.textContent:''})()"))
+        x = shade()
+    e = node_center(x, "nExit")
+    if e:
+        adb("shell", "input", "tap", str(e[0]), str(e[1])); time.sleep(3)
+        say("after Exit", "app process:", adb("shell", "pidof", "com.mymusic.cutter").strip() or "-",
+            "activity on top:", "com.mymusic.cutter" in adb("shell", "dumpsys", "activity", "activities").split("mResumedActivity")[-1][:300],
             "notif left:", "pkg=com.mymusic.cutter" in adb("shell", "dumpsys", "notification"))
     else:
         say("Exit button not found in shade")
     adb("shell", "cmd", "statusbar", "collapse")
-except Exception as e:
-    say("notif test error", repr(e))
+except Exception as ex:
+    say("notif test error", repr(ex))

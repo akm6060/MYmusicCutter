@@ -2386,7 +2386,7 @@ html.light .lock-grip{border-color:#1b1838}
     var pr=el('eqPreamp');if(pr){pr.value=eqState.preamp;cfill(pr,eqState.preamp);el('eqPreampOut').textContent=(eqState.preamp>0?'+':'')+eqState.preamp+' dB'+(eqHeadroom&&NATIVE?' · auto':'');pr.disabled=!!(eqHeadroom&&NATIVE);pr.parentNode.classList.toggle('eq-auto-pre',!!(eqHeadroom&&NATIVE))}
     el('audioEqBands10').hidden=eqState.eqMode!==10;el('audioEqBands20').hidden=eqState.eqMode!==20;
     var lb2=el('eqLayoutBtn');if(lb2)lb2.textContent=eqState.eqMode===20?'20 bands':'10 bands';
-    var bh=el('eqBassHz');if(bh){var bv=Math.round(100*Math.log10(eqState.bassHz/30));bh.value=bv;bh.style.setProperty('--a','0%');bh.style.setProperty('--b',bv+'%');el('eqBassHzOut').textContent=eqState.bassHz+' Hz'}
+    var bh=el('eqBassHz');if(bh){var bv=Math.round(100*Math.log10(eqState.bassHz/30));bh.value=bv;bh.style.setProperty('--p',bv+'%');el('eqBassHzOut').textContent=eqState.bassHz+' Hz'}
     ADJ.forEach(function(p){var node=el(p[0]),out=el(p[0]+'Out');if(node){node.value=eqState[p[1]];var mn=+node.min,mx=+node.max;node.style.setProperty('--p',((eqState[p[1]]-mn)/(mx-mn)*100).toFixed(1)+'%')}if(out)out.textContent=eqState[p[1]]+p[2]});
     document.querySelectorAll('#cinemaModes [data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-mode')===eqState.mode?'true':'false')});
     var sb=el('audioEqLite');if(sb){sb.textContent='Smooth: '+(eqLite?'ON':'OFF');sb.classList.toggle('enabled',eqLite);sb.setAttribute('aria-pressed',eqLite?'true':'false')}
