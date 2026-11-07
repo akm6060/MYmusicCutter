@@ -142,7 +142,6 @@ class PlaybackService : Service() {
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .apply { if (Build.VERSION.SDK_INT >= 31) setSilent(true) }
             .build()
     }
 
