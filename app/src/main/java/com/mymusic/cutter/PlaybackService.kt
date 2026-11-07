@@ -138,8 +138,8 @@ class PlaybackService : Service() {
             .setContentTitle(title)
             .setContentIntent(open)
             .setCustomContentView(v)
-            .setCustomBigContentView(RemoteViews(packageName, R.layout.notif_none))   // no expanded view: one line only
-            .setCustomHeadsUpContentView(v)
+            .setCustomBigContentView(v)   // Android may still expand it: then it shows the same single row
+            .setStyle(Notification.DecoratedCustomViewStyle())
             .setOngoing(playing)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)

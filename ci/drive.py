@@ -227,6 +227,7 @@ try:
     ch = adb("shell", "dumpsys", "notification")
     i = ch.find("playback_line"); say("channel", ch[i:i + 300].replace("\n", " ") if i >= 0 else "not found")
     # lock screen: turn the screen off and on, look for the banner on the keyguard
+    adb("shell", "locksettings", "set-disabled", "false")
     adb("shell", "cmd", "statusbar", "collapse"); adb("shell", "input", "keyevent", "223"); time.sleep(2); adb("shell", "input", "keyevent", "224"); time.sleep(3)
     adb("shell", "uiautomator", "dump", "/sdcard/lk.xml"); lk = adb("shell", "cat", "/sdcard/lk.xml"); shot("lockscreen")
     say("lock screen: keyguard", "keyguard" in lk.lower() or "lock" in lk.lower(), "| banner shown:", "com.mymusic.cutter:id/nTitle" in lk, "| exit shown:", "com.mymusic.cutter:id/nExit" in lk)
