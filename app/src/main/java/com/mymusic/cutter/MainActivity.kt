@@ -87,6 +87,14 @@ class MainActivity : Activity() {
                     pausePlayback()
                 }
             }
+            override fun exit() {
+                runOnUiThread {
+                    if (::nativePlayer.isInitialized) nativePlayer.pauseFromActivity()
+                    pausePlayback()
+                    // a moment for the page to store the resume position, then close the app
+                    window.decorView.postDelayed({ try { finishAndRemoveTask() } catch (_: Exception) { finish() } }, 400)
+                }
+            }
         }
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")
         webView.addJavascriptInterface(FileBrowser(this, webView), "MYmusicFiles")

@@ -279,7 +279,7 @@ struct Engine {
                 for (int i = 0; i < 20; i++) {                                                   // sharp: width set
                     double lo = i > 0 ? F20[i - 1] : F20[0] * 0.67, hi = i < 19 ? F20[i + 1] : F20[19] * 1.4;   // by the
                     double q = F20[i] / ((hi - lo) / 2);                                         // neighbours, so
-                    eqx[i].peaking(sr, F20[i], std::max(1.4, std::min(16.0, q * 2.0)), S[35 + i]);      // they barely overlap
+                    eqx[i].peaking(sr, F20[i], std::max(1.4, std::min(16.0, q)), S[35 + i]);      // mildly soft: each band reaches about a quarter of its boost at the neighbours
                 }
             } else eqN = 0;
         }

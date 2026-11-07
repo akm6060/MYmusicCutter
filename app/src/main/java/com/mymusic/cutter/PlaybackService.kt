@@ -21,6 +21,8 @@ class PlaybackService : Service() {
     interface Control {
         fun toggle()
         fun close()
+        /** Stop playback and close the whole app. */
+        fun exit() { close() }
     }
 
     companion object {
@@ -28,6 +30,7 @@ class PlaybackService : Service() {
         private const val NOTE_ID = 4242
         private const val ACT_TOGGLE = "com.mymusic.cutter.TOGGLE"
         private const val ACT_CLOSE = "com.mymusic.cutter.CLOSE"
+        private const val ACT_EXIT = "com.mymusic.cutter.EXIT"
 
         @Volatile var control: Control? = null
         @Volatile private var title = "MYmusic Cutter"
@@ -70,6 +73,13 @@ class PlaybackService : Service() {
         goForeground()
         when (intent?.action) {
             ACT_TOGGLE -> control?.toggle()
+            ACT_EXIT -> {
+                control?.exit()
+                instance = null
+                stopForegroundCompat()
+                stopSelf()
+                return START_NOT_STICKY
+            }
             ACT_CLOSE -> {
                 control?.close()
                 instance = null
@@ -108,25 +118,24 @@ class PlaybackService : Service() {
             flags
         )
         val toggle = PendingIntent.getService(this, 1, Intent(this, PlaybackService::class.java).setAction(ACT_TOGGLE), flags)
-        val close = PendingIntent.getService(this, 2, Intent(this, PlaybackService::class.java).setAction(ACT_CLOSE), flags)
+        val exit = PendingIntent.getService(this, 3, Intent(this, PlaybackService::class.java).setAction(ACT_EXIT), flags)
         val playPause = Notification.Action.Builder(
             Icon.createWithResource(this, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play),
             if (playing) "Pause" else "Play", toggle
         ).build()
-        val closeAct = Notification.Action.Builder(
-            Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel), "Close", close
+        val exitAct = Notification.Action.Builder(
+            Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel), "Exit", exit
         ).build()
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(title)
-            .setContentText(if (playing) "Playing" else "Paused")
             .setContentIntent(open)
             .setOngoing(playing)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .addAction(playPause)
-            .addAction(closeAct)
+            .addAction(exitAct)
             .setStyle(Notification.MediaStyle().setShowActionsInCompactView(0, 1))
             .build()
     }

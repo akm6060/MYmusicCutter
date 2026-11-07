@@ -11,8 +11,8 @@ android {
         applicationId "com.mymusic.cutter"
         minSdk 26
         targetSdk 35
-        versionCode 41
-        versionName "4.17"
+        versionCode 42
+        versionName "4.18"
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
         }
