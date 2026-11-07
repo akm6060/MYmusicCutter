@@ -20,7 +20,7 @@
 
 namespace {
 
-constexpr int NPARAM = 56;
+constexpr int NPARAM = 57;   // 56: lower edge of the bass boost range (Hz, 30 = no lower edge)
 // 0..7 bands, 8 bass, 9 clarity, 10 virtual, 11 hiss, 12 click, 13 hum, 14 rumble, 15 tube,
 // 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral,
 // 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D, 27 MP3 enhance, 28 Mach3 bass,
@@ -67,6 +67,13 @@ struct Biquad {
     }
     void norm(double B0, double B1, double B2, double A0, double A1, double A2) {
         b0 = B0 / A0; b1 = B1 / A0; b2 = B2 / A0; a1 = A1 / A0; a2 = A2 / A0;
+    }
+    // one section of a 4th-order (Butterworth-type) low shelf: m = 1 or 2, g = total linear gain
+    void lowshelf4(double sr, double fc, double gdb, int m) {
+        fc = std::min(fc, sr * 0.45);
+        double g = std::pow(10.0, gdb / 20), K = 1 / std::tan(M_PI * fc / sr), th = (2 * m - 1) * M_PI / 8, c = 2 * std::sin(th);
+        double a = c * std::pow(g, 0.25), b = std::sqrt(g);
+        norm(K * K + a * K + b, 2 * (b - K * K), K * K - a * K + b, K * K + c * K + 1, 2 * (1 - K * K), K * K - c * K + 1);
     }
     // Q in dB for low/high-pass, like Web Audio
     void lowpass(double sr, double f, double qdb) {
@@ -145,6 +152,7 @@ struct Engine {
     bool fresh = true;
 
     Biquad rumble, hum, bass, bands[8], clarity, hiss;
+    Biquad bassR[4]; bool bassCutOn = false;   // bass range: steep shelves, boost between the lower and upper edge only
     Biquad eqx[20]; int eqMode = 8, eqN = 0;   // 10- or 20-band layout (the 8-band one uses bands[])
     // click repair (port of the web worklet)
     struct DC { std::vector<float> buf; std::vector<uint8_t> bad; float m = 1e-4f, x1 = 0, x2 = 0; int hold = 0; } dc[2];
@@ -237,7 +245,7 @@ struct Engine {
         resetState();
     }
     void resetState() {
-        Biquad *all[] = {&rumble, &hum, &bass, &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear,
+        Biquad *all[] = {&rumble, &hum, &bass, &bassR[0], &bassR[1], &bassR[2], &bassR[3], &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear,
                          &nrHp, &nrHp2, &nrLp, &nrLp2, &bdHp, &bdHp2, &bdLp, &bdLp2, &bbDet, &bbShelf, &bbLow, &wHpS, &wAmbHp, &wAmbLp, &wBass,
                          &hfSrcHp1, &hfSrcHp2, &hfSrcLp1, &hfSrcLp2, &hfGenHp1, &hfGenHp2, &hfGenLp, &hfDc,
                          &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub, &xfLp, &exHp, &exHp2, &exLp, &exOut, &exOut2};
@@ -263,6 +271,22 @@ struct Engine {
         rumble.highpass(sr, 20 + S[14] * 1.25, 0.707);
         hum.peaking(sr, 50, 5, -0.24 * S[13]);
         bass.lowshelf(sr, S[34] > 1 ? S[34] : 100, S[8]);
+        // bass range: steep (4th-order) shelves up at the upper edge and back down at the lower edge,
+        // so only the range between is lifted; the gain is trimmed so the range reaches the set boost
+        bassCutOn = S[8] > 0.01f && S[56] > 30.5f && S[56] < (S[34] > 1 ? S[34] : 100) * 0.95f;
+        if (bassCutOn) {
+            const double hiHz = S[34] > 1 ? S[34] : 100;
+            double g2 = S[8];
+            for (int it = 0; it < 5; it++) {
+                bassR[0].lowshelf4(sr, hiHz, g2, 1); bassR[1].lowshelf4(sr, hiHz, g2, 2);
+                bassR[2].lowshelf4(sr, S[56], -g2, 1); bassR[3].lowshelf4(sr, S[56], -g2, 2);
+                double pk = 0;
+                for (int k = 0; k < 64; k++) { double w = 2 * M_PI * 20.0 * std::pow(25.0, k / 63.0) / sr, m = 1; for (auto &q : bassR) m *= q.mag2(w); pk = std::max(pk, m); }
+                double pkDb = 10 * std::log10(pk + 1e-30);
+                if (pkDb < 0.1 || std::fabs(pkDb - S[8]) < 0.05) break;
+                g2 = std::min(S[8] + 12.0, g2 * S[8] / pkDb);
+            }
+        }
         static const double F[8] = {70, 150, 400, 1000, 2400, 5000, 7000, 10000};
         for (int i = 0; i < 8; i++) bands[i].peaking(sr, F[i], 0.9, S[i]);
         {
@@ -520,7 +544,7 @@ struct Engine {
             for (int j = 0; j < n; j++) {
                 float v = pre ? x[j] * preG : x[j];
                 v = rumble.run(v, c);
-                v = hum.run(v, c); v = bass.run(v, c);
+                v = hum.run(v, c); if (bassCutOn) { for (auto &q : bassR) v = q.run(v, c); } else v = bass.run(v, c);
                 if (eqN == 0) { for (auto &b : bands) v = b.run(v, c); }
                 else { for (int b = 0; b < eqN; b++) v = eqx[b].run(v, c); }
                 v = clarity.run(v, c); v = hiss.run(v, c);

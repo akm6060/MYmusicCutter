@@ -644,7 +644,7 @@ class NativePlayer(
     @JavascriptInterface
     fun setSound(json: String) {
         val o = try { JSONObject(json) } catch (_: Exception) { return }
-        val p = FloatArray(56)
+        val p = FloatArray(57)
         val bands = o.optJSONArray("bands")
         for (i in 0 until 8) p[i] = (bands?.optDouble(i, 0.0) ?: 0.0).toFloat()
         val keys = arrayOf("bass", "clarity", "virtual", "hiss", "click", "hum", "rumble", "tube")
@@ -669,6 +669,7 @@ class NativePlayer(
         val mode = o.optInt("eqMode", 8)
         p[33] = (if (mode == 10 || mode == 20) mode else 8).toFloat()
         p[34] = o.optDouble("bassHz", 100.0).toFloat()
+        p[56] = o.optDouble("bassLoHz", 30.0).toFloat().coerceIn(0f, 300f)   // lower edge of the bass boost (30 = none)
         p[55] = if (o.optBoolean("headroom", false)) 1f else 0f   // auto headroom
         val xb = if (mode == 10) o.optJSONArray("b10") else if (mode == 20) o.optJSONArray("b20") else null
         if (xb != null) for (i in 0 until minOf(20, xb.length())) p[35 + i] = xb.optDouble(i, 0.0).toFloat().coerceIn(-20f, 20f)

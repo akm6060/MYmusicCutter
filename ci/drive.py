@@ -217,6 +217,16 @@ try:
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml"); return adb("shell", "cat", "/sdcard/ui.xml")
     x = shade(); shot("notif")
     say("notif nodes", {k: node_center(x, k) for k in ("nTitle", "nToggle", "nExit")})
+    seg = x[x.find("com.mymusic.cutter:id/nTitle") - 3000: x.find("com.mymusic.cutter:id/nExit") + 400] if "nTitle" in x else ""
+    say("notif expandable:", "expand_button" in seg and 'resource-id="android:id/expand_button"' in seg, "| app-name header line:", "MYmusic Cutter" in seg)
+    ch = adb("shell", "dumpsys", "notification")
+    i = ch.find("playback_line"); say("channel", ch[i:i + 300].replace("\n", " ") if i >= 0 else "not found")
+    # lock screen: turn the screen off and on, look for the banner on the keyguard
+    adb("shell", "cmd", "statusbar", "collapse"); adb("shell", "input", "keyevent", "223"); time.sleep(2); adb("shell", "input", "keyevent", "224"); time.sleep(3)
+    adb("shell", "uiautomator", "dump", "/sdcard/lk.xml"); lk = adb("shell", "cat", "/sdcard/lk.xml"); shot("lockscreen")
+    say("lock screen: keyguard", "keyguard" in lk.lower() or "lock" in lk.lower(), "| banner shown:", "com.mymusic.cutter:id/nTitle" in lk, "| exit shown:", "com.mymusic.cutter:id/nExit" in lk)
+    adb("shell", "wm", "dismiss-keyguard"); adb("shell", "input", "keyevent", "82"); time.sleep(2)
+    x = shade()
     t = node_center(x, "nToggle")
     if t:
         before = js("(()=>{var b=document.getElementById('videoPlay');return b?b.textContent:''})()")

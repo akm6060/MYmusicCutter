@@ -29,7 +29,7 @@ class PlaybackService : Service() {
     }
 
     companion object {
-        private const val CHANNEL = "playback"
+        private const val CHANNEL = "playback_line"   // silent, normal priority: shown in full and on the lock screen
         private const val NOTE_ID = 4242
         private const val ACT_TOGGLE = "com.mymusic.cutter.TOGGLE"
         private const val ACT_CLOSE = "com.mymusic.cutter.CLOSE"
@@ -63,10 +63,16 @@ class PlaybackService : Service() {
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
+        try { nm.deleteNotificationChannel("playback") } catch (_: Exception) {}   // old low-priority channel
         if (nm.getNotificationChannel(CHANNEL) == null) {
-            val ch = NotificationChannel(CHANNEL, "Playback", NotificationManager.IMPORTANCE_LOW)
-            ch.description = "Shows what is playing, with Play / Pause"
+            // normal priority so phones do not shrink it to a title-only line, but no sound and no vibration
+            val ch = NotificationChannel(CHANNEL, "Playback", NotificationManager.IMPORTANCE_DEFAULT)
+            ch.description = "One line: what is playing, with Play / Pause and Exit"
             ch.setShowBadge(false)
+            ch.setSound(null, null)
+            ch.enableVibration(false)
+            ch.enableLights(false)
+            ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             nm.createNotificationChannel(ch)
         }
     }
@@ -132,12 +138,11 @@ class PlaybackService : Service() {
             .setContentTitle(title)
             .setContentIntent(open)
             .setCustomContentView(v)
-            .setCustomBigContentView(v)
-            .setStyle(Notification.DecoratedCustomViewStyle())
             .setOngoing(playing)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .apply { if (Build.VERSION.SDK_INT >= 31) setSilent(true) }
             .build()
     }
 
