@@ -62,6 +62,8 @@ class MYmusicNativeCutter(
     private val context: Context = activity.applicationContext
     private val lock = Any()
     private val worker = Executors.newSingleThreadExecutor()
+    /** Runs after any cut or copy that is still being written has finished (at once when idle). */
+    fun whenIdle(r: Runnable) { try { worker.execute { r.run() } } catch (_: Exception) { r.run() } }
     private val busy = AtomicBoolean(false)
 
     private class Picked(val uri: Uri, val name: String, val size: Long)

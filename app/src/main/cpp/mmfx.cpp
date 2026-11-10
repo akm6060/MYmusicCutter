@@ -20,7 +20,7 @@
 
 namespace {
 
-constexpr int NPARAM = 57;   // 56: lower edge of the bass boost range (Hz, 30 = no lower edge)
+constexpr int NPARAM = 63;   // 57/58 loudness shelves (dB), 59 speaker-safe bass, 60 de-esser, 61 mono->stereo, 62 true-peak limiter;   // 56: lower edge of the bass boost range (Hz, 30 = no lower edge)
 // 0..7 bands, 8 bass, 9 clarity, 10 virtual, 11 hiss, 12 click, 13 hum, 14 rumble, 15 tube,
 // 16 warmth, 17 dialog, 18 width, 19 bassx, 20 level, 21 limiter on, 22 neutral,
 // 23 tape NR, 24 B-decode, 25 clarity HD, 26 wide 3D, 27 MP3 enhance, 28 Mach3 bass,
@@ -182,6 +182,14 @@ struct Engine {
     Biquad xfLp; Delay xfD[2]; int xfDelay = 13;
     // exciter: treble band gently saturated, only the new harmonics mixed back in
     Biquad exHp, exHp2, exLp, exOut, exOut2;
+    // extras (all off by default)
+    Biquad loudLo, loudHi; bool loudOn = false;
+    Biquad svLp1, svLp2, svHp1, svHp2, svTop;
+    Biquad spHp1, spHp2;                                   // speaker-safe bass: nothing below ~110 Hz reaches a phone speaker
+    Biquad dsHp; double dsHi = 0, dsAll = 0, dsG = 1, dsAtt = 0, dsRel = 0, dsEnvK = 0;
+    Delay p2sD; Biquad p2sHp, p2sLp; double p2sLL = 0, p2sRR = 0, p2sLR = 0, p2sAmt = 0, p2sK = 0; int p2sN = 0;
+    float tpH[2][5] = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
+    double bcG = -1, bcHi = -1, bcLo = -1, bcSr = -1;       // bass range filters are recalculated only when they change
     // wide 3D: side widening above the bass, a little space, bass lift
     Biquad wHpS, wAmbHp, wAmbLp, wBass; Delay wDel; int wAmbD = 600;
     // virtualizer
@@ -215,7 +223,7 @@ struct Engine {
         L = std::max(16, (int)std::lround(sr * 0.005));
         lb0.assign(LN, 0.f); lb1.assign(LN, 0.f); req.assign(LN, 1.f); dq.assign(LN, 0.0); lh = lt = lw = 0; lg = 1;
         lRel = std::exp(-1.0 / (0.08 * sr)); lAtt = std::exp(-4.0 / L); lHoldN = (int)(0.03 * sr); lActK = std::exp(-1.0 / sr);
-        hrRel = std::exp(-64.0 / (3.0 * sr)); hrDn = 1 - std::exp(-64.0 / (1.5 * sr)); hrUp = 1 - std::exp(-64.0 / (20.0 * sr)); hrPre = hrPost = 0; hrTarget = hrG = 1;
+        hrRel = std::exp(-64.0 / (3.0 * sr)); hrDn = 1 - std::exp(-64.0 / (1.5 * sr)); hrUp = 1 - std::exp(-64.0 / (20.0 * sr)); hrPre = hrPost = 0;   // hrTarget is kept: the next song starts at the level the last one settled at
         an.assign(FFTN, 0.f); anPos = 0; re.assign(FFTN, 0.f); im.assign(FFTN, 0.f);
         win.resize(FFTN);
         for (int i = 0; i < FFTN; i++) win[i] = 0.5f - 0.5f * std::cos(2 * M_PI * i / (FFTN - 1));
@@ -239,6 +247,10 @@ struct Engine {
         m3A = tc(0.01); m3R = tc(0.15);
         xfLp.lowpass(sr, 700, -3.01); xfDelay = (int)std::lround(0.0003 * sr);
         for (int c = 0; c < 2; c++) xfD[c].init(xfDelay + 4);
+        spHp1.highpass(sr, 110, -5.33); spHp2.highpass(sr, 110, 2.32);
+        svLp1.lowpass(sr, 150, -3.01); svLp2 = svLp1; svHp1.highpass(sr, 110, -3.01); svHp2 = svHp1; svTop.lowpass(sr, 400, -3.01);
+        dsHp.highpass(sr, 5000, -3.01); dsAtt = 1 - std::exp(-1.0 / (0.001 * sr)); dsRel = 1 - std::exp(-1.0 / (0.06 * sr)); dsEnvK = 1 - std::exp(-1.0 / (0.004 * sr));
+        p2sD.init((int)(0.012 * sr) + 4); p2sHp.highpass(sr, 300, -3.01); p2sLp.lowpass(sr, 6000, -3.01); p2sK = 1 - std::exp(-1.0 / (0.4 * sr));
         exHp.highpass(sr, 2500, -3.01); exHp2 = exHp; exLp.lowpass(sr, 7000, -3.01); exOut.highpass(sr, 5000, -3.01); exOut2 = exOut;
         wHpS.highpass(sr, 180, -3.01); wAmbHp.highpass(sr, 300, -3.01); wAmbLp.lowpass(sr, 7000, -3.01);
         wAmbD = (int)std::lround(0.013 * sr); wDel.init(wAmbD + 4);
@@ -248,8 +260,10 @@ struct Engine {
         Biquad *all[] = {&rumble, &hum, &bass, &bassR[0], &bassR[1], &bassR[2], &bassR[3], &clarity, &hiss, &tDc, &tLo, &tHi, &bxLp, &bxHp, &bxTop, &ms0, &ms1, &ms2, &vxShadow, &vxRear,
                          &nrHp, &nrHp2, &nrLp, &nrLp2, &bdHp, &bdHp2, &bdLp, &bdLp2, &bbDet, &bbShelf, &bbLow, &wHpS, &wAmbHp, &wAmbLp, &wBass,
                          &hfSrcHp1, &hfSrcHp2, &hfSrcLp1, &hfSrcLp2, &hfGenHp1, &hfGenHp2, &hfGenLp, &hfDc,
-                         &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub, &xfLp, &exHp, &exHp2, &exLp, &exOut, &exOut2};
+                         &m3Lp1, &m3Lp2, &m3Hp1, &m3Hp2, &m3Sub, &xfLp, &exHp, &exHp2, &exLp, &exOut, &exOut2,
+                         &loudLo, &loudHi, &spHp1, &spHp2, &svLp1, &svLp2, &svHp1, &svHp2, &svTop, &dsHp, &p2sHp, &p2sLp};
         for (auto *b : all) b->reset();
+        p2sD.clear(); dsHi = dsAll = 0; dsG = 1; for (auto &h : tpH) for (auto &q : h) q = 0;
         for (auto &b : bands) b.reset();
         for (auto &b : eqx) b.reset();
         for (auto &d : dc) { std::fill(d.buf.begin(), d.buf.end(), 0.f); std::fill(d.bad.begin(), d.bad.end(), 0); d.x1 = d.x2 = 0; d.hold = 0; }
@@ -274,7 +288,10 @@ struct Engine {
         // bass range: steep (4th-order) shelves up at the upper edge and back down at the lower edge,
         // so only the range between is lifted; the gain is trimmed so the range reaches the set boost
         bassCutOn = S[8] > 0.01f && S[56] > 30.5f && S[56] < (S[34] > 1 ? S[34] : 100) * 0.95f;
-        if (bassCutOn) {
+        loudOn = S[57] > 0.01f || S[58] > 0.01f;
+        if (loudOn) { loudLo.lowshelf(sr, 90, S[57]); loudHi.highshelf(sr, 9000, S[58]); }
+        if (bassCutOn && !(bcG == S[8] && bcHi == S[34] && bcLo == S[56] && bcSr == sr)) {
+            bcG = S[8]; bcHi = S[34]; bcLo = S[56]; bcSr = sr;
             const double hiHz = S[34] > 1 ? S[34] : 100;
             double g2 = S[8];
             for (int it = 0; it < 5; it++) {
@@ -459,6 +476,7 @@ struct Engine {
                 if (P55 != P[55]) { P55 = P[55]; if (P55 < 0.5f) hrTarget = 1; }
                 for (int i = 0; i < NPARAM; i++) {
                     if (i == 21 || i == 22 || i == 33 || i == 55) continue;
+                    if (i >= 59) { S[i] = P[i]; continue; }   // on/off switches
                     S[i] += (P[i] - S[i]) * smoothK;
                     if (std::fabs(S[i] - P[i]) < 1e-3f) S[i] = P[i];
                     if (std::fabs(S[i] - C[i]) > 1e-3f) changed = true;
@@ -548,6 +566,7 @@ struct Engine {
                 if (eqN == 0) { for (auto &b : bands) v = b.run(v, c); }
                 else { for (int b = 0; b < eqN; b++) v = eqx[b].run(v, c); }
                 v = clarity.run(v, c); v = hiss.run(v, c);
+                if (loudOn) v = loudHi.run(loudLo.run(v, c), c);
                 x[j] = v;
             }
         }
@@ -627,6 +646,7 @@ struct Engine {
             }
         }
         // bass enhancer
+        const bool spk = S[59] > 0.5f;
         if (S[19] > 0.01f) {
             const float g = S[19] / 100.f * 0.9f;
             for (int c = 0; c < 2; c++) {
@@ -711,6 +731,29 @@ struct Engine {
                 }
             }
         }
+        // de-esser: when the band above 5 kHz dominates (s, sh), it is turned down by up to 8 dB for that moment
+        if (S[60] > 0.5f) {
+            for (int j = 0; j < n; j++) {
+                float hl = dsHp.run(Lb[j], 0), hr = dsHp.run(Rb[j], 1);
+                double eh = std::max(std::fabs(hl), std::fabs(hr)), ea = std::max(std::fabs(Lb[j]), std::fabs(Rb[j]));
+                dsHi += (eh - dsHi) * dsEnvK; dsAll += (ea - dsAll) * dsEnvK;
+                double over = dsHi / (0.45 * dsAll + 1e-4), tg = over > 1 ? std::max(0.4, 1 / over) : 1.0;
+                dsG += (tg - dsG) * (tg < dsG ? dsAtt : dsRel);
+                Lb[j] -= (float)(1 - dsG) * hl; Rb[j] -= (float)(1 - dsG) * hr;
+            }
+        }
+        // mono -> gentle stereo: only while both channels are the same; a delayed mid band is added to one side and
+        // taken from the other, so the sum (mono) is unchanged and bass stays in the centre
+        if (S[61] > 0.5f) {
+            for (int j = 0; j < n; j++) {
+                float l = Lb[j], r = Rb[j], m = (l + r) * 0.5f;
+                p2sLL += (l * l - p2sLL) * p2sK; p2sRR += (r * r - p2sRR) * p2sK; p2sLR += (l * r - p2sLR) * p2sK;
+                if (++p2sN >= 64) { p2sN = 0; double c = p2sLR / (std::sqrt(p2sLL * p2sRR) + 1e-12), t = std::max(0.0, std::min(1.0, (c - 0.90) / 0.08)); p2sAmt += (t - p2sAmt) * 0.02; }
+                float d = p2sD.tap((int)(0.012 * sr)); p2sD.push(p2sLp.run(p2sHp.run(m, 0), 0));
+                float sd = d * 0.4f * (float)p2sAmt;
+                Lb[j] = l + sd; Rb[j] = r - sd;
+            }
+        }
         // dialogue enhancer and stereo width (mid/side)
         if (S[17] > 0.01f || std::fabs(S[18] - 100) > 0.01f) {
             const float t = S[17] / 100.f, sg = (S[18] / 100.f) * (1 - t * 0.35f);
@@ -763,6 +806,12 @@ struct Engine {
                 Lb[j] = l * dry + wl * wet; Rb[j] = r * dry + wr * wet;
             }
         }
+        // speaker-safe bass: the deep bass a phone speaker cannot play is turned into its overtones (2x, 4x the note,
+        // which the ear hears as the same bass note), then everything below ~110 Hz is removed
+        if (spk) for (int c = 0; c < 2; c++) { float *x = ch[c]; for (int j = 0; j < n; j++) {
+            float lo = svLp2.run(svLp1.run(x[j], c), c);
+            float h = svTop.run(svHp2.run(svHp1.run(std::fabs(lo), c), c), c);
+            x[j] = spHp2.run(spHp1.run(x[j], c), c) + h * 1.6f; } }
         // auto headroom: how much the settings raised the peaks (preamp and headroom itself excluded)
         if (P55 > 0.5f) {
             double pkOut = 0;
@@ -801,10 +850,16 @@ struct Engine {
             const double ceil = std::pow(10.0, -1.0 / 20);
             // release 80 ms when the limiter acts now and then, up to 600 ms when it is busy all the time
             const double relK = std::exp(-1.0 / ((0.08 + 0.52 * lAct) * sr));
-            double grMin = 1;
+            double grMin = 1; const bool tp = S[62] > 0.5f;
             for (int j = 0; j < n; j++) {
                 uint64_t w = lw;
-                double pk = std::max(std::fabs(Lb[j]), std::fabs(Rb[j])), need = pk > ceil ? ceil / pk : 1;
+                double pk = std::max(std::fabs(Lb[j]), std::fabs(Rb[j]));
+                if (tp) {   // peaks between the samples (6-point interpolation at the half-sample points)
+                    for (int c = 0; c < 2; c++) { float x5 = c ? Rb[j] : Lb[j], *h = tpH[c];
+                        float mid = (3 * (h[0] + x5) - 25 * (h[1] + h[4]) + 150 * (h[2] + h[3])) * (1.f / 256);
+                        pk = std::max(pk, (double)std::fabs(mid) * 1.04); h[0] = h[1]; h[1] = h[2]; h[2] = h[3]; h[3] = h[4]; h[4] = x5; }
+                }
+                double need = pk > ceil ? ceil / pk : 1;
                 lb0[w & mask] = Lb[j]; lb1[w & mask] = Rb[j]; req[w & mask] = (float)need;
                 while (lt > lh && req[((uint64_t)dq[(lt - 1) & mask]) & mask] >= need) lt--;
                 dq[lt & mask] = (double)w; lt++;

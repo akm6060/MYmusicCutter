@@ -1479,6 +1479,11 @@ html.light .lock-grip{border-color:#1b1838}
 .audio-eq-page .audio-eq-adjustments .dual input[type=range]::-webkit-slider-runnable-track{background:transparent;box-shadow:none}
 .audio-eq-page .audio-eq-adjustments .dual input[type=range]::-moz-range-track{background:transparent}
 .audio-eq-page .audio-eq-adjustments .dual input[type=range]::-moz-range-progress{background:transparent}
+
+/* extras: five small switches in one row */
+.eq-extras{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:6px 2px}
+.eq-extras button{min-height:30px;border-radius:7px;border:1px solid #4a3d30;background:#1d1915;color:#cdbb9a;font:700 10.5px/1 system-ui,sans-serif;padding:0 1px;white-space:nowrap;overflow:hidden}
+.eq-extras button[aria-pressed="true"]{background:#ffb341;border-color:#ffb341;color:#241400}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1559,7 +1564,7 @@ html.light .lock-grip{border-color:#1b1838}
       <div class="cutter-note" id="cutterNote"></div>
     </section>
     <section class="media-list" id="mediaList" aria-label="Files">
-      <div class="ml-head ml-one"><label class="ml-all"><input type="checkbox" id="mlAll" aria-label="Select all"></label><b class="ml-ttl">List<span id="mlCount"></span></b><button type="button" id="mlAdd" aria-label="Add files and folders to the playlist">＋ Add</button><select id="mlSort" aria-label="Sort the playlist"><option value="">⇅ Sort</option><option value="added-asc">Added: oldest first</option><option value="added-desc">Added: newest first</option><option value="name-asc">Name A → Z</option><option value="name-desc">Name Z → A</option><optgroup label="Repeat"><option value="rep-off">No repeat</option><option value="rep-one">Repeat one</option><option value="rep-all">Repeat all</option></optgroup><optgroup label="Start"><option value="opt-resume">Resume last file &amp; position</option></optgroup></select><button type="button" id="mlJoin">Join</button><button type="button" id="mlRemove">Remove</button><button type="button" id="mlEmpty">Empty</button></div>
+      <div class="ml-head ml-one"><label class="ml-all"><input type="checkbox" id="mlAll" aria-label="Select all"></label><b class="ml-ttl">List<span id="mlCount"></span></b><button type="button" id="mlAdd" aria-label="Add files and folders to the playlist">＋ Add</button><select id="mlSort" aria-label="Sort the playlist"><option value="">⇅ Sort</option><option value="added-asc">Added: oldest first</option><option value="added-desc">Added: newest first</option><option value="name-asc">Name A → Z</option><option value="name-desc">Name Z → A</option><optgroup label="Repeat"><option value="rep-off">No repeat</option><option value="rep-one">Repeat one</option><option value="rep-all">Repeat all</option></optgroup><optgroup label="Start"><option value="opt-resume">Resume last file &amp; position</option></optgroup><optgroup label="Notifications"><option value="opt-banner">Show banner</option><option value="opt-dnd">Do not disturb while playing</option></optgroup></select><button type="button" id="mlJoin">Join</button><button type="button" id="mlRemove">Remove</button><button type="button" id="mlEmpty">Empty</button></div>
       <div class="ml-items" id="mlItems"></div>
     </section>
     <div class="video-seek"><span id="videoCurrent">00:00</span><input id="videoSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="Video position"><span id="videoDuration">00:00</span></div>
@@ -1613,6 +1618,7 @@ html.light .lock-grip{border-color:#1b1838}
     <header class="audio-eq-head"><button type="button" id="audioEqBack" aria-label="Back to cutter">‹</button><div><strong>Audio Equalizer</strong><small>Sound stays untouched until you change something</small></div><button type="button" id="audioEqReset">Reset</button></header>
     <div class="audio-eq-scroll">
       <div class="audio-eq-toggles"><button type="button" class="audio-eq-auto" id="audioEqAuto" aria-pressed="false">✦ Auto enhancer: OFF</button><button type="button" class="audio-eq-auto enabled" id="audioEqLimiter" aria-pressed="true">Limiter: ON</button><button type="button" class="audio-eq-auto enabled" id="audioEqHeadroom" aria-pressed="true">Auto headroom: ON</button><button type="button" class="audio-eq-auto" id="audioEqLite" aria-pressed="false">Smooth: OFF</button><button type="button" class="audio-eq-auto" id="audioEqVm" aria-pressed="false">Equal volume: OFF</button></div>
+      <div class="eq-extras" id="eqExtras"><button type="button" data-x="loud">Loudness</button><button type="button" data-x="spk">Spk bass</button><button type="button" data-x="deess">De-ess</button><button type="button" data-x="m2s">Mono→St</button><button type="button" data-x="tpeak">True peak</button></div>
       <div class="lvl-meter" id="lvlMeter" hidden><div class="lvl-bar"><b id="lvlFill"></b><s id="lvlLim"></s><em></em><i>0 dB</i></div><div class="lvl-txt"><span id="lvlHead">Headroom —</span><span id="lvlLimTxt"></span></div></div>
       <p class="audio-eq-status" id="audioEqStatus" aria-live="polite">Adjust any control while playback continues.</p>
       <div class="afx-panel"><div class="afx-plate"><b>GRAPHIC EQUALIZER</b><small>slide the knob left or right</small></div>
@@ -2139,7 +2145,7 @@ html.light .lock-grip{border-color:#1b1838}
   var FX_KEYS=['bass','clarity','virtual','hiss','click','hum','rumble','tube','warmth','dialog','width','bassx','level','tapenr','bdec','bbe','wide3d','hfr','mach3','exciter','xfeed','preamp','bassHz','eqMode','bassLoHz'];
   function eqNeutral(){return {bands:[0,0,0,0,0,0,0,0],bass:0,clarity:0,virtual:0,hiss:0,click:0,hum:0,rumble:0,tube:0,warmth:50,dialog:0,width:100,bassx:0,level:0,tapenr:0,bdec:0,bbe:0,wide3d:0,hfr:0,mach3:0,exciter:0,xfeed:0,preamp:0,bassHz:100,bassLoHz:30,eqMode:10,b10:[0,0,0,0,0,0,0,0,0,0],b20:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],mode:'off'}}
   function eqCopy(s){var o=eqNeutral();if(!s)return o;if(s.bands&&s.bands.length===8)o.bands=s.bands.map(function(v){v=+v;return isFinite(v)?Math.max(-15,Math.min(15,Math.round(v))):0});FX_KEYS.forEach(function(k){var v=+s[k];if(s[k]!=null&&isFinite(v))o[k]=v});if(typeof s.mode==='string')o.mode=s.mode;o.tube=0;o.warmth=50;o.wide3d=0;['b10','b20'].forEach(function(k){if(Array.isArray(s[k])&&s[k].length===o[k].length)o[k]=s[k].map(function(v){v=+v;return isFinite(v)?Math.max(-20,Math.min(20,Math.round(v))):0})});if(s.eqMode!==10&&s.eqMode!==20){if(o.bands.some(function(v){return v!==0}))o.b10=eqMap8to10(o.bands);o.eqMode=10}o.bands=[0,0,0,0,0,0,0,0];o.preamp=Math.max(-20,Math.min(20,o.preamp||0));o.bassHz=isFinite(+o.bassHz)&&+o.bassHz>0?Math.max(30,Math.min(300,Math.round(+o.bassHz))):100;o.bassLoHz=isFinite(+o.bassLoHz)&&+o.bassLoHz>30?Math.round(+o.bassLoHz):30;if(o.bassLoHz>o.bassHz/1.15)o.bassLoHz=30;o.bass=Math.max(0,Math.min(30,o.bass||0));return o}
-  var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqHeadroom=true,eqAutoLevel=0,eqBeforeAuto=null,eqAnalysing=false,A=null;
+  var eqLite=false,eqState=eqNeutral(),eqLimiter=true,eqHeadroom=true,eqX={loud:false,spk:false,deess:false,m2s:false,tpeak:false},eqAutoLevel=0,eqBeforeAuto=null,eqAnalysing=false,A=null;
   var EQ_F10=[60,100,240,500,1000,1800,3400,5700,9000,13000],EQ_F20=[40,60,80,100,120,140,160,180,200,220,300,500,1000,2000,3000,4000,6000,8000,10000,13000];
   // old 8-band gains (or the auto enhancer's 8 analysis bands) spread onto the 10 bands by log-frequency
   function eqMap8to10(b8,FT){var F=EQ_FREQS;return (FT||EQ_F10).map(function(f){if(f<=F[0])return b8[0];if(f>=F[7])return b8[7];for(var i=0;i<7;i++)if(f<=F[i+1]){var t=Math.log(f/F[i])/Math.log(F[i+1]/F[i]);return Math.round(b8[i]+(b8[i+1]-b8[i])*t)}return 0})}
@@ -2152,8 +2158,13 @@ html.light .lock-grip{border-color:#1b1838}
   function stereoIn(c){var g=c.createGain();g.channelCount=2;g.channelCountMode='explicit';g.channelInterpretation='speakers';return g}
   // Settings are remembered between sessions.
   var EQ_STORE='mmCutterSound_v2',eqSaveTimer=0;
-  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lite:eqLite,lim:eqLimiter,hr:eqHeadroom,auto:eqAutoLevel,before:eqBeforeAuto}))}catch(e){}},250)}
-  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqHeadroom=o.hr!==false;eqLite=!!o.lite;eqAutoLevel=o.auto===true?1:([0,1,2].indexOf(o.auto)>=0?o.auto:0);eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
+  function eqXSet(x){['loud','spk','deess','m2s','tpeak'].forEach(function(k){eqX[k]=!!(x&&x[k])})}
+  // extras: loudness follows the phone volume; speaker-safe bass only when the phone speaker is playing
+  var xVol=1,xOut='ear';
+  function eqXPayload(){var d=eqX.loud?Math.max(0,Math.min(1,(0.7-xVol)/0.6)):0;return {loudB:+(9*d).toFixed(1),loudT:+(4*d).toFixed(1),spk:eqX.spk&&xOut==='speaker',deess:eqX.deess,m2s:eqX.m2s,tpeak:eqX.tpeak}}
+  function eqXActive(x){return x.loudB>0||x.spk||x.deess||x.m2s}
+  function eqSave(){clearTimeout(eqSaveTimer);eqSaveTimer=setTimeout(function(){try{localStorage.setItem(EQ_STORE,JSON.stringify({s:eqState,lite:eqLite,lim:eqLimiter,hr:eqHeadroom,x:eqX,auto:eqAutoLevel,before:eqBeforeAuto}))}catch(e){}},250)}
+  function eqLoad(){try{var o=JSON.parse(localStorage.getItem(EQ_STORE)||'null');if(!o||typeof o!=='object')return;eqState=eqCopy(o.s);eqLimiter=o.lim!==false;eqHeadroom=o.hr!==false;eqXSet(o.x);eqLite=!!o.lite;eqAutoLevel=o.auto===true?1:([0,1,2].indexOf(o.auto)>=0?o.auto:0);eqBeforeAuto=o.before?eqCopy(o.before):null}catch(e){}}
 
   var EQ_WORKLET=[
   "class MMDeclick extends AudioWorkletProcessor{",
@@ -2332,7 +2343,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(n.declick){try{n.declick.parameters.get('amount').setValueAtTime(s.click,c.currentTime)}catch(e){}}
     eqRewireNode(n,s,lim,analysing);
   }
-  function eqApply(){if(NATIVE){var vg=(typeof vmOn!=='undefined'&&vmOn)?vmGain:0;try{NP.setSound(JSON.stringify(Object.assign({},eqState,{limiter:eqLimiter,headroom:eqHeadroom,vmGain:vg,neutral:eqIsNeutral()&&!vg})))}catch(e){}eqSave();return}if(A)eqApplyTo(A,eqState,eqLimiter,eqAnalysing);eqSave()}
+  function eqApply(){if(NATIVE){var vg=(typeof vmOn!=='undefined'&&vmOn)?vmGain:0;var xp=eqXPayload();try{NP.setSound(JSON.stringify(Object.assign({},eqState,xp,{limiter:eqLimiter,headroom:eqHeadroom,vmGain:vg,neutral:eqIsNeutral()&&!vg&&!eqXActive(xp)})))}catch(e){}eqSave();return}if(A)eqApplyTo(A,eqState,eqLimiter,eqAnalysing);eqSave()}
   function eqEngine(){
     if(A)return A;
     var AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Web Audio unavailable');
@@ -2402,6 +2413,7 @@ html.light .lock-grip{border-color:#1b1838}
     ADJ.forEach(function(p){var node=el(p[0]),out=el(p[0]+'Out');if(node){node.value=eqState[p[1]];var mn=+node.min,mx=+node.max;node.style.setProperty('--p',((eqState[p[1]]-mn)/(mx-mn)*100).toFixed(1)+'%')}if(out)out.textContent=eqState[p[1]]+p[2]});
     document.querySelectorAll('#cinemaModes [data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-mode')===eqState.mode?'true':'false')});
     var sb=el('audioEqLite');if(sb){sb.textContent='Smooth: '+(eqLite?'ON':'OFF');sb.classList.toggle('enabled',eqLite);sb.setAttribute('aria-pressed',eqLite?'true':'false')}
+    document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){b.setAttribute('aria-pressed',eqX[b.getAttribute('data-x')]?'true':'false')});
     var hb=el('audioEqHeadroom');if(hb){hb.textContent='Auto headroom: '+(eqHeadroom?'ON':'OFF');hb.classList.toggle('enabled',eqHeadroom);hb.setAttribute('aria-pressed',eqHeadroom?'true':'false')}
     var lb=el('audioEqLimiter');if(lb){lb.textContent='Limiter: '+(eqLimiter?'ON':'OFF');lb.classList.toggle('enabled',eqLimiter);lb.setAttribute('aria-pressed',eqLimiter?'true':'false')}
     var ab=el('audioEqAuto');if(ab){ab.textContent='✦ Auto enhancer: '+['OFF','ON','FULL'][eqAutoLevel];ab.classList.toggle('enabled',eqAutoLevel>0);ab.classList.toggle('full',eqAutoLevel===2);ab.setAttribute('aria-pressed',eqAutoLevel?'true':'false')}
@@ -2423,6 +2435,17 @@ html.light .lock-grip{border-color:#1b1838}
       if(glitch.n>=2){eqLite=true;glitch.n=0;eqRefreshUi();A.topo='';eqApply();eqStatus('Sound was breaking up, so Smooth mode was switched on (lighter processing). You can switch it off above.')}}
     glitch.t=now;glitch.c=ct;
   },1000);
+  var X_HELP={loud:['Loudness on: at low phone volume, bass and treble are lifted so quiet listening still sounds full. At high volume it does nothing.','Loudness off.'],
+    spk:['Speaker bass on: when the phone speaker is playing, deep bass it cannot play is turned into overtones you can hear, and the wasted rumble is removed. Earphones are not affected.','Speaker bass off.'],
+    deess:['De-ess on: harsh “s” and “sh” sounds are softened for the moment they occur.','De-ess off.'],
+    m2s:['Mono→Stereo on: mono recordings get a gentle width. True stereo files are left alone.','Mono→Stereo off.'],
+    tpeak:['True peak on: the limiter also catches peaks hidden between samples (needs Limiter ON).','True peak off.']};
+  document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-x');eqX[k]=!eqX[k];xPoll(true);eqRefreshUi();eqApply();eqStatus(X_HELP[k][eqX[k]?0:1])})});
+  function xPoll(quiet){if(!(NATIVE&&NP))return;var v=xVol,o=xOut;
+    try{if(eqX.loud){var r=JSON.parse(NP.getVolume());if(r.max>0)v=r.v/r.max}}catch(e){}
+    try{if(eqX.spk&&NP.outputKind)o=NP.outputKind()}catch(e){}
+    var ch=Math.abs(v-xVol)>0.001||o!==xOut;xVol=v;xOut=o;if(ch&&!quiet)eqApply()}
+  setInterval(function(){if(eqX.loud||eqX.spk)xPoll(false)},1000);
   el('audioEqHeadroom').addEventListener('click',function(){eqHeadroom=!eqHeadroom;eqRefreshUi();eqApply();eqStatus(eqHeadroom?'Auto headroom on: the Preamp slider now lowers itself by as much as your settings raise the peaks, so the limiter does not pump. Turn the phone volume up a little if needed.':'Auto headroom off: Preamp stays where it is, and is yours to set again.')});
   // level bar: loudness reaching the limiter (green / yellow near full scale / red over it), the limiter's cut
   // as a blue strip from the top end, and the headroom left. Auto headroom also moves the Preamp slider.
@@ -2505,7 +2528,7 @@ html.light .lock-grip{border-color:#1b1838}
   el('eqSaveNo').addEventListener('click',closePresetUi);
   function doSave(){var name=el('eqSaveName').value.trim();if(!name){el('eqSaveName').focus();return}
     var a=presetsGet().filter(function(p){return p.name.toLowerCase()!==name.toLowerCase()});
-    a.unshift({name:name,at:Date.now(),eq:eqCopy(eqState),lim:eqLimiter,hr:eqHeadroom,lite:eqLite,vm:typeof vmOn!=='undefined'&&vmOn,auto:eqAutoLevel,before:eqBeforeAuto?eqCopy(eqBeforeAuto):null});
+    a.unshift({name:name,at:Date.now(),eq:eqCopy(eqState),lim:eqLimiter,hr:eqHeadroom,x:Object.assign({},eqX),lite:eqLite,vm:typeof vmOn!=='undefined'&&vmOn,auto:eqAutoLevel,before:eqBeforeAuto?eqCopy(eqBeforeAuto):null});
     presetsPut(a);closePresetUi();try{el('eqSaveName').blur()}catch(e){}eqStatus('Saved preset “'+name+'”.')}
   el('eqSaveOk').addEventListener('click',doSave);
   el('eqSaveName').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSave()}});
@@ -2522,7 +2545,7 @@ html.light .lock-grip{border-color:#1b1838}
       row.appendChild(go);row.appendChild(del);box.appendChild(row)});
     box.hidden=false;el('eqPresetBtn').setAttribute('aria-pressed','true')});
   function applyPreset(p){
-    eqState=eqCopy(p.eq||{});eqLimiter=p.lim!==false;eqHeadroom=p.hr!==false;eqLite=!!p.lite;eqAutoLevel=[0,1,2].indexOf(p.auto)>=0?p.auto:0;eqBeforeAuto=eqAutoLevel&&p.before?eqCopy(p.before):null;eqConvMemo=null;
+    eqState=eqCopy(p.eq||{});eqLimiter=p.lim!==false;eqHeadroom=p.hr!==false;eqXSet(p.x);eqLite=!!p.lite;eqAutoLevel=[0,1,2].indexOf(p.auto)>=0?p.auto:0;eqBeforeAuto=eqAutoLevel&&p.before?eqCopy(p.before):null;eqConvMemo=null;
     if(window.__vmSet)window.__vmSet(!!p.vm);
     closePresetUi();if(A)A.topo='';eqRefreshUi();eqChanged();eqStatus('Preset “'+p.name+'” applied.')}
   // bass frequency: 30..300 Hz on a musical (logarithmic) scale
@@ -3094,6 +3117,20 @@ html.light .lock-grip{border-color:#1b1838}
   function repeatUi(){var sel=el('mlSort');sel.options[0].textContent='⇅ Sort'+(repeatMode==='one'?' 🔂':repeatMode==='all'?' 🔁':'');
     [['rep-off','No repeat','off'],['rep-one','Repeat one','one'],['rep-all','Repeat all','all']].forEach(function(r){var o=sel.querySelector('option[value="'+r[0]+'"]');if(o)o.textContent=(repeatMode===r[2]?'✓ ':'')+r[1]})}
   repeatUi();
+  // notification options: the app's own banner on/off; other apps silenced while music plays
+  var bannerOn=true,dndOn=false;try{bannerOn=localStorage.getItem('mmBanner')!=='0';dndOn=localStorage.getItem('mmDnd')==='1'}catch(e){}
+  function notifUi(){var a=document.querySelector('#mlSort option[value="opt-banner"]'),b=document.querySelector('#mlSort option[value="opt-dnd"]');if(a)a.textContent=(bannerOn?'✓ ':'')+'Show banner';if(b)b.textContent=(dndOn?'✓ ':'')+'Do not disturb while playing'}
+  notifUi();
+  try{if(window.MYmusicNativePlayer){var NPn=window.MYmusicNativePlayer;if(NPn.setBanner)NPn.setBanner(bannerOn);if(dndOn&&NPn.dndAllowed&&NPn.setDnd){if(NPn.dndAllowed())NPn.setDnd(true);else{dndOn=false;notifUi()}}}}catch(e){}
+  el('mlSort').addEventListener('change',function(){var v=el('mlSort').value,NPn=window.MYmusicNativePlayer;if(v!=='opt-banner'&&v!=='opt-dnd')return;el('mlSort').value='';
+    if(v==='opt-banner'){bannerOn=!bannerOn;try{localStorage.setItem('mmBanner',bannerOn?'1':'0')}catch(e){}try{NPn&&NPn.setBanner&&NPn.setBanner(bannerOn)}catch(e){}
+      note(bannerOn?'Banner on: song name, Play/Pause and Exit in the notification bar and on the lock screen.':'Banner hidden as far as Android allows: no icon and nothing on the lock screen. Android still keeps a small silent line at the bottom of the list while sound plays.')}
+    else{var want=!dndOn,r='ok';try{if(NPn&&NPn.setDnd)r=NPn.setDnd(want)}catch(e){}
+      if(want&&r==='need'){note('Allow “MYmusic Cutter” in the list that opened, come back, and choose this option again.')}
+      else{dndOn=want;try{localStorage.setItem('mmDnd',dndOn?'1':'0')}catch(e){}note(dndOn?'Do not disturb on: while music plays, other apps’ notification sounds are silenced. Calls and alarms follow your phone’s priority settings. It switches off again on pause or exit.':'Do not disturb off.')}}
+    notifUi()});
+  // earphone / Bluetooth / car next and previous buttons
+  window.__mmSkip=function(dir){if(!list.length||current<0)return;var n=current+dir;if(n>=list.length)n=repeatMode==='all'?0:-1;if(n<0)return;playItem(n)};
   el('mlSort').addEventListener('change',function(){
     var v=el('mlSort').value;if(!v||v.indexOf('opt-')===0)return;
     if(v.indexOf('rep-')===0){repeatMode=v.slice(4);try{localStorage.setItem('mmRepeat',repeatMode)}catch(e){}repeatUi();el('mlSort').value='';

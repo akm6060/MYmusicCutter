@@ -499,6 +499,9 @@ class NativePlayer(
             currentUri = uri
             videoW = 0; videoH = 0; rotation = 0; par = 1f
             player.setSeekParameters(SeekParameters.EXACT)
+            // network storage: keep Wi-Fi awake too, so the stream does not stop with the screen off
+            val local = uri.scheme == "file" || uri.authority == "media" || (uri.authority ?: "").startsWith("com.android.")
+            try { player.setWakeMode(if (local) C.WAKE_MODE_LOCAL else C.WAKE_MODE_NETWORK) } catch (_: Exception) {}
             installEffects()
             player.setMediaItem(MediaItem.fromUri(uri))
             player.playWhenReady = false
@@ -644,7 +647,7 @@ class NativePlayer(
     @JavascriptInterface
     fun setSound(json: String) {
         val o = try { JSONObject(json) } catch (_: Exception) { return }
-        val p = FloatArray(57)
+        val p = FloatArray(63)
         val bands = o.optJSONArray("bands")
         for (i in 0 until 8) p[i] = (bands?.optDouble(i, 0.0) ?: 0.0).toFloat()
         val keys = arrayOf("bass", "clarity", "virtual", "hiss", "click", "hum", "rumble", "tube")
@@ -674,6 +677,13 @@ class NativePlayer(
         val xb = if (mode == 10) o.optJSONArray("b10") else if (mode == 20) o.optJSONArray("b20") else null
         if (xb != null) for (i in 0 until minOf(20, xb.length())) p[35 + i] = xb.optDouble(i, 0.0).toFloat().coerceIn(-20f, 20f)
         p[15] = 0f; p[16] = 50f                      // tube amplifier: removed in 4.9
+        // extras (all off unless switched on in the page)
+        p[57] = o.optDouble("loudB", 0.0).toFloat().coerceIn(0f, 12f)
+        p[58] = o.optDouble("loudT", 0.0).toFloat().coerceIn(0f, 6f)
+        p[59] = if (o.optBoolean("spk", false)) 1f else 0f
+        p[60] = if (o.optBoolean("deess", false)) 1f else 0f
+        p[61] = if (o.optBoolean("m2s", false)) 1f else 0f
+        p[62] = if (o.optBoolean("tpeak", false)) 1f else 0f
         FxNative.setParams(p)
     }
 
@@ -790,6 +800,46 @@ class NativePlayer(
             a.screenBrightness = v.toFloat().coerceIn(0.01f, 1f)
             activity.window.attributes = a
         }
+    }
+
+    /** Where the sound comes out: "speaker", or "ear" for wired / Bluetooth / USB earphones and speakers. */
+    @JavascriptInterface
+    fun outputKind(): String {
+        return try {
+            val am = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val ext = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+                when (it.type) {
+                    android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET, android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+                    android.media.AudioDeviceInfo.TYPE_USB_DEVICE, android.media.AudioDeviceInfo.TYPE_LINE_ANALOG,
+                    android.media.AudioDeviceInfo.TYPE_AUX_LINE, android.media.AudioDeviceInfo.TYPE_HDMI,
+                    26 /* BLE headset */, 27 /* BLE speaker */, 23 /* hearing aid */ -> true
+                    else -> false
+                }
+            }
+            if (ext) "ear" else "speaker"
+        } catch (_: Exception) { "ear" }
+    }
+
+    /** Banner on / off (off = shown as little as Android allows). */
+    @JavascriptInterface
+    fun setBanner(on: Boolean) { PlaybackService.quiet = !on; main.post { PlaybackService.refreshNow() } }
+
+    @JavascriptInterface
+    fun dndAllowed(): Boolean = try { activity.getSystemService(android.app.NotificationManager::class.java).isNotificationPolicyAccessGranted } catch (_: Exception) { false }
+
+    /** Do Not Disturb while playing. Returns "ok", or "need" after opening the permission screen. */
+    @JavascriptInterface
+    fun setDnd(on: Boolean): String {
+        val nm = activity.getSystemService(android.app.NotificationManager::class.java)
+        if (on && !nm.isNotificationPolicyAccessGranted) {
+            PlaybackService.dnd = false
+            main.post { try { activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) } catch (_: Exception) {} }
+            return "need"
+        }
+        PlaybackService.dnd = on
+        main.post { PlaybackService.applyDnd(activity) }
+        return "ok"
     }
 
     /** Media volume, the same one the phone's side keys change. */

@@ -91,9 +91,20 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     if (::nativePlayer.isInitialized) nativePlayer.pauseFromActivity()
                     pausePlayback()
-                    // a moment for the page to store the resume position, then close the app
-                    window.decorView.postDelayed({ try { finishAndRemoveTask() } catch (_: Exception) { finish() } }, 400)
+                    // a moment for the page to store the resume position, then close the app;
+                    // a part that is still being saved is finished first, so no half-written file is left
+                    cutter.whenIdle(Runnable {
+                        runOnUiThread {
+                            window.decorView.postDelayed({
+                                PlaybackService.releaseSession()
+                                try { finishAndRemoveTask() } catch (_: Exception) { finish() }
+                            }, 400)
+                        }
+                    })
                 }
+            }
+            override fun skip(dir: Int) {
+                runOnUiThread { try { webView.evaluateJavascript("window.__mmSkip&&window.__mmSkip($dir)", null) } catch (_: Exception) {} }
             }
         }
         webView.addJavascriptInterface(nativePlayer, "MYmusicNativePlayer")

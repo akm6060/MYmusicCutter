@@ -205,6 +205,22 @@ for k in range(6):
 say("ab positions", poss)
 say("ab off", js("(()=>{document.getElementById('abBtn').click();return document.getElementById('cutterNote').textContent})()"))
 
+# extras (all five on while playing), then the earphone / Bluetooth play-pause key
+try:
+    pos = lambda: js("document.getElementById('cutterPos').textContent")
+    btn = lambda: js("(()=>{var b=document.getElementById('videoPlay');return b?b.textContent:''})()")
+    say("extras on", js("(()=>{document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){if(b.getAttribute('aria-pressed')!=='true')b.click()});return [...document.querySelectorAll('#eqExtras [data-x]')].map(b=>b.getAttribute('aria-pressed')).join(',')})()"), "out:", js("MYmusicNativePlayer.outputKind()"))
+    a = pos(); time.sleep(4); say("extras playing", a, "->", pos(), "meter", js("MYmusicNativePlayer.limiterMeter()"))
+    say("extras off", js("(()=>{document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){if(b.getAttribute('aria-pressed')==='true')b.click()});return 'ok'})()"))
+    b0 = btn(); adb("shell", "input", "keyevent", "85"); time.sleep(2); b1 = btn(); adb("shell", "input", "keyevent", "85"); time.sleep(2)
+    say("media key play/pause", b0, "->", b1, "->", btn(), "| session:", "MYmusicCutter" in adb("shell", "dumpsys", "media_session"))
+    say("banner off", js("MYmusicNativePlayer.setBanner(false);'ok'")); time.sleep(1.5)
+    nd = adb("shell", "dumpsys", "notification"); say("hidden channel in use:", "playback_hidden" in nd[nd.find("pkg=com.mymusic.cutter"):][:3000] if "pkg=com.mymusic.cutter" in nd else "no notif")
+    say("banner on", js("MYmusicNativePlayer.setBanner(true);'ok'")); time.sleep(1.5)
+    say("dnd allowed:", js("MYmusicNativePlayer.dndAllowed()"))
+except Exception as ex:
+    say("extras test error", repr(ex))
+
 # notification: one slim line with our own Play/Pause and Exit buttons; Exit closes the app
 try:
     import re
