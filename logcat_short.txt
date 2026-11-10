@@ -1,0 +1,205 @@
+11-10 03:48:19.969  2396  2396 I ExoPlayerImpl: Init 81b9676 [AndroidXMedia3/1.5.0] [emu64x, Android SDK built for x86_64, unknown, 34]
+11-10 03:48:20.177  2396  2396 I MMP     : surfaceChanged 1x1 playing=false
+11-10 03:48:20.541  2396  2396 I MMP     : layout stage=21,136 1040x472 video=0x0 fill=false -> 21,136 1040x472 texture=false
+11-10 03:48:20.567  2396  2396 I MMP     : layout stage=21,136 1040x472 video=0x0 fill=false -> 21,136 1040x472 texture=false
+11-10 03:48:20.586  2396  2396 I MMP     : surfaceChanged 1040x473 playing=false
+11-10 03:48:20.640  2396  2396 I MMP     : layout stage=21,136 1040x472 video=0x0 fill=false -> 21,136 1040x472 texture=false
+11-10 03:48:20.646  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:48:20.649  2396  2396 I MMP     : surfaceChanged 1040x536 playing=false
+11-10 03:48:20.759  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:48:22.741  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:48:23.471  2396  2396 I MMP     : size from track 1280x720 rot=0
+11-10 03:48:23.472  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:48:23.543  2396  2396 I MMP     : surfaceChanged 952x536 playing=true
+11-10 03:48:24.448  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:48:36.006  2396  2396 I MMP     : layout stage=0,0 1082x2148 video=1280x720 fill=false -> 0,769 1082x608 texture=false
+11-10 03:48:36.055  2396  2396 I MMP     : layout stage=-1074,-541 2148x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:48:38.999  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=true
+11-10 03:48:39.035  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:48:39.073  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:48:39.138  2396  2396 I MMP     : layout stage=-541,-1201 1082x2402 video=1280x720 fill=false -> -541,-304 1082x608 texture=false
+11-10 03:48:39.176  2396  2396 I MMP     : surfaceChanged 1082x609 playing=false
+11-10 03:48:39.269  2396  2396 I MMP     : layout stage=-541,-1201 1082x2402 video=1280x720 fill=false -> -541,-304 1082x608 texture=false
+11-10 03:48:39.313  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:48:39.325  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=true
+11-10 03:48:41.735  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:48:41.751  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=true
+11-10 03:48:49.596  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:48:49.615  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=true
+11-10 03:48:56.348  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:48:56.469  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=true
+11-10 03:48:56.791  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:48:56.792  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:48:56.792  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:48:56.831  2396  2396 I MMP     : layout stage=21,78 2360x567 video=1280x720 fill=false -> 697,78 1008x567 texture=false
+11-10 03:48:56.840  2396  2396 I MMP     : surfaceChanged 1008x567 playing=true
+11-10 03:48:56.873  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:48:57.082  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:48:57.110  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:48:57.140  2396  2396 I MMP     : surfaceChanged 952x536 playing=true
+11-10 03:48:57.860  2396  2396 I MMP     : redraw at new size
+11-10 03:49:04.463  2396  2396 I MMP     : layout stage=0,0 1082x2148 video=1280x720 fill=false -> 0,769 1082x608 texture=false
+11-10 03:49:04.511  2396  2396 I MMP     : surfaceChanged 1082x609 playing=false
+11-10 03:49:04.736  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:04.768  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:04.830  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:08.654  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:08.666  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=false
+11-10 03:49:10.670  2396  2396 I MMP     : redraw at new size
+11-10 03:49:13.403  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:13.405  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:13.421  2396  2396 I MMP     : surfaceChanged 544x306 playing=false
+11-10 03:49:13.826  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:14.100  2396  2396 I MMP     : layout stage=21,78 2360x567 video=1280x720 fill=false -> 697,78 1008x567 texture=false
+11-10 03:49:14.101  2396  2396 I MMP     : redraw at new size
+11-10 03:49:14.105  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:14.112  2396  2396 I MMP     : surfaceChanged 1008x567 playing=false
+11-10 03:49:14.142  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:14.146  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:14.154  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:14.156  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:14.435  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:16.240  2396  2396 I MMP     : redraw at new size
+11-10 03:49:18.128  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:18.310  2396  2396 I MMP     : layout stage=0,0 1082x2148 video=1280x720 fill=false -> 0,769 1082x608 texture=false
+11-10 03:49:18.325  2396  2396 I MMP     : surfaceChanged 1082x609 playing=false
+11-10 03:49:18.560  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:49:18.561  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=true -> -1201,-675 2402x1351 texture=false
+11-10 03:49:18.577  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=false
+11-10 03:49:18.620  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:18.923  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:19.019  2396  2396 I MMP     : redraw at new size
+11-10 03:49:20.995  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:21.002  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:21.254  2396  2396 I MMP     : redraw at new size
+11-10 03:49:23.306  2396  2396 I MMP     : redraw at new size
+11-10 03:49:24.307  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:24.318  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:24.435  2396  2396 I MMP     : surfaceChanged 544x306 playing=false
+11-10 03:49:24.917  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:24.933  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:24.939  2396  2396 I MMP     : surfaceChanged 1008x567 playing=false
+11-10 03:49:24.942  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:24.944  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:24.946  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:24.990  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:25.077  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:26.098  2396  2396 I MMP     : redraw at new size
+11-10 03:49:27.208  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:27.568  2396  2396 I MMP     : layout stage=0,0 1082x2148 video=1280x720 fill=false -> 0,769 1082x608 texture=false
+11-10 03:49:27.572  2396  2396 I MMP     : surfaceChanged 1082x609 playing=false
+11-10 03:49:27.652  2396  2396 I MMP     : layout stage=0,0 1082x2402 video=1280x720 fill=false -> 0,896 1082x608 texture=false
+11-10 03:49:27.653  2396  2396 I MMP     : layout stage=0,0 1082x2402 video=1280x720 fill=false -> 0,896 1082x608 texture=false
+11-10 03:49:27.665  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:27.718  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:27.787  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:28.930  2396  2396 I MMP     : redraw at new size
+11-10 03:49:30.164  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:30.179  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=false
+11-10 03:49:31.031  2396  2396 I MMP     : redraw at new size
+11-10 03:49:32.873  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:33.067  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:33.221  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:33.330  2396  2396 I MMP     : surfaceChanged 544x306 playing=false
+11-10 03:49:33.617  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:33.620  2396  2396 I MMP     : layout stage=21,78 2360x567 video=1280x720 fill=false -> 697,78 1008x567 texture=false
+11-10 03:49:33.641  2396  2396 I MMP     : surfaceChanged 1008x567 playing=false
+11-10 03:49:33.671  2396  2396 I MMP     : layout stage=21,78 2360x567 video=1280x720 fill=false -> 697,78 1008x567 texture=false
+11-10 03:49:33.672  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:33.674  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:33.873  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:36.095  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:36.171  2396  2396 I MMP     : layout stage=-1074,-541 2148x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:49:36.182  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:36.503  2396  2396 I MMP     : layout stage=-541,-1201 1082x2402 video=1280x720 fill=false -> -541,-304 1082x608 texture=false
+11-10 03:49:36.504  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:36.504  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:36.504  2396  2396 I MMP     : redraw at new size
+11-10 03:49:36.529  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=false
+11-10 03:49:38.817  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:38.832  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:40.840  2396  2396 I MMP     : redraw at new size
+11-10 03:49:42.162  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:42.165  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:42.204  2396  2396 I MMP     : surfaceChanged 544x306 playing=false
+11-10 03:49:42.514  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:42.542  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:42.542  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:42.542  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:42.552  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:42.558  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:42.803  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:43.662  2396  2396 I MMP     : redraw at new size
+11-10 03:49:45.001  2396  2396 I MMP     : layout stage=0,0 1082x2148 video=1280x720 fill=false -> 0,769 1082x608 texture=false
+11-10 03:49:45.218  2396  2396 I MMP     : surfaceChanged 1082x609 playing=false
+11-10 03:49:45.466  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:49:45.475  2396  2396 I MMP     : layout stage=-1201,-541 2402x1082 video=1280x720 fill=false -> -961,-541 1923x1082 texture=false
+11-10 03:49:45.476  2396  2396 I MMP     : layout stage=-541,-1201 1082x2402 video=1280x720 fill=false -> -541,-304 1082x608 texture=false
+11-10 03:49:45.609  2396  2396 I MMP     : layout stage=-541,-1201 1082x2402 video=1280x720 fill=false -> -541,-304 1082x608 texture=false
+11-10 03:49:45.610  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:45.614  2396  2396 I MMP     : surfaceChanged 1924x1082 playing=false
+11-10 03:49:46.483  2396  2396 I MMP     : redraw at new size
+11-10 03:49:48.013  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=true -> 0,-134 2402x1351 texture=false
+11-10 03:49:48.017  2396  2396 I MMP     : surfaceChanged 2402x1351 playing=false
+11-10 03:49:48.596  2396  2396 I MMP     : redraw at new size
+11-10 03:49:50.630  2396  2396 I MMP     : redraw at new size
+11-10 03:49:51.113  2396  2396 I MMP     : layout stage=0,0 2402x1082 video=1280x720 fill=false -> 239,0 1923x1082 texture=false
+11-10 03:49:51.143  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:51.213  2396  2396 I MMP     : surfaceChanged 544x306 playing=false
+11-10 03:49:51.548  2396  2396 I MMP     : layout stage=21,78 2360x306 video=1280x720 fill=false -> 928,78 544x306 texture=false
+11-10 03:49:51.553  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:51.575  2396  2396 I MMP     : surfaceChanged 1008x567 playing=false
+11-10 03:49:51.645  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:51.649  2396  2396 I MMP     : layout stage=21,136 1040x567 video=1280x720 fill=false -> 37,136 1008x567 texture=false
+11-10 03:49:51.662  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:51.663  2396  2396 I MMP     : surfaceChanged 952x536 playing=false
+11-10 03:49:51.733  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:49:53.404  2396  2396 I MMP     : redraw at new size
+11-10 03:50:03.094  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:50:03.094  2396  2396 I MMP     : videoSize 0x0 rot=0 par=1.0
+11-10 03:50:03.132  2396  2396 I MMP     : surfaceChanged 1040x536 playing=false
+11-10 03:50:05.873  2396  2396 I MMP     : size from track 1280x720 rot=0
+11-10 03:50:05.873  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:50:05.900  2396  2396 I MMP     : surfaceChanged 952x536 playing=true
+11-10 03:50:06.224  2396  2396 I MMP     : layout stage=21,136 1040x535 video=1280x720 fill=false -> 65,136 952x535 texture=false
+11-10 03:50:28.968  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:50:28.976  2396  2396 I MMP     : videoSize 0x0 rot=0 par=1.0
+11-10 03:50:29.335  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:51:21.629  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:51:21.917  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:51:26.569   502   524 E BLASTSyncEngine: WM sent Transaction to organized, but never received commit callback. Application ANR likely to follow.
+11-10 03:51:38.136  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:51:38.591  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:51:43.104   502   524 E BLASTSyncEngine: WM sent Transaction to organized, but never received commit callback. Application ANR likely to follow.
+11-10 03:52:02.226  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:52:02.497  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:52:07.213   502   524 E BLASTSyncEngine: WM sent Transaction to organized, but never received commit callback. Application ANR likely to follow.
+11-10 03:52:34.351  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:52:34.624  2396  2396 I MMP     : layout stage=21,136 1040x535 video=0x0 fill=false -> 21,136 1040x535 texture=false
+11-10 03:52:39.330   502   524 E BLASTSyncEngine: WM sent Transaction to organized, but never received commit callback. Application ANR likely to follow.
+11-10 03:53:17.801  3123  3123 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-10 03:53:17.806  3123  3123 I AndroidRuntime: Using default boot image
+11-10 03:53:17.806  3123  3123 I AndroidRuntime: Leaving lock profiling enabled
+11-10 03:53:17.922  3123  3123 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-10 03:53:19.003  3123  3123 D AndroidRuntime: Shutting down VM
+11-10 03:53:20.216  3150  3150 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-10 03:53:20.219  3150  3150 I AndroidRuntime: Using default boot image
+11-10 03:53:20.219  3150  3150 I AndroidRuntime: Leaving lock profiling enabled
+11-10 03:53:20.323  3150  3150 D AndroidRuntime: Calling main entry com.android.commands.locksettings.LockSettingsCmd
+11-10 03:53:20.327  3150  3150 D AndroidRuntime: Shutting down VM
+11-10 03:53:26.358  3182  3182 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-10 03:53:26.362  3182  3182 I AndroidRuntime: Using default boot image
+11-10 03:53:26.362  3182  3182 I AndroidRuntime: Leaving lock profiling enabled
+11-10 03:53:26.434  3182  3182 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-10 03:53:27.460  3182  3182 D AndroidRuntime: Shutting down VM
+11-10 03:53:33.112  3224  3224 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-10 03:53:33.117  3224  3224 I AndroidRuntime: Using default boot image
+11-10 03:53:33.117  3224  3224 I AndroidRuntime: Leaving lock profiling enabled
+11-10 03:53:33.185  3224  3224 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-10 03:53:34.336  3224  3224 D AndroidRuntime: Shutting down VM
+11-10 03:53:39.261  3253  3253 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-10 03:53:39.263  3253  3253 I AndroidRuntime: Using default boot image
+11-10 03:53:39.263  3253  3253 I AndroidRuntime: Leaving lock profiling enabled
+11-10 03:53:39.327  3253  3253 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-10 03:53:40.471  3253  3253 D AndroidRuntime: Shutting down VM
+11-10 03:53:41.960  2396  2396 I ExoPlayerImpl: Release 81b9676 [AndroidXMedia3/1.5.0] [emu64x, Android SDK built for x86_64, unknown, 34] [media3.common, media3.exoplayer, media3.decoder, media3.datasource, media3.extractor, media3.decoder.ffmpeg, media3.effect]

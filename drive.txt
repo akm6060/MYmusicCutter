@@ -1,0 +1,205 @@
+pid 2396
+pages ['https://appassets.androidplatform.net/assets/index.html']
+start page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:09 / 00:40', 'w': 412, 'h': 818}
+start dumpsys took 0.2
+shot 1_portrait
+click Full ok
+full page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:15 / 00:40', 'w': 915, 'h': 412}
+full dumpsys took 0.1
+shot 2_full_fit
+click Fill ok
+fill page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:20 / 00:40', 'w': 915, 'h': 412}
+fill dumpsys took 0.2
+shot 3_full_fill
+swipe right edge
+screen 1080 2400
+volume will get volume
+[V] Connecting to AudioService
+[V] volume is 14 in range [0..15]
+click Fill again (Fit) ok
+fit2 page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:28 / 00:40', 'w': 915, 'h': 412}
+fit2 dumpsys took 0.2
+shot 4_full_fit_again
+click Full (exit) ok
+exit page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:31 / 00:40', 'w': 412, 'h': 818}
+exit dumpsys took 0.0
+shot 5_portrait_again
+play ok
+playing page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+playing dumpsys took 0.0
+shot 6_playing
+Full while playing ok
+full-playing page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+full-playing dumpsys took 0.0
+shot 7_full_playing
+Fill while playing ok
+fill-playing page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+fill-playing dumpsys took 0.0
+shot 8_fill_playing
+exit while playing ok
+exit-playing page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+exit-playing dumpsys took 0.0
+shot 9_exit_playing
+cycle 0 ok
+cycle0-in page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle0-in dumpsys took 0.0
+fill toggle ok
+cycle0-fill page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle0-fill dumpsys took 0.0
+shot c0_fill
+exit ok
+cycle0-out page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+cycle0-out dumpsys took 0.0
+cycle 1 ok
+cycle1-in page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle1-in dumpsys took 0.0
+fill toggle ok
+cycle1-fill page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle1-fill dumpsys took 0.0
+shot c1_fill
+exit ok
+cycle1-out page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+cycle1-out dumpsys took 0.0
+cycle 2 ok
+cycle2-in page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle2-in dumpsys took 0.0
+fill toggle ok
+cycle2-fill page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle2-fill dumpsys took 0.0
+shot c2_fill
+exit ok
+cycle2-out page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+cycle2-out dumpsys took 0.0
+cycle 3 ok
+cycle3-in page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▢ Fit', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle3-in dumpsys took 0.0
+fill toggle ok
+cycle3-fill page: {'cls': 'video-layer open native-fullscreen gesture-landscape', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 915, 'h': 412}
+cycle3-fill dumpsys took 0.0
+shot c3_fill
+exit ok
+cycle3-out page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:33 / 00:40', 'w': 412, 'h': 818}
+cycle3-out dumpsys took 0.0
+tap on screen
+end page: {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:39 / 00:40', 'w': 412, 'h': 818}
+end dumpsys took 0.1
+shot z_end
+open network file
+net 0 {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:02 / 00:40', 'w': 412, 'h': 818}
+net 1 {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:04 / 00:40', 'w': 412, 'h': 818}
+net 2 {'cls': 'video-layer open', 'title': 't.mp4', 'fill': '▣ Fill', 'pos': '00:06 / 00:40', 'w': 412, 'h': 818}
+shot n1_network
+note 
+mark start
+mark end end
+save save
+note Copying from network storage… 4 MB
+note Copying from network storage… 11 MB
+note ✓ Saved t 1.mp4
+shot n2_after_cut
+files 
+open aac
+aac {'cls': 'video-layer open audio-only', 'title': 'cassette.aac', 'fill': '▣ Fill', 'pos': '00:07 / 06:16', 'w': 412, 'h': 818}
+fx on ❚❚
+fx playing 00:09 / 06:16 -> 00:12 / 06:16 cassette.aac
+equal volume Equal volume: ON
+heavy bass ok
+meter {"gr":8.685890229287452E-9,"hr":-0.07807797193527222,"pk":-18.31715965270996}   | Headroom — |  | preamp 0 dB · auto 00:14 / 06:16
+meter {"gr":8.685890229287452E-9,"hr":-0.0702180415391922,"pk":-18.360090255737305}   | Headroom — |  | preamp 0 dB · auto 00:16 / 06:16
+meter {"gr":8.685890229287452E-9,"hr":-0.06256628781557083,"pk":-18.350215911865234}   | Headroom — |  | preamp 0 dB · auto 00:19 / 06:16
+auto on ok
+auto on status ✦ Auto enhancer: ON | Auto enhancer ON (EQ and tone & repair): 10-band EQ balanced, mono recording, 99 kbps AAC. Tap again for FULL.
+auto full ✦ Auto enhancer: FULL | Auto enhancer FULL (EQ, tone, studio effects and cinema): 10-band EQ balanced, mono recording, 99 kbps AAC · tape hiss cleaned, treble restored for low bit rate. Tap again for OFF.
+full playing 00:28 / 06:16
+auto off ✦ Auto enhancer: OFF
+eq status Auto enhancer off: its settings stay, and you can change any of them by hand. 00:40 / 06:16
+songs ok
+status Listening to the recording… 95%
+status Found 3 songs (silence below -52 dB).
+close ok
+save ok
+note ✓ Saved 3 parts
+files 
+playhead [71.5773811340332, 188.85714721679688, 2.625]
+locked True
+shot l1_locked
+offset 126 page 818
+pos before 00:49 / 06:16
+scroll before 46.85714340209961 swipe 826 350 471
+pos after drag 03:37 / 06:16 {"down":1,"move":18,"scroll":16,"seek":0} 207.61904907226562
+shot l2_dragged
+open album
+album {'cls': 'video-layer open audio-only', 'title': 'album.mp3', 'fill': '▣ Fill', 'pos': '00:07 / 02:15', 'w': 412, 'h': 818}
+songs ok
+album status Found 1 song (silence below -52 dB).
+save ok
+album note ✓ Saved album 1.mp3
+save fallback ok
+fallback note ✓ Saved album 1.mp3
+fallback files /sdcard/Download/MYmusic Cutter/Audio/Save parts/album 1:
+total 3868
+-rwxrwx--- 1 u0_a135 media_rw 3954041 2026-11-10 03:51 album 1.mp3
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/album 2:
+total 2048
+-rwxrwx--- 1 u0_a135 media_rw 2089795 2026-11-10 03:51 album 1.mp3
+
+ytm4a.mp3 {'cls': 'video-layer open audio-only', 'title': 'ytm4a.mp3', 'fill': '▣ Fill', 'pos': '00:07 / 06:30', 'w': 412, 'h': 818}
+ytm4a.mp3 songs: Found 3 songs (silence below -55 dB).
+ytm4a.mp3 save: ✓ Saved 3 parts
+ytwebm.mp3 {'cls': 'video-layer open audio-only', 'title': 'ytwebm.mp3', 'fill': '▣ Fill', 'pos': '00:30 / 06:30', 'w': 412, 'h': 818}
+ytwebm.mp3 songs: Found 3 songs (silence below -55 dB).
+ytwebm.mp3 save: ✓ Saved 3 parts
+saved files /sdcard/Download/MYmusic Cutter/Audio/Save parts:
+total 40
+drwxrws--- 2 u0_a135 media_rw 4096 2026-11-10 03:51 album 1
+drwxrws--- 2 u0_a135 media_rw 4096 2026-11-10 03:51 album 2
+drwxrws--- 2 u0_a135 media_rw 4096 2026-11-10 03:51 cassette 1
+drwxrws--- 2 u0_a135 media_rw 4096 2026-11-10 03:52 ytm4a 1
+drwxrws--- 2 u0_a135 media_rw 4096 2026-11-10 03:52 ytwebm 1
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/album 1:
+total 3868
+-rwxrwx--- 1 u0_a135 media_rw 3954041 2026-11-10 03:51 album 1.mp3
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/album 2:
+total 2048
+-rwxrwx--- 1 u0_a135 media_rw 2089795 2026-11-10 03:51 album 1.mp3
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/cassette 1:
+total 4544
+-rwxrwx--- 1 u0_a135 media_rw 1542843 2026-11-10 03:51 cassette 1.aac
+-rwxrwx--- 1 u0_a135 media_rw 1546236 2026-11-10 03:51 cassette 2.aac
+-rwxrwx--- 1 u0_a135 media_rw 1545073 2026-11-10 03:51 cassette 3.aac
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/ytm4a 1:
+total 5964
+-rwxrwx--- 1 u0_a135 media_rw 2026167 2026-11-10 03:51 ytm4a 1.m4a
+-rwxrwx--- 1 u0_a135 media_rw 2026298 2026-11-10 03:51 ytm4a 2.m4a
+-rwxrwx--- 1 u0_a135 media_rw 2026422 2026-11-10 03:52 ytm4a 3.m4a
+
+/sdcard/Download/MYmusic Cutter/Audio/Save parts/ytwebm 1:
+total 7312
+-rwxrwx--- 1 u0_a135 media_rw 2602723 2026-11-10 03:52 ytwebm 1.webm
+-rwxrwx--- 1 u0_a135 media_rw 2589666 2026-11-10 03:52 ytwebm 2.webm
+-rwxrwx--- 1 u0_a135 media_rw 2275865 2026-11-10 03:52 ytwebm 3.webm
+
+ab on A-B repeat on: 00:00 – 02:05 plays again and again. Tap A↔B to stop.
+ab positions ['01:14 / 06:16', '01:16 / 06:16', '01:18 / 06:16', '01:20 / 06:16', '01:22 / 06:16', '01:24 / 06:16']
+ab off A-B repeat off.
+extras on true,true,true,true,true out: speaker
+extras playing 01:24 / 06:16 -> 01:28 / 06:16 meter {"gr":8.685890229287452E-9,"hr":-0.00706422608345747,"pk":-12.830116271972656}
+extras off ok
+media key play/pause Ⅱ -> ▶ -> Ⅱ | session: True
+banner off ok
+hidden channel in use: True
+banner on ok
+dnd allowed: False
+shot notif
+notif nodes {'nTitle': (461, 761), 'nToggle': (807, 762), 'nExit': (933, 762)}
+notif default view: our row True | system title-only view: False
+channel playback_line shortcut=null contentView=com.mymusic.cutter/0x7f070001 vibrate=null sound=null defaults=0x0 flags=0x6a color=0x00000000 vis=PUBLIC))       uid=10141 userId=0       opPkg=com.mymusic.cutter       icon=Icon(typ=RESOURCE pkg=com.mymusic.cutter id=0x01080024)       flags=0x6a       origin
+shot lockscreen
+lock screen: keyguard True | banner shown: True | exit shown: True
+toggle via notification Ⅱ -> ▶
+after Exit app process: 2396 activity on top: False notif left: False
