@@ -1494,20 +1494,25 @@ html.light .lock-grip{border-color:#1b1838}
 .fs-pop{z-index:61!important}
 .fs-seek{display:flex;align-items:center;gap:8px;margin:0 2px 3px;font:600 10px/1 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000}
 .fs-track{position:relative;flex:1;height:22px}
-.fs-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffffff40}
-.fs-track i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffb341b3;width:0}
-.fs-track b{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;left:0;background:radial-gradient(circle at 35% 30%,#fff,#ffd28a 45%,#c8841f);box-shadow:0 1px 4px #000a;opacity:.85}
+.fs-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#5a5148}
+.fs-track i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffb341;width:0}
+.fs-track b{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;left:0;background:radial-gradient(circle at 35% 30%,#fff,#ffd28a 45%,#c8841f);box-shadow:0 1px 4px #000a}
 .fs-track.drag b{transform:scale(1.25)}
 .fs-row{display:flex;justify-content:space-between;gap:16px;padding:0 6px}
-.fs-pair{display:flex;align-items:center;flex:0 1 128px;min-width:0;border-radius:7px;background:#0000004d;border:1px solid #ffffff26}
-.fs-pair button{flex:0 0 24px;height:24px;padding:0;border:0;background:transparent;color:#fffd;font:800 15px/1 system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+.fs-pair{display:flex;align-items:center;flex:0 1 128px;min-width:0;border-radius:7px;background:#1b1916;border:1px solid #4a3d30}
+.fs-pair button{flex:0 0 24px;height:24px;padding:0;border:0;background:transparent;color:#fff;font:800 15px/1 system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
 .fs-pair span.held{background:#ffffff26}
 .fs-pair button.held{background:#ffb34159;border-radius:6px}
-.fs-pair span{flex:1;min-width:0;padding:2px 0;border-radius:6px;touch-action:none;-webkit-user-select:none;user-select:none;text-align:center;font:700 9px/1.05 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden}
+.fs-pair span{flex:1;min-width:0;padding:2px 0;border-radius:6px;touch-action:none;-webkit-user-select:none;user-select:none;text-align:center;font:700 9px/1.05 system-ui,sans-serif;color:#fff;white-space:nowrap;overflow:hidden}
 .fs-pair span em{display:block;font-style:normal;font-size:10.5px;color:#ffd28a}
-.fs-pair.changed{border-color:#ffb34199}
+.fs-pair.changed{border-color:#ffb341}
 .fs-pop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:31;padding:6px 14px;border-radius:10px;background:#0008;color:#fff;font:800 22px/1 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .25s}
 .fs-pop.show{opacity:1}
+
+/* small landscape view: the same -/+ row in place of the sliders */
+.fs-host{display:none}
+.video-layer.small-land .fs-host{display:block;margin:4px 0 2px;touch-action:none}
+.video-layer.small-land .video-settings{display:none!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1599,6 +1604,7 @@ html.light .lock-grip{border-color:#1b1838}
       <button type="button" id="videoForward10" aria-label="Forward ten seconds">+10</button>
       <button type="button" id="videoNext" aria-label="Next video">▶|</button>
     </div>
+    <div class="fs-host" id="fsHost"></div>
     <div class="video-settings">
       <div class="video-setting" id="videoZoomRow"><label for="videoZoom">Video zoom <output id="videoZoomOut">100%</output></label><input id="videoZoom" type="range" min="1" max="5" step="0.05" value="1"></div>
       <div class="video-setting"><label for="videoSpeed">Playback speed (up to 10×) <output id="videoSpeedOut">1.00×</output></label><input id="videoSpeed" type="range" min="0.25" max="10" step="0.05" value="1"></div>
@@ -1980,6 +1986,14 @@ html.light .lock-grip{border-color:#1b1838}
     tr.addEventListener('pointerup',end);tr.addEventListener('pointercancel',end);
     setInterval(function(){if(!layer.classList.contains('quality-open'))return;paint();if(drag)return;var d=duration();draw(d>0?Math.max(0,Math.min(1,activeMedia.currentTime/d)):0);el('fsCur').textContent=fmt(activeMedia.currentTime||0);el('fsDur').textContent=fmt(d)},250);
     paint();
+    // small landscape view (not full screen): the same row sits under the video in place of the sliders
+    var host=el('fsHost'),seekRow=panel.querySelector('.fs-seek');
+    ['pointerdown','pointermove','pointerup','touchstart','touchmove','touchend','click','dblclick','contextmenu'].forEach(function(t){host.addEventListener(t,function(e){e.stopPropagation();if(t==='touchstart'||t==='touchmove'||t==='contextmenu')e.preventDefault()},{passive:false})});
+    function place(){var small=layer.classList.contains('open')&&!isFullscreen()&&window.innerWidth>window.innerHeight;
+      if(small!==layer.classList.contains('small-land'))layer.classList.toggle('small-land',small);
+      var want=small?host:panel;if(row.parentNode!==want){want.appendChild(row);paint()}}
+    window.addEventListener('resize',place);try{new MutationObserver(place).observe(layer,{attributes:true,attributeFilter:['class']})}catch(e){}
+    setInterval(function(){place();if(layer.classList.contains('small-land'))paint()},500);place();
   })();
   function seekBy(seconds){if(!isFinite(activeMedia.duration)||activeMedia.duration<=0)return;var t=Math.max(0,Math.min(activeMedia.duration,activeMedia.currentTime+seconds));activeMedia.currentTime=t;}
   function smoothSwipeSeek(dx,elapsed){if(!isFinite(activeMedia.duration)||activeMedia.duration<=0)return;var speed=Math.abs(dx)/Math.max(1,elapsed),seconds=Math.min(120,Math.max(2,Math.abs(dx)*0.10+speed*0.45));var delta=(dx<0?-1:1)*seconds,start=activeMedia.currentTime,target=Math.max(0,Math.min(activeMedia.duration,start+delta)),duration=Math.max(180,Math.min(650,Math.abs(dx)*1.1)),begin=performance.now();if(seekAnim)cancelAnimationFrame(seekAnim);function step(now){var q=Math.min(1,(now-begin)/duration);activeMedia.currentTime=start+(target-start)*q;if(q<1)seekAnim=requestAnimationFrame(step);else seekAnim=0;}seekAnim=requestAnimationFrame(step);}
