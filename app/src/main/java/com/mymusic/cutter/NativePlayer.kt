@@ -583,11 +583,6 @@ class NativePlayer(
     }
 
     private var speedMuted = false
-    @Volatile private var fastNoFx = false
-    private var fxSuspended = false
-    /** Test only. */
-    @JavascriptInterface
-    fun setFastNoFx(on: Boolean) { fastNoFx = on }
     /** Test only: frames decoded / shown / dropped so far. */
     @JavascriptInterface
     fun videoStats(): String {
@@ -607,12 +602,6 @@ class NativePlayer(
                 try { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, mute).build() } catch (_: Exception) {}
             }
             player.playbackParameters = PlaybackParameters(r)
-            // test switch: at high speed, run the picture without the picture-effects stage
-            val noFx = fastNoFx && r > 3.001f
-            if (noFx != fxSuspended) {
-                fxSuspended = noFx
-                try { if (noFx) { player.setVideoEffects(emptyList()); effectsOn = false } else installEffects() } catch (_: Exception) {}
-            }
         }
     }
 

@@ -214,7 +214,6 @@ try:
     js("document.getElementById('videoFull').click();'ok'"); time.sleep(4)
     say("fastplay start", js("MYmusicNativePlayer.videoStats()"))
     for nofx in (False,):
-        js("MYmusicNativePlayer.setFastNoFx(%s)" % ("true" if nofx else "false"))
         js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
         for sp in (1, 3, 4, 6, 8, 10):
             js("MYmusicNativePlayer.setSpeed(%d)" % sp); time.sleep(2)
@@ -224,7 +223,7 @@ try:
                     b["dropped"]-a["dropped"], b["skipped"]-a["skipped"], b["dropToKey"]-a["dropToKey"], b["state"], b["fx"]))
             else: say("fastplay no stats", sp)
         alive("fastplay-nofx-%s" % nofx)
-    js("MYmusicNativePlayer.setFastNoFx(false)"); js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(2)
+    js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(2)
     js("document.getElementById('videoFull').click();'ok'"); time.sleep(3)
 except Exception as ex:
     say("fastplay error", repr(ex))
