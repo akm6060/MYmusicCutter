@@ -210,12 +210,13 @@ try:
     import json as _j
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "http://10.0.2.2:8000/fast.mp4", "-t", "video/mp4", "-n", "com.mymusic.cutter/.MainActivity")
     time.sleep(8)
-    js("document.getElementById('cxPlay').click();'ok'"); time.sleep(3)
+    js("(()=>{var b=document.getElementById('cxPlay');if(b.textContent.indexOf('▶')>=0)b.click();return b.textContent})()"); time.sleep(3)
     js("document.getElementById('videoFull').click();'ok'"); time.sleep(4)
-    for nofx in (False, True):
+    say("fastplay start", js("MYmusicNativePlayer.videoStats()"))
+    for nofx in (False,):
         js("MYmusicNativePlayer.setFastNoFx(%s)" % ("true" if nofx else "false"))
         js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
-        for sp in (2, 4, 6, 10):
+        for sp in (1, 3, 4, 6, 8, 10):
             js("MYmusicNativePlayer.setSpeed(%d)" % sp); time.sleep(2)
             a = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}"); time.sleep(5); b = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}")
             if a and b:
