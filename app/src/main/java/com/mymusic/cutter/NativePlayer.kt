@@ -583,17 +583,36 @@ class NativePlayer(
     }
 
     private var speedMuted = false
+    @Volatile private var fastNoFx = false
+    private var fxSuspended = false
+    /** Test only. */
+    @JavascriptInterface
+    fun setFastNoFx(on: Boolean) { fastNoFx = on }
+    /** Test only: frames decoded / shown / dropped so far. */
+    @JavascriptInterface
+    fun videoStats(): String {
+        val r = java.util.concurrent.FutureTask { val c = player.videoDecoderCounters
+            JSONObject().put("pos", player.currentPosition).put("rendered", c?.renderedOutputBufferCount ?: -1).put("dropped", c?.droppedBufferCount ?: -1)
+                .put("skipped", c?.skippedOutputBufferCount ?: -1).put("dropToKey", c?.droppedToKeyframeCount ?: -1).put("state", player.playbackState).put("fx", effectsOn).toString() }
+        main.post(r); return try { r.get(2, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) { "{}" }
+    }
     @JavascriptInterface
     fun setSpeed(rate: Double) {
         main.post {
             val r = rate.toFloat().coerceIn(0.25f, 10f)
-            // Android's sound output stops at 8x: above that the sound is switched off so the picture can run at full speed
-            val mute = r > 8.001f
+            // above 3x the sound is switched off: the picture alone runs much more smoothly
+            val mute = r > 3.001f
             if (mute != speedMuted) {
                 speedMuted = mute
                 try { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, mute).build() } catch (_: Exception) {}
             }
             player.playbackParameters = PlaybackParameters(r)
+            // test switch: at high speed, run the picture without the picture-effects stage
+            val noFx = fastNoFx && r > 3.001f
+            if (noFx != fxSuspended) {
+                fxSuspended = noFx
+                try { if (noFx) { player.setVideoEffects(emptyList()); effectsOn = false } else installEffects() } catch (_: Exception) {}
+            }
         }
     }
 

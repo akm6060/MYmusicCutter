@@ -205,6 +205,29 @@ for k in range(6):
 say("ab positions", poss)
 say("ab off", js("(()=>{document.getElementById('abBtn').click();return document.getElementById('cutterNote').textContent})()"))
 
+# fast playback of a 720p video: 4x / 6x / 10x, with and without the picture-effects stage
+try:
+    import json as _j
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "http://10.0.2.2:8000/fast.mp4", "-t", "video/mp4", "-n", "com.mymusic.cutter/.MainActivity")
+    time.sleep(8)
+    js("document.getElementById('cxPlay').click();'ok'"); time.sleep(3)
+    js("document.getElementById('videoFull').click();'ok'"); time.sleep(4)
+    for nofx in (False, True):
+        js("MYmusicNativePlayer.setFastNoFx(%s)" % ("true" if nofx else "false"))
+        js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
+        for sp in (2, 4, 6, 10):
+            js("MYmusicNativePlayer.setSpeed(%d)" % sp); time.sleep(2)
+            a = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}"); time.sleep(5); b = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}")
+            if a and b:
+                say("fastplay nofx=%s %sx: speed %.2fx  shown %d fps  dropped %d  skipped %d  toKey %d  state %s fx %s" % (nofx, sp, (b["pos"]-a["pos"])/5000.0, (b["rendered"]-a["rendered"])/5,
+                    b["dropped"]-a["dropped"], b["skipped"]-a["skipped"], b["dropToKey"]-a["dropToKey"], b["state"], b["fx"]))
+            else: say("fastplay no stats", sp)
+        alive("fastplay-nofx-%s" % nofx)
+    js("MYmusicNativePlayer.setFastNoFx(false)"); js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(2)
+    js("document.getElementById('videoFull').click();'ok'"); time.sleep(3)
+except Exception as ex:
+    say("fastplay error", repr(ex))
+
 # extras (all five on while playing), then the earphone / Bluetooth play-pause key
 try:
     pos = lambda: js("document.getElementById('cutterPos').textContent")
