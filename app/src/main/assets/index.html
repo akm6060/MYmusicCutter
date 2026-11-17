@@ -1498,11 +1498,12 @@ html.light .lock-grip{border-color:#1b1838}
 .fs-track i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffb341b3;width:0}
 .fs-track b{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;left:0;background:radial-gradient(circle at 35% 30%,#fff,#ffd28a 45%,#c8841f);box-shadow:0 1px 4px #000a;opacity:.85}
 .fs-track.drag b{transform:scale(1.25)}
-.fs-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
-.fs-pair{display:flex;align-items:center;min-width:0;border-radius:7px;background:#0000004d;border:1px solid #ffffff26}
+.fs-row{display:flex;justify-content:space-between;gap:16px;padding:0 6px}
+.fs-pair{display:flex;align-items:center;flex:0 1 128px;min-width:0;border-radius:7px;background:#0000004d;border:1px solid #ffffff26}
 .fs-pair button{flex:0 0 24px;height:24px;padding:0;border:0;background:transparent;color:#fffd;font:800 15px/1 system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+.fs-pair span.held{background:#ffffff26}
 .fs-pair button.held{background:#ffb34159;border-radius:6px}
-.fs-pair span{flex:1;min-width:0;text-align:center;font:700 9px/1.05 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden}
+.fs-pair span{flex:1;min-width:0;padding:2px 0;border-radius:6px;touch-action:none;-webkit-user-select:none;user-select:none;text-align:center;font:700 9px/1.05 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden}
 .fs-pair span em{display:block;font-style:normal;font-size:10.5px;color:#ffd28a}
 .fs-pair.changed{border-color:#ffb34199}
 .fs-pop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:31;padding:6px 14px;border-radius:10px;background:#0008;color:#fff;font:800 22px/1 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .25s}
@@ -1604,7 +1605,7 @@ html.light .lock-grip{border-color:#1b1838}
       <div class="video-setting"><label for="videoBrightness">Brightness <output id="videoBrightnessOut">100%</output></label><input id="videoBrightness" type="range" min="30" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoContrast">Contrast <output id="videoContrastOut">100%</output></label><input id="videoContrast" type="range" min="50" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoSaturation">Saturation <output id="videoSaturationOut">100%</output></label><input id="videoSaturation" type="range" min="0" max="200" step="5" value="100"></div>
-      <div class="video-setting"><label for="videoHue">Hue <output id="videoHueOut">0°</output></label><input id="videoHue" type="range" min="-180" max="180" step="5" value="0"></div>
+      <div class="video-setting"><label for="videoHue">Hue <output id="videoHueOut">0°</output></label><input id="videoHue" type="range" min="-180" max="180" step="0.1" value="0"></div>
       <div class="video-setting"><label for="videoSharp">Sharpness ◀ soft · sharp ▶ <output id="videoSharpOut">0</output></label><input id="videoRed" type="hidden" value="50"><input id="videoGreen" type="hidden" value="50"><input id="videoBlue" type="hidden" value="50"><input id="videoSharp" class="centre-zero" type="range" min="-150" max="150" step="5" value="0"></div>
     </div>
   </div>
@@ -1936,12 +1937,10 @@ html.light .lock-grip{border-color:#1b1838}
       {l:'Contrast',id:'videoContrast',min:50,max:200,st:10,def:100,f:function(v){return v+'%'}},
       {l:'Satur.',id:'videoSaturation',min:0,max:200,st:10,def:100,f:function(v){return v+'%'}},
       {l:'Sharp',id:'videoSharp',min:-150,max:150,st:10,def:0,f:function(v){return (v>0?'+':'')+v+'%'}},
-      {l:'Red',id:'videoRed',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}},
-      {l:'Green',id:'videoGreen',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}},
-      {l:'Blue',id:'videoBlue',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}}];
-    function get(p){var v=+el(p.id).value;return isFinite(v)?v:p.def}
-    function set(p,v){v=Math.max(p.min,Math.min(p.max,Math.round(v/p.st)*p.st));v=+v.toFixed(2);var inp=el(p.id);
-      if(+inp.value!==v){inp.value=v;if(inp.type==='hidden')applyPicture();else inp.dispatchEvent(new Event('input',{bubbles:true}))}paint();return v}
+      {l:'Hue',id:'videoHue',min:-50,max:50,st:1,def:0,sc:3.6,f:function(v){return (v>0?'+':'')+v+'%'}}];   // 1% = 3.6 degrees
+    function get(p){var v=+el(p.id).value/(p.sc||1);return isFinite(v)?+v.toFixed(2):p.def}
+    function set(p,v){v=Math.max(p.min,Math.min(p.max,Math.round(v/p.st)*p.st));v=+v.toFixed(2);var inp=el(p.id),raw=+(v*(p.sc||1)).toFixed(2);
+      if(Math.abs(+inp.value-raw)>1e-6){inp.value=raw;if(inp.type==='hidden')applyPicture();else inp.dispatchEvent(new Event('input',{bubbles:true}))}paint();return v}
     function show(p,txt){pop.textContent=txt||(p.l+' '+p.f(get(p)));pop.classList.add('show');clearTimeout(popT);popT=setTimeout(function(){pop.classList.remove('show')},900)}
     function paint(){P.forEach(function(p){if(!p.out)return;var v=get(p);p.out.textContent=p.f(v);p.box.classList.toggle('changed',Math.abs(v-p.def)>1e-6)})}
     P.forEach(function(p){
@@ -1950,7 +1949,10 @@ html.light .lock-grip{border-color:#1b1838}
       var lb=document.createElement('span');lb.appendChild(document.createTextNode(p.l));var em=document.createElement('em');lb.appendChild(em);
       var pl=document.createElement('button');pl.type='button';pl.textContent='+';pl.setAttribute('aria-label',p.l+' up');
       box.appendChild(mi);box.appendChild(lb);box.appendChild(pl);row.appendChild(box);p.out=em;p.box=box;
-      var held={},rep=0,both=0;
+      var held={},rep=0,both=0,lp=0;
+      lb.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();lb.classList.add('held');clearTimeout(lp);
+        lp=setTimeout(function(){set(p,p.def);show(p,p.l+' reset · '+p.f(p.def))},500)});
+      ['pointerup','pointercancel','pointerleave'].forEach(function(t){lb.addEventListener(t,function(){clearTimeout(lp);lb.classList.remove('held')})});
       function stopRep(){clearTimeout(rep);rep=0}
       // held: starts after 0.45 s, then runs faster and faster
       function run(dir,delay,n){rep=setTimeout(function(){set(p,get(p)+dir*p.st);show(p);run(dir,Math.max(35,delay*(n<5?0.88:0.75)),n+1)},delay)}
