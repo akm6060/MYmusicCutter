@@ -211,6 +211,8 @@ try:
     btn = lambda: js("(()=>{var b=document.getElementById('videoPlay');return b?b.textContent:''})()")
     say("extras on", js("(()=>{document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){if(b.getAttribute('aria-pressed')!=='true')b.click()});return [...document.querySelectorAll('#eqExtras [data-x]')].map(b=>b.getAttribute('aria-pressed')).join(',')})()"), "out:", js("MYmusicNativePlayer.outputKind()"))
     a = pos(); time.sleep(4); say("extras playing", a, "->", pos(), "meter", js("MYmusicNativePlayer.limiterMeter()"))
+    t0 = pos(); js("MYmusicNativePlayer.setSpeed(10)"); time.sleep(4); t1 = pos(); js("MYmusicNativePlayer.setSpeed(8)"); time.sleep(3); t2 = pos(); js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
+    say("speed 10x/8x/1x", t0, "->", t1, "->", t2, "->", pos())
     say("extras off", js("(()=>{document.querySelectorAll('#eqExtras [data-x]').forEach(function(b){if(b.getAttribute('aria-pressed')==='true')b.click()});return 'ok'})()"))
     b0 = btn(); adb("shell", "input", "keyevent", "85"); time.sleep(2); b1 = btn(); adb("shell", "input", "keyevent", "85"); time.sleep(2)
     say("media key play/pause", b0, "->", b1, "->", btn(), "| session:", "MYmusicCutter" in adb("shell", "dumpsys", "media_session"))

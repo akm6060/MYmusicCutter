@@ -472,6 +472,7 @@ class NativePlayer(
             0.349f - 0.349f * p, 0.686f + 0.314f * p, 0.168f - 0.168f * p, 0f, 0f,
             0.272f - 0.272f * p, 0.534f - 0.534f * p, 0.131f + 0.869f * p, 0f, 0f,
             0f, 0f, 0f, 1f, 0f)))
+        cm.postConcat(ColorMatrix(floatArrayOf(PictureFx.red / 50f, 0f, 0f, 0f, 0f, 0f, PictureFx.green / 50f, 0f, 0f, 0f, 0f, 0f, PictureFx.blue / 50f, 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
         return cm
     }
 
@@ -581,9 +582,19 @@ class NativePlayer(
         }
     }
 
+    private var speedMuted = false
     @JavascriptInterface
     fun setSpeed(rate: Double) {
-        main.post { player.playbackParameters = PlaybackParameters(rate.toFloat().coerceIn(0.25f, 6f)) }
+        main.post {
+            val r = rate.toFloat().coerceIn(0.25f, 10f)
+            // Android's sound output stops at 8x: above that the sound is switched off so the picture can run at full speed
+            val mute = r > 8.001f
+            if (mute != speedMuted) {
+                speedMuted = mute
+                try { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, mute).build() } catch (_: Exception) {}
+            }
+            player.playbackParameters = PlaybackParameters(r)
+        }
     }
 
     @JavascriptInterface
@@ -621,7 +632,10 @@ class NativePlayer(
             PictureFx.contrast = o.optDouble("c", 100.0).toFloat()
             PictureFx.saturation = o.optDouble("s", 100.0).toFloat()
             PictureFx.hue = o.optDouble("h", 0.0).toFloat()
-            PictureFx.sharpness = o.optDouble("sharp", 0.0).toFloat()
+            PictureFx.sharpness = o.optDouble("sharp", 0.0).toFloat().coerceIn(-150f, 150f)
+            PictureFx.red = o.optDouble("r", 50.0).toFloat().coerceIn(0f, 100f)
+            PictureFx.green = o.optDouble("g", 50.0).toFloat().coerceIn(0f, 100f)
+            PictureFx.blue = o.optDouble("bl", 50.0).toFloat().coerceIn(0f, 100f)
             if (effectsOn && !player.isPlaying) {
                 // Paused: redraw the current frame so the change is visible at once.
                 main.removeCallbacks(refreshFrame)

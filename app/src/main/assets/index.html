@@ -1484,6 +1484,29 @@ html.light .lock-grip{border-color:#1b1838}
 .eq-extras{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:6px 2px}
 .eq-extras button{min-height:30px;border-radius:7px;border:1px solid #4a3d30;background:#1d1915;color:#cdbb9a;font:700 10.5px/1 system-ui,sans-serif;padding:0 1px;white-space:nowrap;overflow:hidden}
 .eq-extras button[aria-pressed="true"]{background:#ffb341;border-color:#ffb341;color:#241400}
+
+/* fullscreen panel: 8 pairs of small -/+ buttons and a sleek seeker (long-press to open / close) */
+.fs-panel{display:none;position:absolute;left:0;right:0;bottom:0;z-index:60;padding:2px 8px calc(4px + env(safe-area-inset-bottom));pointer-events:auto;touch-action:none}
+.video-layer.gesture-landscape.quality-open .fs-panel{display:block}
+.video-layer.gesture-landscape.quality-open .video-controls .video-settings{display:none!important}
+.video-layer.gesture-landscape.quality-open .video-seek{visibility:hidden!important}
+.video-layer.gesture-landscape.quality-open .video-controls{pointer-events:none!important}
+.fs-pop{z-index:61!important}
+.fs-seek{display:flex;align-items:center;gap:8px;margin:0 2px 3px;font:600 10px/1 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000}
+.fs-track{position:relative;flex:1;height:22px}
+.fs-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffffff40}
+.fs-track i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:#ffb341b3;width:0}
+.fs-track b{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;left:0;background:radial-gradient(circle at 35% 30%,#fff,#ffd28a 45%,#c8841f);box-shadow:0 1px 4px #000a;opacity:.85}
+.fs-track.drag b{transform:scale(1.25)}
+.fs-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.fs-pair{display:flex;align-items:center;min-width:0;border-radius:7px;background:#0000004d;border:1px solid #ffffff26}
+.fs-pair button{flex:0 0 24px;height:24px;padding:0;border:0;background:transparent;color:#fffd;font:800 15px/1 system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+.fs-pair button.held{background:#ffb34159;border-radius:6px}
+.fs-pair span{flex:1;min-width:0;text-align:center;font:700 9px/1.05 system-ui,sans-serif;color:#fffc;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden}
+.fs-pair span em{display:block;font-style:normal;font-size:10.5px;color:#ffd28a}
+.fs-pair.changed{border-color:#ffb34199}
+.fs-pop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:31;padding:6px 14px;border-radius:10px;background:#0008;color:#fff;font:800 22px/1 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .25s}
+.fs-pop.show{opacity:1}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1577,13 +1600,17 @@ html.light .lock-grip{border-color:#1b1838}
     </div>
     <div class="video-settings">
       <div class="video-setting" id="videoZoomRow"><label for="videoZoom">Video zoom <output id="videoZoomOut">100%</output></label><input id="videoZoom" type="range" min="1" max="5" step="0.05" value="1"></div>
-      <div class="video-setting"><label for="videoSpeed">Playback speed (up to 6×) <output id="videoSpeedOut">1.00×</output></label><input id="videoSpeed" type="range" min="0.25" max="6" step="0.05" value="1"></div>
-      <div class="video-setting"><label for="videoBrightness">Brightness <output id="videoBrightnessOut">100%</output></label><input id="videoBrightness" type="range" min="30" max="150" step="5" value="100"></div>
+      <div class="video-setting"><label for="videoSpeed">Playback speed (up to 10×) <output id="videoSpeedOut">1.00×</output></label><input id="videoSpeed" type="range" min="0.25" max="10" step="0.05" value="1"></div>
+      <div class="video-setting"><label for="videoBrightness">Brightness <output id="videoBrightnessOut">100%</output></label><input id="videoBrightness" type="range" min="30" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoContrast">Contrast <output id="videoContrastOut">100%</output></label><input id="videoContrast" type="range" min="50" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoSaturation">Saturation <output id="videoSaturationOut">100%</output></label><input id="videoSaturation" type="range" min="0" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoHue">Hue <output id="videoHueOut">0°</output></label><input id="videoHue" type="range" min="-180" max="180" step="5" value="0"></div>
-      <div class="video-setting"><label for="videoSharp">Sharpness ◀ soft · sharp ▶ <output id="videoSharpOut">0</output></label><input id="videoSharp" class="centre-zero" type="range" min="-100" max="100" step="5" value="0"></div>
+      <div class="video-setting"><label for="videoSharp">Sharpness ◀ soft · sharp ▶ <output id="videoSharpOut">0</output></label><input id="videoRed" type="hidden" value="50"><input id="videoGreen" type="hidden" value="50"><input id="videoBlue" type="hidden" value="50"><input id="videoSharp" class="centre-zero" type="range" min="-150" max="150" step="5" value="0"></div>
     </div>
+  </div>
+  <div class="fs-panel" id="fsPanel" aria-label="Picture and speed">
+    <div class="fs-seek"><span id="fsCur">00:00</span><div class="fs-track" id="fsTrack"><i id="fsFill"></i><b id="fsKnob"></b></div><span id="fsDur">00:00</span></div>
+    <div class="fs-row" id="fsRow"></div>
   </div>
   <section class="fm" id="fm" hidden aria-label="File manager">
     <header class="fm-top"><button type="button" id="fmClose" aria-label="Close">✕</button><b>Add to playlist</b><span class="sp"></span>
@@ -1893,13 +1920,65 @@ html.light .lock-grip{border-color:#1b1838}
   function cutterPortraitPinned(){var cutter=el('videoCutter');return !!(layer.classList.contains('open')&&window.innerHeight>=window.innerWidth&&cutter&&cutter.getBoundingClientRect().height>0)}
   // Controls never hide while a finger is on them; the countdown restarts when it lifts.
   var controlsHeld=false;
-  function armQuality(){clearTimeout(qualityTimer);qualityTimer=setTimeout(function(){if(cutterPortraitPinned())return;if(controlsHeld){armQuality();return}layer.classList.remove('quality-open');layer.classList.add('controls-hidden');if(isFullscreen())layer.classList.add('fs-controls-hidden')},10000)}
+  function armQuality(){if(layer.classList.contains('gesture-landscape')){clearTimeout(qualityTimer);return}clearTimeout(qualityTimer);qualityTimer=setTimeout(function(){if(cutterPortraitPinned())return;if(controlsHeld){armQuality();return}layer.classList.remove('quality-open');layer.classList.add('controls-hidden');if(isFullscreen())layer.classList.add('fs-controls-hidden')},10000)}
   document.addEventListener('pointerdown',function(e){var t=e.target;if(t&&t.closest&&t.closest('.video-controls,.video-head,.video-stage-actions')){controlsHeld=true;showControls();if(layer.classList.contains('quality-open'))armQuality()}},true);
   function releaseControls(){if(!controlsHeld)return;controlsHeld=false;showControls();if(layer.classList.contains('quality-open'))armQuality()}
   document.addEventListener('pointerup',releaseControls,true);document.addEventListener('pointercancel',releaseControls,true);
   document.addEventListener('input',function(e){var t=e.target;if(t&&t.closest&&t.closest('.video-controls')&&isFullscreen()){showControls();if(layer.classList.contains('quality-open'))armQuality()}},true);
   function showControls(){layer.classList.remove('fs-controls-hidden','controls-hidden');clearTimeout(fsTimer);if(!layer.classList.contains('open')||cutterPortraitPinned())return;fsTimer=setTimeout(function(){if(cutterPortraitPinned())return;if(controlsHeld){showControls();return}layer.classList.add('controls-hidden');if(isFullscreen())layer.classList.add('fs-controls-hidden')},layer.classList.contains('quality-open')?10000:5000)}
   function toggleQuality(){if(!gestureMode())return;clearTimeout(qualityTimer);if(layer.classList.contains('quality-open')){layer.classList.remove('quality-open');showControls();return;}layer.classList.add('quality-open');showControls();armQuality();}
+  // ---- fullscreen panel: opens with a long press, stays open until the next long press
+  (function(){
+    var row=el('fsRow'),panel=el('fsPanel'),pop=document.createElement('div');pop.className='fs-pop';layer.appendChild(pop);var popT=0;
+    var P=[
+      {l:'Speed',id:'videoSpeed',min:0.25,max:10,st:0.25,def:1,f:function(v){return v.toFixed(2)+'×'}},
+      {l:'Bright',id:'videoBrightness',min:30,max:200,st:10,def:100,f:function(v){return v+'%'}},
+      {l:'Contrast',id:'videoContrast',min:50,max:200,st:10,def:100,f:function(v){return v+'%'}},
+      {l:'Satur.',id:'videoSaturation',min:0,max:200,st:10,def:100,f:function(v){return v+'%'}},
+      {l:'Sharp',id:'videoSharp',min:-150,max:150,st:10,def:0,f:function(v){return (v>0?'+':'')+v+'%'}},
+      {l:'Red',id:'videoRed',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}},
+      {l:'Green',id:'videoGreen',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}},
+      {l:'Blue',id:'videoBlue',min:0,max:100,st:1,def:50,f:function(v){return v+'%'}}];
+    function get(p){var v=+el(p.id).value;return isFinite(v)?v:p.def}
+    function set(p,v){v=Math.max(p.min,Math.min(p.max,Math.round(v/p.st)*p.st));v=+v.toFixed(2);var inp=el(p.id);
+      if(+inp.value!==v){inp.value=v;if(inp.type==='hidden')applyPicture();else inp.dispatchEvent(new Event('input',{bubbles:true}))}paint();return v}
+    function show(p,txt){pop.textContent=txt||(p.l+' '+p.f(get(p)));pop.classList.add('show');clearTimeout(popT);popT=setTimeout(function(){pop.classList.remove('show')},900)}
+    function paint(){P.forEach(function(p){if(!p.out)return;var v=get(p);p.out.textContent=p.f(v);p.box.classList.toggle('changed',Math.abs(v-p.def)>1e-6)})}
+    P.forEach(function(p){
+      var box=document.createElement('div');box.className='fs-pair';
+      var mi=document.createElement('button');mi.type='button';mi.textContent='−';mi.setAttribute('aria-label',p.l+' down');
+      var lb=document.createElement('span');lb.appendChild(document.createTextNode(p.l));var em=document.createElement('em');lb.appendChild(em);
+      var pl=document.createElement('button');pl.type='button';pl.textContent='+';pl.setAttribute('aria-label',p.l+' up');
+      box.appendChild(mi);box.appendChild(lb);box.appendChild(pl);row.appendChild(box);p.out=em;p.box=box;
+      var held={},rep=0,both=0;
+      function stopRep(){clearTimeout(rep);rep=0}
+      // held: starts after 0.45 s, then runs faster and faster
+      function run(dir,delay,n){rep=setTimeout(function(){set(p,get(p)+dir*p.st);show(p);run(dir,Math.max(35,delay*(n<5?0.88:0.75)),n+1)},delay)}
+      [[mi,-1],[pl,1]].forEach(function(bd){var b=bd[0],dir=bd[1];
+        b.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch(_){}
+          held[dir]=true;b.classList.add('held');stopRep();
+          if(held[-dir]){both=setTimeout(function(){set(p,p.def);show(p,p.l+' reset · '+p.f(p.def))},350);return}   // − and + held together
+          set(p,get(p)+dir*p.st);show(p);run(dir,450,0)});
+        function up(){if(!held[dir])return;held[dir]=false;b.classList.remove('held');stopRep();clearTimeout(both);both=0}
+        b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
+        b.addEventListener('contextmenu',function(e){e.preventDefault()});
+      });
+    });
+    // the panel's touches never reach the video gestures (swipe, double tap, long press)
+    ['pointerdown','pointermove','pointerup','touchstart','touchmove','touchend','click','dblclick','contextmenu'].forEach(function(t){panel.addEventListener(t,function(e){e.stopPropagation();if(t==='touchstart'||t==='touchmove'||t==='contextmenu')e.preventDefault()},{passive:false})});
+    // seeker: the round handle moves only when the finger is on it
+    var tr=el('fsTrack'),kn=el('fsKnob'),fill=el('fsFill'),drag=null,lastSeek=0;
+    function draw(f){kn.style.left=(f*100)+'%';fill.style.width=(f*100)+'%'}
+    tr.addEventListener('pointerdown',function(e){var r=kn.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+      if(Math.abs(e.clientX-cx)>22||Math.abs(e.clientY-cy)>22)return;   // touch on the track away from the handle: ignored
+      e.preventDefault();drag={id:e.pointerId,dx:e.clientX-cx,f:null};tr.classList.add('drag');try{tr.setPointerCapture(e.pointerId)}catch(_){}});
+    tr.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;var r=tr.getBoundingClientRect(),f=Math.max(0,Math.min(1,(e.clientX-drag.dx-r.left)/r.width)),d=duration();
+      draw(f);drag.f=f;el('fsCur').textContent=fmt(f*d);var now=performance.now();if(d>0&&now-lastSeek>150){lastSeek=now;activeMedia.currentTime=f*d}});
+    function end(e){if(!drag||e.pointerId!==drag.id)return;var d=duration();if(d>0&&drag.f!=null)activeMedia.currentTime=drag.f*d;drag=null;tr.classList.remove('drag')}
+    tr.addEventListener('pointerup',end);tr.addEventListener('pointercancel',end);
+    setInterval(function(){if(!layer.classList.contains('quality-open'))return;paint();if(drag)return;var d=duration();draw(d>0?Math.max(0,Math.min(1,activeMedia.currentTime/d)):0);el('fsCur').textContent=fmt(activeMedia.currentTime||0);el('fsDur').textContent=fmt(d)},250);
+    paint();
+  })();
   function seekBy(seconds){if(!isFinite(activeMedia.duration)||activeMedia.duration<=0)return;var t=Math.max(0,Math.min(activeMedia.duration,activeMedia.currentTime+seconds));activeMedia.currentTime=t;}
   function smoothSwipeSeek(dx,elapsed){if(!isFinite(activeMedia.duration)||activeMedia.duration<=0)return;var speed=Math.abs(dx)/Math.max(1,elapsed),seconds=Math.min(120,Math.max(2,Math.abs(dx)*0.10+speed*0.45));var delta=(dx<0?-1:1)*seconds,start=activeMedia.currentTime,target=Math.max(0,Math.min(activeMedia.duration,start+delta)),duration=Math.max(180,Math.min(650,Math.abs(dx)*1.1)),begin=performance.now();if(seekAnim)cancelAnimationFrame(seekAnim);function step(now){var q=Math.min(1,(now-begin)/duration);activeMedia.currentTime=start+(target-start)*q;if(q<1)seekAnim=requestAnimationFrame(step);else seekAnim=0;}seekAnim=requestAnimationFrame(step);}
   // Fullscreen: left third -5 s, right third +5 s, centre play/pause. Portrait: anywhere play/pause.
@@ -1914,7 +1993,7 @@ html.light .lock-grip{border-color:#1b1838}
     panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));
   }
   function setPreviewSharpen(v){var k=el('mmSharpenKernel');if(!k)return;var a=v>=0?v/100*1.2:v/100*0.22;k.setAttribute('kernelMatrix','0 '+(-a)+' 0 '+(-a)+' '+(1+4*a)+' '+(-a)+' 0 '+(-a)+' 0')}
-  function applyPicture(){if(NATIVE){var zz=+el('videoZoom').value;clampPan(zz);try{NP.setPicture(JSON.stringify({z:zz,panX:panX,panY:panY,fill:typeof fillMode!=='undefined'&&fillMode==='fill'&&isFullscreen(),b:+el('videoBrightness').value,c:+el('videoContrast').value,s:+el('videoSaturation').value,h:+el('videoHue').value,sharp:+el('videoSharp').value}))}catch(e){}}var z=+el('videoZoom').value,b=+el('videoBrightness').value,c=+el('videoContrast').value,sat=+el('videoSaturation').value,h=+el('videoHue').value,col=+el('videoSharp').value;clampPan(z);video.style.transform='translate('+panX.toFixed(1)+'px,'+panY.toFixed(1)+'px) scale('+z+')';video.style.filter='brightness('+b+'%) contrast('+c+'%) saturate('+sat+'%) hue-rotate('+h+'deg)'+(col!==0?' url(#mmSharpen)':'');setPreviewSharpen(col);el('videoZoomOut').textContent=Math.round(z*100)+'%';el('videoBrightnessOut').textContent=b+'%';el('videoContrastOut').textContent=c+'%';el('videoSaturationOut').textContent=sat+'%';el('videoHueOut').textContent=h+'°';el('videoSharpOut').textContent=(col>0?'+':'')+col;}
+  function applyPicture(){if(NATIVE){var zz=+el('videoZoom').value;clampPan(zz);try{NP.setPicture(JSON.stringify({z:zz,panX:panX,panY:panY,fill:typeof fillMode!=='undefined'&&fillMode==='fill'&&isFullscreen(),b:+el('videoBrightness').value,c:+el('videoContrast').value,s:+el('videoSaturation').value,h:+el('videoHue').value,sharp:+el('videoSharp').value,r:+el('videoRed').value,g:+el('videoGreen').value,bl:+el('videoBlue').value}))}catch(e){}}var z=+el('videoZoom').value,b=+el('videoBrightness').value,c=+el('videoContrast').value,sat=+el('videoSaturation').value,h=+el('videoHue').value,col=+el('videoSharp').value;clampPan(z);video.style.transform='translate('+panX.toFixed(1)+'px,'+panY.toFixed(1)+'px) scale('+z+')';video.style.filter='brightness('+b+'%) contrast('+c+'%) saturate('+sat+'%) hue-rotate('+h+'deg)'+(col!==0?' url(#mmSharpen)':'');setPreviewSharpen(col);el('videoZoomOut').textContent=Math.round(z*100)+'%';el('videoBrightnessOut').textContent=b+'%';el('videoContrastOut').textContent=c+'%';el('videoSaturationOut').textContent=sat+'%';el('videoHueOut').textContent=h+'°';el('videoSharpOut').textContent=(col>0?'+':'')+col;}
   // Playback stays at full level straight from the media element (no Web Audio
   // routing), which avoids the WebView audio-processing path linked to crackling.
   function applyVolume(){try{activeMedia.volume=1;activeMedia.muted=false;}catch(e){}}
@@ -2099,7 +2178,7 @@ html.light .lock-grip{border-color:#1b1838}
   el('videoSeek').addEventListener('input',function(){if(isFinite(activeMedia.duration)&&activeMedia.duration>0)activeMedia.currentTime=(+this.value/1000)*activeMedia.duration;showControls()});
   el('videoSpeed').addEventListener('input',function(){activeMedia.playbackRate=+this.value;el('videoSpeedOut').textContent=(+this.value).toFixed(2)+'×';showControls()});
   el('videoZoom').addEventListener('input',function(){applyPicture();showControls()});['videoBrightness','videoContrast','videoSaturation','videoHue','videoSharp'].forEach(function(id){el(id).addEventListener('input',function(){applyPicture();showControls()})});
-  el('videoFit').addEventListener('click',function(){el('videoZoom').value=1;panX=0;panY=0;el('videoBrightness').value=100;el('videoContrast').value=100;el('videoSaturation').value=100;el('videoHue').value=0;el('videoSharp').value=0;applyPicture();showControls()});
+  el('videoFit').addEventListener('click',function(){el('videoZoom').value=1;panX=0;panY=0;el('videoBrightness').value=100;el('videoContrast').value=100;el('videoSaturation').value=100;el('videoHue').value=0;el('videoSharp').value=0;el('videoRed').value=50;el('videoGreen').value=50;el('videoBlue').value=50;applyPicture();showControls()});
 
   // Portrait: size the video area to the video's own shape so there is no dead
   // black band; the controls and sliders take the remaining height.

@@ -26,9 +26,13 @@ object PictureFx {
     @Volatile var contrast = 100f     // %
     @Volatile var saturation = 100f   // %
     @Volatile var hue = 0f            // degrees
-    @Volatile var sharpness = 0f      // -100 (softer) .. +100 (sharper)
+    @Volatile var sharpness = 0f      // -150 (softer) .. +150 (sharper)
+    @Volatile var red = 50f           // colour balance, 0..100 %, 50 = unchanged
+    @Volatile var green = 50f
+    @Volatile var blue = 50f
 
-    fun isNeutral() = brightness == 100f && contrast == 100f && saturation == 100f && hue == 0f && sharpness == 0f
+    fun isNeutral() = brightness == 100f && contrast == 100f && saturation == 100f && hue == 0f && sharpness == 0f &&
+        red == 50f && green == 50f && blue == 50f
 
     // Pinch zoom and panning, also done by the player (so the direct, true-colour display is kept).
     @Volatile var zoom = 1f
@@ -83,6 +87,7 @@ object PictureFx {
                 0.213f + co * 0.787f - si * 0.213f, 0.715f - co * 0.715f - si * 0.715f, 0.072f - co * 0.072f + si * 0.928f,
                 0.213f - co * 0.213f + si * 0.143f, 0.715f + co * 0.285f + si * 0.140f, 0.072f - co * 0.072f - si * 0.283f,
                 0.213f - co * 0.213f - si * 0.787f, 0.715f - co * 0.715f + si * 0.715f, 0.072f + co * 0.928f + si * 0.072f), zero)
+            r = step(r.first, r.second, floatArrayOf(red / 50f, 0f, 0f, 0f, green / 50f, 0f, 0f, 0f, blue / 50f), zero)
             val m = r.first
             val t = r.second
             // 4x4 column-major for OpenGL; the offset sits in the last column (alpha = 1)
@@ -144,7 +149,8 @@ void main() {
                 program.use()
                 program.setSamplerTexIdUniform("uTexSampler", inputTexId, 0)
                 program.setFloatsUniform("uTexelSize", floatArrayOf(1f / w, 1f / h))
-                program.setFloatUniform("uAmount", if (sharpness >= 0f) sharpness / 100f * 1.2f else sharpness / 100f * 0.22f)
+                program.setFloatUniform("uAmount", if (sharpness >= 0f) sharpness / 100f * 1.2f
+                    else if (sharpness >= -100f) sharpness / 100f * 0.22f else -0.22f + (sharpness + 100f) / 50f * 0.03f)   // -150 = -0.25, the smoothest blur
                 program.bindAttributesAndUniforms()
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
             } catch (e: GlUtil.GlException) {

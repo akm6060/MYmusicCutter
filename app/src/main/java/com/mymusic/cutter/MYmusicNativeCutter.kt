@@ -947,14 +947,18 @@ class MYmusicNativeCutter(
     @Volatile private var playlistText = ""
     private val playlistWriter = Executors.newSingleThreadExecutor()
 
-    /** Saves the current playlist as "MYmusic Cutter/Playlists/Current playlist.m3u8" (replaced each time; removed when empty). */
+    /** The playlist is no longer written to a file (the app remembers it itself); the old file and its folder are removed once. */
+    @Volatile private var playlistCleaned = false
     @JavascriptInterface
     fun savePlaylist(text: String) {
-        playlistText = text
+        if (playlistCleaned) return
+        playlistCleaned = true
+        playlistText = ""
         playlistWriter.execute {
-            val t = playlistText
-            if (t != text) return@execute   // a newer version is queued
-            try { writePlaylist(t) } catch (_: Exception) {}
+            try { writePlaylist("") } catch (_: Exception) {}
+            // the empty "Playlists" folder too
+            try { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "$rootName/Playlists").delete() } catch (_: Exception) {}
+            try { File(legacyRoot(), "Playlists").delete() } catch (_: Exception) {}
         }
     }
 
