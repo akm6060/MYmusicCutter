@@ -91,9 +91,36 @@ class MYmusicNativeCutter(
         return true
     }
 
+    private var turnWatch: android.view.OrientationEventListener? = null
+
+    /** Leaving full screen while the phone is held sideways: show the portrait page, and let the screen turn
+     *  freely again once the phone itself is turned upright (then turning it sideways opens full screen again). */
+    @JavascriptInterface
+    fun portraitUntilTurned(): Boolean {
+        activity.runOnUiThread {
+            turnWatch?.disable(); turnWatch = null
+            val landNow = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            if (!landNow) { activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR; return@runOnUiThread }
+            activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            val w = object : android.view.OrientationEventListener(activity) {
+                override fun onOrientationChanged(a: Int) {
+                    if (a == ORIENTATION_UNKNOWN) return
+                    if (a <= 25 || a >= 335) {
+                        disable(); if (turnWatch === this) turnWatch = null
+                        activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                    }
+                }
+            }
+            if (w.canDetectOrientation()) { turnWatch = w; w.enable() }
+            else activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
+        return true
+    }
+
     @JavascriptInterface
     fun lockLandscape(): Boolean {
         activity.runOnUiThread {
+            turnWatch?.disable(); turnWatch = null
             activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             (activity as? MainActivity)?.setFullscreenBars(true)
         }

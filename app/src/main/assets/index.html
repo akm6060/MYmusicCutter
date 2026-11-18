@@ -1989,7 +1989,7 @@ html.light .lock-grip{border-color:#1b1838}
     // small landscape view (not full screen): the same row sits under the video in place of the sliders
     var host=el('fsHost'),seekRow=panel.querySelector('.fs-seek');
     ['pointerdown','pointermove','pointerup','touchstart','touchmove','touchend','click','dblclick','contextmenu'].forEach(function(t){host.addEventListener(t,function(e){e.stopPropagation();if(t==='touchstart'||t==='touchmove'||t==='contextmenu')e.preventDefault()},{passive:false})});
-    function place(){var small=layer.classList.contains('open')&&!isFullscreen()&&window.innerWidth>window.innerHeight;
+    function place(){var small=layer.classList.contains('open')&&!audioMode&&!isFullscreen()&&window.innerWidth>window.innerHeight;
       if(small!==layer.classList.contains('small-land'))layer.classList.toggle('small-land',small);
       var want=small?host:panel;if(row.parentNode!==want){want.appendChild(row);paint()}}
     window.addEventListener('resize',place);try{new MutationObserver(place).observe(layer,{attributes:true,attributeFilter:['class']})}catch(e){}
@@ -2017,7 +2017,7 @@ html.light .lock-grip{border-color:#1b1838}
   function load(i,autoplay){
     panX=0;panY=0;
     if(!files.length)return;index=(i+files.length)%files.length;var f=files[index],isAudio=(f.type&&f.type.indexOf('audio/')===0)||/\.(mp3|m4a|m4b|aac|wav|flac|ogg|oga|opus|aif|aiff|wma)$/i.test(f.name);
-    audioMode=!!isAudio;activeMedia=audioMode?audioMedia:video;try{video.pause();audioMedia.pause()}catch(e){}
+    audioMode=!!isAudio;activeMedia=audioMode?audioMedia:video;if(!audioMode)setTimeout(function(){if(window.__mmAutoFull)window.__mmAutoFull()},600);try{video.pause();audioMedia.pause()}catch(e){}
     if(audioMode){video.removeAttribute('src');video.load();setSource(audioMedia,urls[index]);audioMedia.load();video.style.display='none';empty.style.display='grid';empty.innerHTML='<b>Audio cutter</b>Audio playback and trimming timeline';stage.classList.add('audio-mode');el('videoLayer').classList.add('audio-only');}
     else{audioMedia.removeAttribute('src');audioMedia.load();setSource(video,urls[index]);video.load();video.style.display='block';empty.style.display='none';stage.classList.remove('audio-mode');el('videoLayer').classList.remove('audio-only');}
     el('videoTitle').textContent=f.name||((audioMode?'Audio ':'Video ')+(index+1));el('videoPlay').textContent='▶';el('videoCurrent').textContent='00:00';el('videoDuration').textContent='00:00';el('videoSeek').value=0;resetCutter();el('videoSpeed').value=1;el('videoSpeedOut').textContent='1.00×';activeMedia.playbackRate=1;el('videoPrev').disabled=files.length<2;el('videoNext').disabled=files.length<2;applyPicture();applyVolume();attachAudio();if(autoplay&&!(typeof resumeHold!=='undefined'&&resumeHold&&(resumeHold=false,true))){var p=activeMedia.play();if(p&&p.catch)p.catch(function(){el('videoPlay').textContent='▶';});}showControls();
@@ -2856,6 +2856,8 @@ html.light .lock-grip{border-color:#1b1838}
     stage.classList.remove('full-bleed');
     layer.classList.remove('native-fullscreen','force-landscape','gesture-landscape','quality-open','fs-controls-hidden','controls-hidden');
     clearTimeout(qualityTimer);unlockOrientation();showControls();
+    // phone still sideways: show the portrait page; turning it sideways again later opens full screen again
+    try{if(!audioMode&&window.MYmusicNativeCutter&&window.MYmusicNativeCutter.portraitUntilTurned)window.MYmusicNativeCutter.portraitUntilTurned()}catch(e){}
     panX=0;panY=0;applyPicture();
     setTimeout(fitStage,300);setTimeout(fitStage,800);
   }
@@ -2864,6 +2866,15 @@ html.light .lock-grip{border-color:#1b1838}
   function applyFill(){stage.classList.toggle('fill-mode',fillMode==='fill');el('videoFill').textContent=fillMode==='fill'?'▣ Fill':'▢ Fit'}
   el('videoFill').addEventListener('click',function(e){e.stopPropagation();fillMode=fillMode==='fill'?'fit':'fill';try{localStorage.setItem('mmCutterFill',fillMode)}catch(_){}applyFill();applyPicture();showControls()});
   applyFill();
+  // turning the phone sideways while a video is open goes straight to full screen (no small landscape page)
+  var autoLand=null,autoT=0;
+  function phoneSideways(){var t='';try{t=screen.orientation&&screen.orientation.type||''}catch(e){}if(t)return t.indexOf('landscape')===0;return window.innerWidth>window.innerHeight&&window.innerHeight<500}
+  function hasVideo(){return !audioMode&&activeMedia===video&&!!(video.currentSrc||video.src||video.__src)&&layer.classList.contains('open')&&!layer.hidden}
+  function autoFull(force){var land=phoneSideways();if(!force&&land===autoLand)return;autoLand=land;
+    if(land&&!isFullscreen()&&hasVideo()){clearTimeout(autoT);autoT=setTimeout(function(){if(phoneSideways()&&!isFullscreen()&&hasVideo())el('videoFull').click()},120)}}
+  window.addEventListener('resize',function(){autoFull(false)});
+  try{screen.orientation.addEventListener('change',function(){autoFull(false)})}catch(e){}
+  window.__mmAutoFull=function(){autoFull(true)};
   el('videoFull').addEventListener('click',function(){
     if(isFullscreen()){leaveFullscreen();return;}
     if(window.MYmusicNativeCutter&&window.MYmusicNativeCutter.lockLandscape){enterCssFullscreen();return;}

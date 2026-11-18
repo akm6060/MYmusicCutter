@@ -215,9 +215,13 @@ try:
     say("fastplay start", js("MYmusicNativePlayer.videoStats()"))
     for nofx in (False,):
         js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
+        js("MYmusicNativePlayer.seek(0)"); time.sleep(2)
         for sp in (1, 3, 4, 6, 8, 10):
             js("MYmusicNativePlayer.setSpeed(%d)" % sp); time.sleep(2)
-            a = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}"); time.sleep(5); b = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}")
+            a = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}"); trail = []
+            for _k in range(5): time.sleep(1); trail.append(round(_j.loads(js("MYmusicNativePlayer.videoStats()") or '{"pos":0}')["pos"] / 1000.0, 1))
+            say("   positions each second", trail, "stopped:", any(trail[i] <= trail[i-1] for i in range(1, len(trail))))
+            b = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}")
             if a and b:
                 say("fastplay nofx=%s %sx: speed %.2fx  shown %d fps  dropped %d  skipped %d  toKey %d  state %s fx %s" % (nofx, sp, (b["pos"]-a["pos"])/5000.0, (b["rendered"]-a["rendered"])/5,
                     b["dropped"]-a["dropped"], b["skipped"]-a["skipped"], b["dropToKey"]-a["dropToKey"], b["state"], b["fx"]))

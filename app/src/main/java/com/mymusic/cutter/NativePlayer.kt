@@ -570,7 +570,7 @@ class NativePlayer(
 
     @JavascriptInterface
     fun seek(ms: Double) {
-        main.post { player.seekTo(max(0.0, ms).toLong()) }
+        main.post { fastLastTick = 0L; player.seekTo(max(0.0, ms).toLong()) }
     }
 
     /** While a caliper or the cursor is dragged, seek to the nearest key frame (fast); exact on release. */
@@ -601,7 +601,51 @@ class NativePlayer(
                 speedMuted = mute
                 try { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, mute).build() } catch (_: Exception) {}
             }
-            player.playbackParameters = PlaybackParameters(r)
+            // above 3x: play at 2x and jump ahead to keep the set speed. The decoder never has to show
+            // more than 2x the frames, so the picture keeps moving; higher speeds just jump further.
+            val fast = r > 3.001f
+            fastRate = r
+            player.playbackParameters = PlaybackParameters(if (fast) 2f else r)
+            if (fast && !fastOn) { fastOn = true; fastLastTick = 0L; main.removeCallbacks(fastTick); main.postDelayed(fastTick, 200) }
+            else if (!fast && fastOn) { fastOn = false; main.removeCallbacks(fastTick) }
+        }
+    }
+
+    private var fastOn = false
+    private var fastRate = 1f
+    private var fastIdeal = 0.0
+    private var fastLastTick = 0L
+    private var fastLastPos = 0L
+    private var fastSeekAt = 0L
+    private val fastTick = object : Runnable {
+        override fun run() { try { fastStep() } catch (_: Exception) {}; if (fastOn) main.postDelayed(this, 200) }
+    }
+    private fun fastStep() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val pos = player.currentPosition
+        val st = player.playbackState
+        if (!player.playWhenReady || st == Player.STATE_ENDED || st == Player.STATE_IDLE || scrubbing) { fastLastTick = 0L; return }
+        // first tick, or the position was moved by something else (a seek, a new file): follow from here
+        if (fastLastTick == 0L || pos < fastLastPos - 1500) { fastIdeal = pos.toDouble(); fastLastTick = now; fastLastPos = pos; return }
+        val dt = (now - fastLastTick).coerceIn(0L, 1000L); fastLastTick = now
+        fastIdeal += dt * fastRate
+        if (pos > fastIdeal) fastIdeal = pos.toDouble()
+        fastIdeal = min(fastIdeal, pos + 30000.0)
+        fastLastPos = pos
+        val dur = player.duration
+        if (dur > 0 && fastIdeal >= dur - 1500) return              // near the end: play on to the end
+        val lag = fastIdeal - pos
+        val settling = st == Player.STATE_BUFFERING && now - fastSeekAt < 2500
+        if (lag > max(600.0, fastRate * 120.0) && !settling && now - fastSeekAt > 300) {
+            val target = fastIdeal.toLong()
+            // nearest key frame between the current position and a little past the target: quick to show, always forward
+            val beforeUs = max(0L, (target - pos - 150L)) * 1000L
+            val afterUs = (fastRate * 600f).toLong() * 1000L
+            player.setSeekParameters(SeekParameters(beforeUs, afterUs))
+            player.seekTo(target)
+            player.setSeekParameters(if (scrubbing) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
+            fastSeekAt = now
+            fastLastPos = target   // the jump is ours
         }
     }
 
