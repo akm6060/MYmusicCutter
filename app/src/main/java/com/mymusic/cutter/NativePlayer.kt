@@ -629,7 +629,8 @@ class NativePlayer(
         if (fastLastTick == 0L || pos < fastLastPos - 1500) { fastIdeal = pos.toDouble(); fastLastTick = now; fastLastPos = pos; return }
         val dt = (now - fastLastTick).coerceIn(0L, 1000L); fastLastTick = now
         fastIdeal += dt * fastRate
-        if (pos > fastIdeal) fastIdeal = pos.toDouble()
+        // a jump that landed ahead is not counted as progress: playing on at 2x until the set speed catches up
+        fastIdeal = max(fastIdeal, pos - 20000.0)
         fastIdeal = min(fastIdeal, pos + 30000.0)
         fastLastPos = pos
         val dur = player.duration
