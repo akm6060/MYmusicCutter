@@ -640,7 +640,9 @@ class NativePlayer(
             val target = fastIdeal.toLong()
             // nearest key frame between the current position and a little past the target: quick to show, always forward
             val beforeUs = max(0L, (target - pos - 150L)) * 1000L
-            val afterUs = (fastRate * 600f).toLong() * 1000L
+            // generous window after the target: landing on a key frame is instant, decoding up to an exact point is not;
+            // if the jump lands ahead, playing on at 2x lets the set speed catch up (it never goes back)
+            val afterUs = max(12000L, (fastRate * 1500f).toLong()) * 1000L
             player.setSeekParameters(SeekParameters(beforeUs, afterUs))
             player.seekTo(target)
             player.setSeekParameters(if (scrubbing) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
