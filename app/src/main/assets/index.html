@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MYmusic</title>
+<title>Ak Media Center</title>
 <style>
 /* Layout: a home of big colour-blocked buttons, song lists that stay quiet, the player pinned below. The colour of a control says what it does. */
 :root {
@@ -1513,6 +1513,9 @@ html.light .lock-grip{border-color:#1b1838}
 .fs-host{display:none}
 .video-layer.small-land .fs-host{display:block;margin:4px 0 2px;touch-action:none}
 .video-layer.small-land .video-settings{display:none!important}
+
+/* full screen: the old seek bar is not shown (the slim seeker opens with a long press) */
+.video-layer.native-fullscreen .video-seek{display:none!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -1607,7 +1610,7 @@ html.light .lock-grip{border-color:#1b1838}
     <div class="fs-host" id="fsHost"></div>
     <div class="video-settings">
       <div class="video-setting" id="videoZoomRow"><label for="videoZoom">Video zoom <output id="videoZoomOut">100%</output></label><input id="videoZoom" type="range" min="1" max="5" step="0.05" value="1"></div>
-      <div class="video-setting"><label for="videoSpeed">Playback speed (up to 10×) <output id="videoSpeedOut">1.00×</output></label><input id="videoSpeed" type="range" min="0.25" max="10" step="0.05" value="1"></div>
+      <div class="video-setting"><label for="videoSpeed">Playback speed (0.1× to 30×) <output id="videoSpeedOut">1.00×</output></label><input id="videoSpeed" type="range" min="0.1" max="30" step="0.1" value="1"></div>
       <div class="video-setting"><label for="videoBrightness">Brightness <output id="videoBrightnessOut">100%</output></label><input id="videoBrightness" type="range" min="30" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoContrast">Contrast <output id="videoContrastOut">100%</output></label><input id="videoContrast" type="range" min="50" max="200" step="5" value="100"></div>
       <div class="video-setting"><label for="videoSaturation">Saturation <output id="videoSaturationOut">100%</output></label><input id="videoSaturation" type="range" min="0" max="200" step="5" value="100"></div>
@@ -1938,7 +1941,7 @@ html.light .lock-grip{border-color:#1b1838}
   (function(){
     var row=el('fsRow'),panel=el('fsPanel'),pop=document.createElement('div');pop.className='fs-pop';layer.appendChild(pop);var popT=0;
     var P=[
-      {l:'Speed',id:'videoSpeed',min:0.25,max:10,st:0.25,def:1,f:function(v){return v.toFixed(2)+'×'}},
+      {l:'Speed',id:'videoSpeed',min:0.1,max:30,st:0.1,def:1,acc:true,f:function(v){return v.toFixed(1)+'×'}},
       {l:'Bright',id:'videoBrightness',min:30,max:200,st:10,def:100,f:function(v){return v+'%'}},
       {l:'Contrast',id:'videoContrast',min:50,max:200,st:10,def:100,f:function(v){return v+'%'}},
       {l:'Satur.',id:'videoSaturation',min:0,max:200,st:10,def:100,f:function(v){return v+'%'}},
@@ -1961,7 +1964,7 @@ html.light .lock-grip{border-color:#1b1838}
       ['pointerup','pointercancel','pointerleave'].forEach(function(t){lb.addEventListener(t,function(){clearTimeout(lp);lb.classList.remove('held')})});
       function stopRep(){clearTimeout(rep);rep=0}
       // held: starts after 0.45 s, then runs faster and faster
-      function run(dir,delay,n){rep=setTimeout(function(){set(p,get(p)+dir*p.st);show(p);run(dir,Math.max(35,delay*(n<5?0.88:0.75)),n+1)},delay)}
+      function run(dir,delay,n){rep=setTimeout(function(){var m=p.acc?(n<8?1:n<18?2:n<30?5:10):1;set(p,get(p)+dir*p.st*m);show(p);run(dir,Math.max(35,delay*(n<5?0.88:0.75)),n+1)},delay)}
       [[mi,-1],[pl,1]].forEach(function(bd){var b=bd[0],dir=bd[1];
         b.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch(_){}
           held[dir]=true;b.classList.add('held');stopRep();
@@ -2795,8 +2798,8 @@ html.light .lock-grip{border-color:#1b1838}
       var who=function(k){return st[k]==='self'?'this app':(st[k]==='other'?(st[k+'Name']||'another app'):'no app (you are asked each time)')};
       var msg='Videos open with '+who('video')+'; music opens with '+who('audio')+'. ';
       if(st.video==='self'&&st.audio==='self'){el('cutterNote').textContent='✓ '+msg;return;}
-      if(st.video==='other'||st.audio==='other'){msg+='In the settings page that opens, tap "Open by default" → "Clear defaults". Then open any video or song in your file manager, choose MYmusic Cutter and tap "Always".';el('cutterNote').textContent=msg;try{nb.openDefaultAppSettings(st.video==='other'?'video':'audio')}catch(e){}return;}
-      el('cutterNote').textContent=msg+'Open any video or song in your file manager, choose MYmusic Cutter and tap "Always".';});})();
+      if(st.video==='other'||st.audio==='other'){msg+='In the settings page that opens, tap "Open by default" → "Clear defaults". Then open any video or song in your file manager, choose Ak Media Center and tap "Always".';el('cutterNote').textContent=msg;try{nb.openDefaultAppSettings(st.video==='other'?'video':'audio')}catch(e){}return;}
+      el('cutterNote').textContent=msg+'Open any video or song in your file manager, choose Ak Media Center and tap "Always".';});})();
   function updatePos(){var m=activeMedia;el('cutterPos').textContent=fmt(m&&m.currentTime||0)+' / '+fmt(m&&isFinite(m.duration)?m.duration:0)}
   [video,audioMedia].forEach(function(m){['timeupdate','loadedmetadata','seeked','emptied'].forEach(function(ev){m.addEventListener(ev,function(){if(m===activeMedia)updatePos()})})});
   var lastResult=null,origState=null,resultMode='';
@@ -3232,7 +3235,7 @@ html.light .lock-grip{border-color:#1b1838}
     if(v==='opt-banner'){bannerOn=!bannerOn;try{localStorage.setItem('mmBanner',bannerOn?'1':'0')}catch(e){}try{NPn&&NPn.setBanner&&NPn.setBanner(bannerOn)}catch(e){}
       note(bannerOn?'Banner on: song name, Play/Pause and Exit in the notification bar and on the lock screen.':'Banner hidden as far as Android allows: no icon and nothing on the lock screen. Android still keeps a small silent line at the bottom of the list while sound plays.')}
     else{var want=!dndOn,r='ok';try{if(NPn&&NPn.setDnd)r=NPn.setDnd(want)}catch(e){}
-      if(want&&r==='need'){note('Allow “MYmusic Cutter” in the list that opened, come back, and choose this option again.')}
+      if(want&&r==='need'){note('Allow “Ak Media Center” in the list that opened, come back, and choose this option again.')}
       else{dndOn=want;try{localStorage.setItem('mmDnd',dndOn?'1':'0')}catch(e){}note(dndOn?'Do not disturb on: while music plays, other apps’ notification sounds are silenced. Calls and alarms follow your phone’s priority settings. It switches off again on pause or exit.':'Do not disturb off.')}}
     notifUi()});
   // earphone / Bluetooth / car next and previous buttons

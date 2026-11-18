@@ -216,7 +216,7 @@ try:
     for nofx in (False,):
         js("MYmusicNativePlayer.setSpeed(1)"); time.sleep(3)
         js("MYmusicNativePlayer.seek(0)"); time.sleep(2)
-        for sp in (1, 3, 4, 6, 8, 10):
+        for sp in (1, 3, 6, 10, 20, 30):
             js("MYmusicNativePlayer.setSpeed(%d)" % sp); time.sleep(2)
             a = _j.loads(js("MYmusicNativePlayer.videoStats()") or "{}"); trail = []
             for _k in range(5): time.sleep(1); trail.append(round(_j.loads(js("MYmusicNativePlayer.videoStats()") or '{"pos":0}')["pos"] / 1000.0, 1))

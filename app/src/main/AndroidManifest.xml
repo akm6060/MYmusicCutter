@@ -39,7 +39,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="MYmusic Cutter"
+        android:label="Ak Media Center"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="true"

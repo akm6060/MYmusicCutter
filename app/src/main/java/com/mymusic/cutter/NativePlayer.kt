@@ -554,7 +554,7 @@ class NativePlayer(
     }
 
     private fun titleFor(u: Uri?): String {
-        if (u == null) return "MYmusic Cutter"
+        if (u == null) return "Ak Media Center"
         var name: String? = null
         if (u.scheme == "content") {
             try {
@@ -565,7 +565,7 @@ class NativePlayer(
             }
         }
         if (name.isNullOrBlank()) name = u.lastPathSegment?.substringAfterLast('/')
-        return (name ?: "MYmusic Cutter").substringBeforeLast('.')
+        return (name ?: "Ak Media Center").substringBeforeLast('.')
     }
 
     @JavascriptInterface
@@ -594,7 +594,7 @@ class NativePlayer(
     @JavascriptInterface
     fun setSpeed(rate: Double) {
         main.post {
-            val r = rate.toFloat().coerceIn(0.25f, 10f)
+            val r = rate.toFloat().coerceIn(0.1f, 30f)
             // above 3x the sound is switched off: the picture alone runs much more smoothly
             val mute = r > 3.001f
             if (mute != speedMuted) {

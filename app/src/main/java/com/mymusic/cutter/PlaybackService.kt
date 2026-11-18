@@ -43,7 +43,7 @@ class PlaybackService : Service() {
         private const val ACT_EXIT = "com.mymusic.cutter.EXIT"
 
         @Volatile var control: Control? = null
-        @Volatile private var title = "MYmusic Cutter"
+        @Volatile private var title = "Ak Media Center"
         @Volatile private var playing = false
         @Volatile private var instance: PlaybackService? = null
 
@@ -117,7 +117,7 @@ class PlaybackService : Service() {
 
         /** Called whenever playback starts or stops. */
         fun update(ctx: Context, newTitle: String, isPlaying: Boolean) {
-            title = newTitle.ifBlank { "MYmusic Cutter" }
+            title = newTitle.ifBlank { "Ak Media Center" }
             playing = isPlaying
             syncSession(ctx); applyDnd(ctx)
             val s = instance
