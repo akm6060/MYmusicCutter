@@ -771,7 +771,7 @@ class MYmusicNativeCutter(
                 require(outputs.all { it.isNotEmpty() }) { "Nothing would be left to save." }
                 val format = detectFormat(source, name)
                 val kind = if (isAudio || format == "mp3" || format == "wav" || format == "adts") "audio" else "video"
-                beginJob(if (kind == "audio") "Audio" else "Video", categoryFor(if (marked == null && mode == "keep") "join" else mode), shortStem(name))
+                beginJob(name, outputs.size > 1)
                 val names = jobMeta.optJSONArray("names")
                 forceExtractor = jobMeta.optBoolean("forceExtractor", false)
                 val skipped = ArrayList<Int>()
@@ -850,7 +850,7 @@ class MYmusicNativeCutter(
                 val allAudio = formats[0] != "container" || sources.all { s ->
                     try { probeContainer(s, false).formats.values.all { (it.getString(MediaFormat.KEY_MIME) ?: "").startsWith("audio/") } } catch (_: Exception) { false }
                 }
-                beginJob(if (allAudio) "Audio" else "Video", "Save as one", shortStem(name) + " joined")
+                beginJob(name, true)
                 when (formats[0]) {
                     "mp3" -> {
                         val t = createOutput(Kind.AUDIO, name, ".mp3", "audio/mpeg"); target = t
@@ -984,7 +984,7 @@ class MYmusicNativeCutter(
         playlistWriter.execute {
             try { writePlaylist("") } catch (_: Exception) {}
             // the empty "Playlists" folder too
-            try { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "$rootName/Playlists").delete() } catch (_: Exception) {}
+            try { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "$oldRootName/Playlists").delete() } catch (_: Exception) {}
             try { File(legacyRoot(), "Playlists").delete() } catch (_: Exception) {}
         }
     }
@@ -993,7 +993,7 @@ class MYmusicNativeCutter(
         val name = "Current playlist.m3u8"
         val empty = text.lines().none { it.isNotBlank() && !it.startsWith("#") }
         if (Build.VERSION.SDK_INT >= 29) {
-            val rel = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/Playlists/"
+            val rel = "${Environment.DIRECTORY_DOWNLOADS}/$oldRootName/Playlists/"
             val col = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             var existing: Uri? = null
             context.contentResolver.query(col, arrayOf(MediaStore.MediaColumns._ID),
@@ -1618,8 +1618,11 @@ class MYmusicNativeCutter(
     // where apps may only create folders inside the standard ones; on the main storage before that):
     //   Audio | Video  ›  Save parts | Save as one | Erase parts  ›  "<name> <job number>"  ›  files
     //   Playlists  ›  Current playlist.m3u8
-    private val rootName = "MYmusic Cutter"
-    @Volatile private var jobDir = "Audio/Save as one/media 1"
+    //   Download › Media Center › <date> › <first 4 words of the file name> (a save that makes several files,
+    //   or joins several files) or "Single files" (every save that makes one file that day)
+    private val rootName = "Media Center"
+    private val oldRootName = "MYmusic Cutter"   // folder used before v4.28 (only for removing the old playlist file)
+    @Volatile private var jobDir = "Single files"
 
     private fun categoryFor(mode: String) = when (mode) {
         "parts" -> "Save parts"
@@ -1630,18 +1633,21 @@ class MYmusicNativeCutter(
     @Suppress("DEPRECATION")
     private fun legacyRoot(): File {
         val canWritePublic = context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        return if (canWritePublic) File(Environment.getExternalStorageDirectory(), rootName)
+        return if (canWritePublic) File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), rootName)
                else File(context.getExternalFilesDir(null) ?: context.filesDir, rootName)
     }
 
-    /** Picks a fresh sub-folder for this job: "<name> 1", "<name> 2", ... */
-    private fun beginJob(kindFolder: String, category: String, originalName: String) {
-        val stem = outputStem(originalName)
-        val base = "$kindFolder/$category"
-        val pat = Regex("^" + Regex.escape(stem) + " (\\d{1,6})$", RegexOption.IGNORE_CASE)
+    /** Picks the folder for this save: <date>/Single files, or <date>/<first 4 words> (then "... 2", "... 3" the same day). */
+    private fun beginJob(firstName: String, multi: Boolean) {
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        if (!multi) { jobDir = "$date/Single files"; return }
+        val words = outputStem(firstName).split(' ', '_', '-').filter { it.isNotBlank() }
+        val stem = words.take(4).joinToString(" ").take(60).trim().ifBlank { "media" }
+        val pat = Regex("^" + Regex.escape(stem) + "(?: (\\d{1,6}))?$", RegexOption.IGNORE_CASE)
         var max = 0
+        fun seen(folder: String) { val m = pat.matchEntire(folder) ?: return; val n = m.groupValues[1].toIntOrNull() ?: 1; if (n > max) max = n }
         if (Build.VERSION.SDK_INT >= 29) {
-            val prefix = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/$base/"
+            val prefix = "${Environment.DIRECTORY_DOWNLOADS}/$rootName/$date/"
             try {
                 context.contentResolver.query(
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH),
@@ -1650,19 +1656,14 @@ class MYmusicNativeCutter(
                     while (c.moveToNext()) {
                         val rp = c.getString(0) ?: continue
                         if (!rp.startsWith(prefix)) continue
-                        val folder = rp.substring(prefix.length).trimEnd('/').substringBefore('/')
-                        val n = pat.matchEntire(folder)?.groupValues?.get(1)?.toIntOrNull() ?: continue
-                        if (n > max) max = n
+                        seen(rp.substring(prefix.length).trimEnd('/').substringBefore('/'))
                     }
                 }
             } catch (_: Exception) {}
         } else {
-            File(legacyRoot(), base).list()?.forEach { n ->
-                val v = pat.matchEntire(n)?.groupValues?.get(1)?.toIntOrNull() ?: return@forEach
-                if (v > max) max = v
-            }
+            File(legacyRoot(), date).list()?.forEach { seen(it) }
         }
-        jobDir = "$base/$stem ${max + 1}"
+        jobDir = if (max == 0) "$date/$stem" else "$date/$stem ${max + 1}"
     }
 
     /** A name given to the part being saved (e.g. from the first words sung), or null. */

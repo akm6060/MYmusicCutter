@@ -89,7 +89,7 @@ for k in range(10):
     time.sleep(2); n = js("document.getElementById('cutterNote').textContent"); say("note", n)
     if n and ("Saved" in n or "failed" in n): break
 shot("n2_after_cut")
-say("files", adb("shell", "ls", "-R", "/sdcard/Download/MYmusic Cutter"))
+say("files", adb("shell", "ls", "-R", "/sdcard/Download/Media Center"))
 
 # ---- .aac cassette: song finder and saving parts
 say("open aac")
@@ -119,7 +119,7 @@ say("save", js("document.getElementById('saveParts').click();'ok'"))
 for k in range(20):
     time.sleep(2); n = js("document.getElementById('cutterNote').textContent"); say("note", n)
     if n and ("Saved 3" in n or "failed" in n): break
-say("files", adb("shell", "ls", "-lR", "/sdcard/Download/MYmusic Cutter/Audio"))
+say("files", adb("shell", "ls", "-lR", "/sdcard/Download/Media Center"))
 # fixed seeker: double-tap the seeker handle, then drag the strip
 r = js("(()=>{const r=document.getElementById('cutterPlayhead').getBoundingClientRect();return [r.x+r.width/2,r.bottom-12,devicePixelRatio]})()")
 say("playhead", r)
@@ -166,7 +166,7 @@ for k in range(30):
     time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
     if n and ("Saved" in n or "failed" in n): break
 say("fallback note", n)
-say("fallback files", adb("shell", "ls -l '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'*album*'/'"))
+say("fallback files", adb("shell", "ls -l '/sdcard/Download/Media Center/'*/*album*'/'"))
 
 # ---- downloads named ".mp3" that are really M4A (AAC) or WebM (Opus)
 for name in ["ytm4a.mp3", "ytwebm.mp3"]:
@@ -187,7 +187,7 @@ for name in ["ytm4a.mp3", "ytwebm.mp3"]:
         time.sleep(2); n = js("document.getElementById('cutterNote').textContent")
         if n and ("parts" in n or "failed" in n or "None" in n): break
     say(name, "save:", n)
-say("saved files", adb("shell", "ls -lR '/sdcard/Download/MYmusic Cutter/Audio/Save parts/'"))
+say("saved files", adb("shell", "ls -lR '/sdcard/Download/Media Center/'"))
 
 # ---- A-B repeat on the cassette: marks from the song finder, loop the first song
 adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "file:///sdcard/Download/cassette.aac", "-t", "audio/aac", "-n", "com.mymusic.cutter/.MainActivity")
