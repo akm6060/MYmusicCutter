@@ -1536,6 +1536,9 @@ html.light .lock-grip{border-color:#1b1838}
 /* full screen: the four side buttons show and hide together with the -/+ row and the seeker (long press) */
 .video-layer.native-fullscreen:not(.quality-open) #videoFull,.video-layer.native-fullscreen:not(.quality-open) #videoEqOpen,
 .video-layer.native-fullscreen:not(.quality-open) #videoFill,.video-layer.native-fullscreen:not(.quality-open) #videoFit{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+
+/* full screen with the panel open: Fit and Exit stay too (the auto-hide timer must not fade their bar) */
+.video-layer.native-fullscreen.quality-open.controls-hidden .video-head,.video-layer.native-fullscreen.quality-open.fs-controls-hidden .video-head{opacity:1!important;visibility:visible!important}
 </style>
 
 <button type="button" class="video-launch" id="videoLaunch" aria-label="Add audio or video folder" title="Add audio or video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 10v6M9 13h6"/></svg></button>
@@ -3088,7 +3091,7 @@ html.light .lock-grip{border-color:#1b1838}
   // Tap: 1 second back / forward. Hold: moves slowly at first, then faster and faster
   // (about half real speed at the start, 2x after 2 s, 10x after 4 s, 45x after 6 s, up to 10 min per second).
   var tapTarget=null,tapAt=0;
-  // Rewind while playing: playback pauses, and carries on 3 seconds after the last tap / release.
+  // Back or forward while playing: playback pauses, and carries on 3 seconds after the last tap / release.
   var rwResume=0,rwPaused=false;
   function rwPause(){clearTimeout(rwResume);if(!activeMedia.paused){rwPaused=true;try{activeMedia.pause()}catch(e){}}}
   function rwLater(){clearTimeout(rwResume);if(!rwPaused)return;rwResume=setTimeout(function(){if(rwPaused){rwPaused=false;try{var p=activeMedia.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}},3000)}
@@ -3107,7 +3110,7 @@ html.light .lock-grip{border-color:#1b1838}
       timer=setTimeout(tick,60);
     }
     b.addEventListener('pointerdown',function(e){e.preventDefault();if(!duration())return;try{b.setPointerCapture(e.pointerId)}catch(_){}
-      if(dir<0)rwPause();
+      rwPause();   // back or forward: playback pauses while stepping
       stepHeld=true;holding=false;stepTarget=null;t0=performance.now();clearTimeout(timer);tick()});
     function stop(){
       if(!stepHeld)return;stepHeld=false;clearTimeout(timer);var d=duration();
@@ -3121,7 +3124,7 @@ html.light .lock-grip{border-color:#1b1838}
         tapTarget=null;
       }
       holding=false;stepTarget=null;
-      if(dir<0)rwLater();
+      rwLater();   // and carries on 3 seconds after the finger is lifted
     }
     b.addEventListener('pointerup',stop);b.addEventListener('pointercancel',stop);b.addEventListener('lostpointercapture',stop);
     b.addEventListener('contextmenu',function(e){e.preventDefault()});
